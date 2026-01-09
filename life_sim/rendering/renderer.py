@@ -18,6 +18,7 @@ class Renderer:
         self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
         pygame.display.set_caption(constants.WINDOW_TITLE)
         self.font = pygame.font.SysFont("Arial", 24)
+        self.log_font = pygame.font.SysFont("Consolas", constants.LOG_FONT_SIZE)
         
         self.logger.info("Renderer initialized (Pygame).")
 
@@ -47,9 +48,26 @@ class Renderer:
             y_offset += 40
             
         # Render Instruction
-        instr_surf = self.font.render("Press SPACE to Age Up", True, constants.COLOR_ACCENT)
+        if sim_state.agent.is_alive:
+            msg = "Press SPACE to Age Up"
+            color = constants.COLOR_ACCENT
+        else:
+            msg = "GAME OVER - Check Logs"
+            color = constants.COLOR_DEATH
+            
+        instr_surf = self.font.render(msg, True, color)
         self.screen.blit(instr_surf, (50, constants.SCREEN_HEIGHT - 50))
         
+        # Render Event Log
+        # Slice to show only the last N lines
+        visible_logs = sim_state.event_log[-constants.MAX_LOG_LINES:]
+        log_y = constants.LOG_Y
+        
+        for line in visible_logs:
+            log_surf = self.log_font.render(line, True, constants.COLOR_TEXT)
+            self.screen.blit(log_surf, (constants.LOG_X, log_y))
+            log_y += constants.LOG_LINE_HEIGHT
+
         pygame.display.flip()
 
     def quit(self):

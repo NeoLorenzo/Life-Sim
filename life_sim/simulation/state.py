@@ -21,13 +21,9 @@ class Agent:
         self.happiness = agent_config.get("initial_happiness", 50)
         self.smarts = agent_config.get("initial_smarts", 50)
         self.looks = agent_config.get("initial_looks", 50)
+        self.is_alive = True
         
         self.logger.info(f"Agent initialized. Age: {self.age}, Health: {self.health}")
-
-    def age_up(self):
-        """Increments age by 1 year."""
-        self.age += 1
-        self.logger.info(f"Age incremented to {self.age}")
 
 class SimState:
     """
@@ -36,3 +32,8 @@ class SimState:
     def __init__(self, config: dict):
         self.config = config
         self.agent = Agent(config["agent"])
+        self.event_log = ["Simulation started."]
+
+    def add_log(self, message: str):
+        """Adds a message to the in-game event log."""
+        self.event_log.append(message)

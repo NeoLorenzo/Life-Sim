@@ -15,6 +15,7 @@ import numpy as np
 # If running from root, ensure __init__.py exists in life_sim/
 from life_sim import constants, logging_setup
 from life_sim.simulation.state import SimState
+from life_sim.simulation import logic
 from life_sim.rendering.renderer import Renderer
 
 def load_config():
@@ -55,7 +56,7 @@ def main():
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        sim_state.agent.age_up()
+                        logic.process_turn(sim_state)
             
             # Update (No continuous update for this MVP, only event-driven)
             
