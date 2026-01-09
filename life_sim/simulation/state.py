@@ -21,9 +21,10 @@ class Agent:
         self.happiness = agent_config.get("initial_happiness", 50)
         self.smarts = agent_config.get("initial_smarts", 50)
         self.looks = agent_config.get("initial_looks", 50)
+        self.money = agent_config.get("initial_money", 0)
         self.is_alive = True
         
-        self.logger.info(f"Agent initialized. Age: {self.age}, Health: {self.health}")
+        self.logger.info(f"Agent initialized. Age: {self.age}, Health: {self.health}, Money: {self.money}")
 
 class SimState:
     """

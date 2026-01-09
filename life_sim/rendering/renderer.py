@@ -38,7 +38,8 @@ class Renderer:
             f"Health: {agent.health}",
             f"Happiness: {agent.happiness}",
             f"Smarts: {agent.smarts}",
-            f"Looks: {agent.looks}"
+            f"Looks: {agent.looks}",
+            f"Money: ${agent.money}"
         ]
         
         y_offset = 50
@@ -49,14 +50,21 @@ class Renderer:
             
         # Render Instruction
         if sim_state.agent.is_alive:
-            msg = "Press SPACE to Age Up"
+            controls = [
+                "SPACE: Age Up",
+                "W: Work (+$100)",
+                "D: Doctor (-$100)"
+            ]
             color = constants.COLOR_ACCENT
         else:
-            msg = "GAME OVER - Check Logs"
+            controls = ["GAME OVER - Check Logs"]
             color = constants.COLOR_DEATH
             
-        instr_surf = self.font.render(msg, True, color)
-        self.screen.blit(instr_surf, (50, constants.SCREEN_HEIGHT - 50))
+        y_instr = constants.SCREEN_HEIGHT - 150
+        for line in controls:
+            instr_surf = self.font.render(line, True, color)
+            self.screen.blit(instr_surf, (50, y_instr))
+            y_instr += 30
         
         # Render Event Log
         # Slice to show only the last N lines

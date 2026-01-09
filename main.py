@@ -57,6 +57,10 @@ def main():
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         logic.process_turn(sim_state)
+                    elif event.key == pygame.K_w:
+                        logic.work(sim_state)
+                    elif event.key == pygame.K_d:
+                        logic.visit_doctor(sim_state)
             
             # Update (No continuous update for this MVP, only event-driven)
             
