@@ -4,42 +4,50 @@
 
 ## 🚀 Current Features (MVP 0.1)
 
-### Core Simulation
-*   **Biological Life Cycle:** Agents age annually, suffering natural health decay (randomized) and eventual death based on health metrics.
-*   **Stat System:** Tracks core attributes including Health, Happiness, Smarts, Looks, and Age.
-*   **Event Logging:** A scrolling on-screen text log records every significant life event (salary, illness, job offers), providing a narrative history.
-*   **Game Over State:** Upon death, the simulation locks inputs and displays a final summary, preventing further actions.
-*   **Configuration:** All simulation parameters (initial stats, job markets, decay rates, seed) are loaded from `config.json`, ensuring deterministic runs.
+### Core Simulation & Identity
+*   **Biological Life Cycle:** Agents age annually, suffering natural health decay and eventual death.
+*   **Procedural Identity:** Agents are generated with specific Names, Genders, Countries of Origin, and Cities based on configuration pools.
+*   **Appearance System:** Tracks physical traits including Eye Color, Hair Color, Skin Tone, Height (cm), and Weight (kg).
+*   **Universal Attribute System:**
+    *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
+    *   **Personality:** Discipline, Willpower, Generosity, Religiousness, Craziness.
+    *   **Hidden:** Karma, Luck, Sexuality.
+*   **Derived Metrics:** Calculates dynamic stats like Body Fat % and Lean Mass based on Weight and Athleticism.
 
 ### Economy & Career
 *   **Currency System:** Agents earn and spend money; starting balance is configurable.
-*   **Employment Market:** Agents can search for jobs defined in the configuration. The system presents a random opportunity from the pool.
+*   **Employment Market:** Agents can search for jobs defined in the configuration.
 *   **Qualification Logic:** Job acquisition is gated by stats. High-tier jobs (e.g., Software Engineer) automatically reject applicants with low 'Smarts'.
 *   **Income:** Employed agents receive annual salaries automatically upon aging up.
 *   **Overtime:** Employed agents can perform manual work actions to earn immediate bonuses (1% of salary).
 
 ### Actions & Progression
 *   **Study:** Agents can invest time to increase their 'Smarts' stat to qualify for better jobs, at the cost of a small amount of Health (stress).
-*   **Medical Care:** Agents can visit a doctor to restore Health, provided they have sufficient funds ($100).
+*   **Medical Care:** Agents can visit a doctor to restore Health, provided they have sufficient funds.
 *   **Context-Sensitive Controls:** The UI updates available actions based on the agent's state (e.g., "Work" is only available if employed).
+
+### User Interface & Visualization
+*   **Tabbed Interface:**
+    *   **Overview Tab:** Displays core stats (Age, Money, Job), current actions, and the narrative event log.
+    *   **Attributes Tab:** A detailed, multi-column inspection screen showing the full biographical, physical, and personality profile of the agent.
+*   **Event Logging:** A scrolling on-screen text log records every significant life event (salary, illness, job offers).
+*   **Game Over State:** Upon death, the simulation locks inputs and displays a final summary.
 
 ## 🗺️ Roadmap (Planned Features)
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
-### Phase 1: Deep Stats & Customization
-*   **Hyper-Detailed Character Creator:**
-    *   **Biographical:** Custom Name, Gender, Country/City of Birth (affecting economy/laws).
-    *   **Appearance:** Eye color, hair color/style, skin tone, and facial hair.
-*   **Universal Attribute System:**
-    *   **Physical:** Height, Weight, Strength, Endurance, Fertility, Libido, Athleticism.
-    *   **Personality:** Discipline, Willpower, Karma, Generosity, Craziness, Religiousness.
-    *   **Hidden:** Luck, Sexuality (Spectrum), Fertility.
-*   **Skill Mastery Engine (0-100 Progression):**
-    *   **Musical Instruments:** Voice, Guitar, Piano, Drums, Violin, Saxophone, Bass, Cello, Flute, Harp, Trumpet, Tuba, Banjo, Harmonica, Didgeridoo.
-    *   **Martial Arts:** Karate, Judo, Taekwondo, Jiu-Jitsu, Kung Fu, Muay Thai, Boxing, Kickboxing, Wrestling, Krav Maga.
-    *   **Licenses & Certifications:** Driving, Pilot (Private/Commercial), Boating, CPR, First Aid.
-    *   **Criminal Proficiency:** Stealth, Pickpocketing, Hacking, Safe-cracking.
+### Phase 1: Genetics, Growth & Skills
+*   **Genetics Engine:**
+    *   **Height Potential:** Agents are born with a genetic max height. They grow towards this limit annually until adulthood, and slowly shrink during seniority.
+    *   **Dynamic Physiology:** Weight and muscle mass fluctuate dynamically based on Age, Athleticism, and Metabolism (Genetics).
+*   **Skill Mastery Mechanics:**
+    *   **Practice System:** Logic to learn and level up specific skills (0-100) via time allocation.
+    *   **Content Implementation:**
+        *   **Instruments:** Guitar, Piano, Violin, etc.
+        *   **Martial Arts:** Karate, Jiu-Jitsu, Boxing, etc.
+        *   **Licenses:** Driving, Pilot, Boating.
+*   **Manual Character Creator:** A UI screen to manually select Name, Appearance, and Attributes before starting the simulation (replacing the current random generation).
 
 ### Phase 2: Social Web & Relationships
 *   **Family Generation:** Procedural creation of parents and siblings with genetic stat inheritance.
