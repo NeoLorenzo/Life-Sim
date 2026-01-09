@@ -11,11 +11,33 @@
         "initial_smarts": 50,
         "initial_looks": 50,
         "initial_money": 0,
+        "bio": {
+            "first_names_male": ["James", "John", "Robert", "Michael", "William"],
+            "first_names_female": ["Mary", "Patricia", "Jennifer", "Linda", "Elizabeth"],
+            "last_names": ["Smith", "Johnson", "Williams", "Brown", "Jones"],
+            "countries": ["USA", "UK", "Canada", "Australia", "Japan", "Portugal"],
+            "cities": ["New York", "London", "Toronto", "Sydney", "Tokyo", "Lisbon"]
+        },
+        "appearance": {
+            "eye_colors": ["Brown", "Blue", "Green", "Hazel", "Gray"],
+            "hair_colors": ["Black", "Brown", "Blonde", "Red", "Gray"],
+            "skin_tones": ["Pale", "Fair", "Olive", "Brown", "Dark"]
+        },
         "attributes": {
             "strength_min": 10, "strength_max": 90,
             "athleticism_min": 10, "athleticism_max": 90,
+            "endurance_min": 10, "endurance_max": 90,
+            "fertility_min": 50, "fertility_max": 100,
+            "libido_min": 20, "libido_max": 80,
+            
             "discipline_min": 10, "discipline_max": 90,
-            "karma_min": 40, "karma_max": 60
+            "willpower_min": 10, "willpower_max": 90,
+            "generosity_min": 10, "generosity_max": 90,
+            "religiousness_min": 0, "religiousness_max": 100,
+            "craziness_min": 0, "craziness_max": 50,
+            
+            "karma_min": 40, "karma_max": 60,
+            "luck_min": 0, "luck_max": 100
         }
     },
     "economy": {
