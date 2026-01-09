@@ -11,5 +11,13 @@
         "initial_smarts": 50,
         "initial_looks": 50,
         "initial_money": 0
+    },
+    "economy": {
+        "jobs": [
+            {"title": "Dishwasher", "salary": 15000},
+            {"title": "Barista", "salary": 22000},
+            {"title": "Teacher", "salary": 45000},
+            {"title": "Software Engineer", "salary": 90000}
+        ]
     }
 }

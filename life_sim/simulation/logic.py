@@ -27,6 +27,12 @@ def process_turn(sim_state: SimState):
     # 1. Age Up
     agent.age += 1
     
+    # 1b. Process Salary
+    if agent.job:
+        salary = agent.job['salary']
+        agent.money += salary
+        sim_state.add_log(f"Earned ${salary} from {agent.job['title']}.")
+    
     # 2. Stat Decay (Random 0-5 health loss per year)
     # Rule 12: Uses global random which was seeded in main.py
     decay = random.randint(0, 5)
@@ -48,15 +54,36 @@ def process_turn(sim_state: SimState):
     logger.info(f"Turn processed: Age {agent.age}, Health {agent.health}, Alive: {agent.is_alive}")
 
 def work(sim_state: SimState):
-    """Agent performs work to earn money."""
+    """Agent performs overtime if employed."""
     agent = sim_state.agent
     if not agent.is_alive:
         return
 
-    salary = 100  # Placeholder for job system
-    agent.money += salary
-    sim_state.add_log(f"You worked and earned ${salary}.")
-    logger.info(f"Action: Work. Money: {agent.money}")
+    if not agent.job:
+        sim_state.add_log("You are unemployed. Get a job (J) first.")
+        return
+
+    # Overtime bonus is 1% of salary
+    bonus = int(agent.job['salary'] * 0.01)
+    agent.money += bonus
+    sim_state.add_log(f"Worked overtime. Earned ${bonus}.")
+    logger.info(f"Action: Overtime. Money: {agent.money}")
+
+def find_job(sim_state: SimState):
+    """Assigns a random job from config."""
+    agent = sim_state.agent
+    if not agent.is_alive:
+        return
+        
+    jobs = sim_state.config.get("economy", {}).get("jobs", [])
+    if not jobs:
+        sim_state.add_log("No jobs available in economy.")
+        return
+        
+    new_job = random.choice(jobs)
+    agent.job = new_job
+    sim_state.add_log(f"You were hired as a {new_job['title']}!")
+    logger.info(f"Action: Hired. Job: {new_job['title']}, Salary: {new_job['salary']}")
 
 def visit_doctor(sim_state: SimState):
     """Agent visits doctor to restore health."""

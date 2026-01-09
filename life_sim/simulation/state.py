@@ -22,6 +22,7 @@ class Agent:
         self.smarts = agent_config.get("initial_smarts", 50)
         self.looks = agent_config.get("initial_looks", 50)
         self.money = agent_config.get("initial_money", 0)
+        self.job = None  # None or dict {"title": str, "salary": int}
         self.is_alive = True
         
         self.logger.info(f"Agent initialized. Age: {self.age}, Health: {self.health}, Money: {self.money}")

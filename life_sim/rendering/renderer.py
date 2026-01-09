@@ -39,7 +39,8 @@ class Renderer:
             f"Happiness: {agent.happiness}",
             f"Smarts: {agent.smarts}",
             f"Looks: {agent.looks}",
-            f"Money: ${agent.money}"
+            f"Money: ${agent.money}",
+            f"Job: {agent.job['title'] if agent.job else 'Unemployed'}"
         ]
         
         y_offset = 50
@@ -52,7 +53,8 @@ class Renderer:
         if sim_state.agent.is_alive:
             controls = [
                 "SPACE: Age Up",
-                "W: Work (+$100)",
+                "J: Find Job",
+                "W: Overtime",
                 "D: Doctor (-$100)"
             ]
             color = constants.COLOR_ACCENT

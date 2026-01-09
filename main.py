@@ -59,6 +59,8 @@ def main():
                         logic.process_turn(sim_state)
                     elif event.key == pygame.K_w:
                         logic.work(sim_state)
+                    elif event.key == pygame.K_j:
+                        logic.find_job(sim_state)
                     elif event.key == pygame.K_d:
                         logic.visit_doctor(sim_state)
             
