@@ -4,6 +4,7 @@ Simulation State Module.
 Holds the core data model for the simulation.
 """
 import logging
+import random
 
 class Agent:
     """
@@ -25,7 +26,15 @@ class Agent:
         self.job = None  # None or dict {"title": str, "salary": int}
         self.is_alive = True
         
+        # Extended Attributes
+        attr_config = agent_config.get("attributes", {})
+        self.strength = random.randint(attr_config.get("strength_min", 0), attr_config.get("strength_max", 100))
+        self.athleticism = random.randint(attr_config.get("athleticism_min", 0), attr_config.get("athleticism_max", 100))
+        self.discipline = random.randint(attr_config.get("discipline_min", 0), attr_config.get("discipline_max", 100))
+        self.karma = random.randint(attr_config.get("karma_min", 0), attr_config.get("karma_max", 100))
+
         self.logger.info(f"Agent initialized. Age: {self.age}, Health: {self.health}, Money: {self.money}")
+        self.logger.info(f"Attributes: Str={self.strength}, Ath={self.athleticism}, Disc={self.discipline}, Karma={self.karma}")
 
 class SimState:
     """

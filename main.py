@@ -55,7 +55,9 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
+                    if event.key == pygame.K_TAB:
+                        renderer.toggle_view()
+                    elif event.key == pygame.K_SPACE:
                         logic.process_turn(sim_state)
                     elif event.key == pygame.K_w:
                         logic.work(sim_state)

@@ -20,18 +20,46 @@ class Renderer:
         self.font = pygame.font.SysFont("Arial", 24)
         self.log_font = pygame.font.SysFont("Consolas", constants.LOG_FONT_SIZE)
         
+        # UI State
+        self.view_mode = "OVERVIEW" # Options: OVERVIEW, ATTRIBUTES
+        
         self.logger.info("Renderer initialized (Pygame).")
+
+    def toggle_view(self):
+        """Switches between UI tabs."""
+        if self.view_mode == "OVERVIEW":
+            self.view_mode = "ATTRIBUTES"
+        else:
+            self.view_mode = "OVERVIEW"
 
     def render(self, sim_state):
         """
-        Draws the current state.
-        
-        Args:
-            sim_state (SimState): The current simulation state object.
+        Draws the current state based on view mode.
         """
         self.screen.fill(constants.COLOR_BG)
         
-        # Render Stats
+        # Draw Tab Indicator
+        tab_text = f"Tab: {self.view_mode} (Press TAB to switch)"
+        tab_surf = self.font.render(tab_text, True, (150, 150, 150))
+        self.screen.blit(tab_surf, (50, 10))
+
+        if self.view_mode == "OVERVIEW":
+            self._render_overview(sim_state)
+        elif self.view_mode == "ATTRIBUTES":
+            self._render_attributes(sim_state)
+            
+        # Render Event Log (Always visible)
+        visible_logs = sim_state.event_log[-constants.MAX_LOG_LINES:]
+        log_y = constants.LOG_Y
+        
+        for line in visible_logs:
+            log_surf = self.log_font.render(line, True, constants.COLOR_TEXT)
+            self.screen.blit(log_surf, (constants.LOG_X, log_y))
+            log_y += constants.LOG_LINE_HEIGHT
+
+        pygame.display.flip()
+
+    def _render_overview(self, sim_state):
         agent = sim_state.agent
         stats = [
             f"Age: {agent.age}",
@@ -49,7 +77,7 @@ class Renderer:
             self.screen.blit(text_surf, (50, y_offset))
             y_offset += 40
             
-        # Render Instruction
+        # Render Controls
         if sim_state.agent.is_alive:
             controls = [
                 "SPACE: Age Up",
@@ -63,13 +91,31 @@ class Renderer:
             controls = ["GAME OVER - Check Logs"]
             color = constants.COLOR_DEATH
             
-        y_instr = constants.SCREEN_HEIGHT - 150
+        y_instr = constants.SCREEN_HEIGHT - 180
         for line in controls:
             instr_surf = self.font.render(line, True, color)
             self.screen.blit(instr_surf, (50, y_instr))
             y_instr += 30
+
+    def _render_attributes(self, sim_state):
+        agent = sim_state.agent
         
-        # Render Event Log
+        # Header
+        header = self.font.render("--- Mind & Body ---", True, constants.COLOR_ACCENT)
+        self.screen.blit(header, (50, 50))
+        
+        attrs = [
+            f"Strength: {agent.strength}",
+            f"Athleticism: {agent.athleticism}",
+            f"Discipline: {agent.discipline}",
+            f"Karma: {agent.karma}"
+        ]
+        
+        y_offset = 90
+        for line in attrs:
+            text_surf = self.font.render(line, True, constants.COLOR_TEXT)
+            self.screen.blit(text_surf, (50, y_offset))
+            y_offset += 40
         # Slice to show only the last N lines
         visible_logs = sim_state.event_log[-constants.MAX_LOG_LINES:]
         log_y = constants.LOG_Y

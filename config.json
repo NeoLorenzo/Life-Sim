@@ -10,7 +10,13 @@
         "initial_happiness": 100,
         "initial_smarts": 50,
         "initial_looks": 50,
-        "initial_money": 0
+        "initial_money": 0,
+        "attributes": {
+            "strength_min": 10, "strength_max": 90,
+            "athleticism_min": 10, "athleticism_max": 90,
+            "discipline_min": 10, "discipline_max": 90,
+            "karma_min": 40, "karma_max": 60
+        }
     },
     "economy": {
         "jobs": [
