@@ -38,16 +38,20 @@
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
 ### Phase 1: Genetics, Growth & Skills
+*   **Aging & Mortality:**
+    *   **Declining Vitality:** Maximum Health capacity decreases annually (e.g., Max Health is 100 at age 20, but only 60 at age 80).
+    *   **The Century Limit:** A hard mortality cap ensures Maximum Health reaches 0 at age 100, guaranteeing death if it hasn't occurred naturally.
+    *   **Frailty:** As the Health Cap lowers, minor events (flu, stress) become increasingly lethal due to the reduced health buffer.
 *   **Genetics Engine:**
     *   **Height Potential:** Agents are born with a genetic max height. They grow towards this limit annually until adulthood, and slowly shrink during seniority.
-    *   **Dynamic Physiology:** Weight and muscle mass fluctuate dynamically based on Age, Athleticism, and Metabolism (Genetics).
+    *   **Dynamic Physiology:** Weight and muscle mass fluctuate dynamically based on Age, Athleticism, and Metabolism.
 *   **Skill Mastery Mechanics:**
     *   **Practice System:** Logic to learn and level up specific skills (0-100) via time allocation.
     *   **Content Implementation:**
         *   **Instruments:** Guitar, Piano, Violin, etc.
         *   **Martial Arts:** Karate, Jiu-Jitsu, Boxing, etc.
         *   **Licenses:** Driving, Pilot, Boating.
-*   **Manual Character Creator:** A UI screen to manually select Name, Appearance, and Attributes before starting the simulation (replacing the current random generation).
+*   **Manual Character Creator:** A UI screen to manually select Name, Appearance, and Attributes before starting the simulation.
 
 ### Phase 2: Social Web & Relationships
 *   **Family Generation:** Procedural creation of parents and siblings with genetic stat inheritance.
@@ -107,6 +111,22 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Achievements:** Tracking ribbons and trophies for specific life outcomes.
 *   **Graveyard:** Persistent records of past lives and epitaphs.
 *   **Technical:** Save/Load functionality and data visualization dashboards.
+
+### Phase 7: Developmental Psychology & Genetics
+*   **Genotype vs. Phenotype System:**
+    *   **Genetic Potential:** Agents spawn with a "Genetic Range" for attributes (e.g., IQ Potential: 110-130, Height Potential: 175cm-180cm).
+    *   **Realized Attributes:** Actual stats start low and grow based on environmental factors (Nutrition, Education, Parenting) within the genetic bounds.
+    *   **Hard vs. Soft Limits:**
+        *   *Hard:* Height, Eye Color, Bone Structure.
+        *   *Soft:* Weight (Metabolism tendency), Intelligence (Neuroplasticity), Strength (Myostatin levels).
+*   **Developmental Stages (0-18 Years):**
+    *   **Infancy (0-2):** Motor skill development, "Trust vs. Mistrust" (Parental bonding mechanics).
+    *   **Early Childhood (3-6):** Language acquisition, curiosity events, and potty training (affects Discipline).
+    *   **School Age (7-12):** Socialization, academic foundations, and bullying encounters.
+    *   **Adolescence (13-18):** Puberty mechanics, rebellion, and risk-taking behaviors.
+*   **Emergent Identity:**
+    *   **Discovery Mechanics:** Traits like Sexuality, Religiousness, and Political alignment are not pre-set but emerge dynamically based on reactions to formative events (e.g., "First Crush" scenarios).
+    *   **Core Memories:** Significant childhood events that permanently buff/debuff specific personality traits (e.g., "Won the Science Fair" -> Permanent Confidence boost).
 
 ## ⚖️ Design Philosophy & Abstractions
 
