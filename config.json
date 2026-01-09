@@ -1,0 +1,14 @@
+{
+    "seed": 42,
+    "logging": {
+        "level": "INFO",
+        "save_to_file": true
+    },
+    "agent": {
+        "initial_age": 0,
+        "initial_health": 100,
+        "initial_happiness": 100,
+        "initial_smarts": 50,
+        "initial_looks": 50
+    }
+}

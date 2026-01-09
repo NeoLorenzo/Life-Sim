@@ -1,0 +1,76 @@
+# main.py
+"""
+Life-Sim Entry Point.
+Wires together Config, Logging, Simulation, and Rendering.
+"""
+import json
+import logging
+import sys
+import pygame
+import random
+import numpy as np
+
+# Import local modules
+# Note: Assumes 'life_sim' package structure. 
+# If running from root, ensure __init__.py exists in life_sim/
+from life_sim import constants, logging_setup
+from life_sim.simulation.state import SimState
+from life_sim.rendering.renderer import Renderer
+
+def load_config():
+    try:
+        with open(constants.CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"CRITICAL: {constants.CONFIG_FILE} not found.")
+        sys.exit(1)
+
+def main():
+    # 1. Load Config
+    config = load_config()
+    
+    # 2. Setup Logging (Rule 2)
+    logging_setup.setup_logging(config)
+    logger = logging.getLogger("main")
+    
+    # 3. Initialize RNG (Rule 12)
+    seed = config.get("seed", 0)
+    random.seed(seed)
+    np.random.seed(seed)
+    logger.info(f"Life-Sim started. Seed: {seed}")
+    
+    # 4. Initialize Systems
+    try:
+        sim_state = SimState(config)
+        renderer = Renderer()
+        clock = pygame.time.Clock()
+        
+        running = True
+        
+        # 5. Main Loop
+        while running:
+            # Event Handling
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        sim_state.agent.age_up()
+            
+            # Update (No continuous update for this MVP, only event-driven)
+            
+            # Render
+            renderer.render(sim_state)
+            
+            # Cap FPS
+            clock.tick(constants.FPS)
+            
+    except Exception as e:
+        logger.critical(f"Unhandled exception: {e}", exc_info=True)
+        raise
+    finally:
+        renderer.quit()
+        logger.info("Simulation ended cleanly.")
+
+if __name__ == "__main__":
+    main()
