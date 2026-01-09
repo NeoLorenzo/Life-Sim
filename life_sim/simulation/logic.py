@@ -69,21 +69,44 @@ def work(sim_state: SimState):
     sim_state.add_log(f"Worked overtime. Earned ${bonus}.")
     logger.info(f"Action: Overtime. Money: {agent.money}")
 
+def study(sim_state: SimState):
+    """Agent studies to increase smarts."""
+    agent = sim_state.agent
+    if not agent.is_alive:
+        return
+        
+    gain = random.randint(2, 5)
+    agent.smarts = min(100, agent.smarts + gain)
+    
+    # Studying costs a little health (stress/sedentary)
+    agent.health = max(0, agent.health - 1)
+    
+    sim_state.add_log(f"You studied hard. Smarts +{gain}.")
+    logger.info(f"Action: Study. Smarts: {agent.smarts}")
+
 def find_job(sim_state: SimState):
-    """Assigns a random job from config."""
+    """Attempts to find a job based on qualifications."""
     agent = sim_state.agent
     if not agent.is_alive:
         return
         
     jobs = sim_state.config.get("economy", {}).get("jobs", [])
     if not jobs:
-        sim_state.add_log("No jobs available in economy.")
+        sim_state.add_log("No jobs available.")
         return
         
-    new_job = random.choice(jobs)
-    agent.job = new_job
-    sim_state.add_log(f"You were hired as a {new_job['title']}!")
-    logger.info(f"Action: Hired. Job: {new_job['title']}, Salary: {new_job['salary']}")
+    # Pick a random job to apply for
+    target_job = random.choice(jobs)
+    required_smarts = target_job.get("min_smarts", 0)
+    
+    if agent.smarts >= required_smarts:
+        agent.job = target_job
+        sim_state.add_log(f"Hired as {target_job['title']}!")
+        logger.info(f"Action: Hired. Job: {target_job['title']}")
+    else:
+        sim_state.add_log(f"Rejected from {target_job['title']}.")
+        sim_state.add_log(f"Need {required_smarts} Smarts (Have {agent.smarts}).")
+        logger.info(f"Action: Rejected. Job: {target_job['title']}, Req: {required_smarts}, Has: {agent.smarts}")
 
 def visit_doctor(sim_state: SimState):
     """Agent visits doctor to restore health."""

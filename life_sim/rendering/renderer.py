@@ -54,6 +54,7 @@ class Renderer:
             controls = [
                 "SPACE: Age Up",
                 "J: Find Job",
+                "S: Study (Smarts)",
                 "W: Overtime",
                 "D: Doctor (-$100)"
             ]

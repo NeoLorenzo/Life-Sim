@@ -14,10 +14,10 @@
     },
     "economy": {
         "jobs": [
-            {"title": "Dishwasher", "salary": 15000},
-            {"title": "Barista", "salary": 22000},
-            {"title": "Teacher", "salary": 45000},
-            {"title": "Software Engineer", "salary": 90000}
+            {"title": "Dishwasher", "salary": 15000, "min_smarts": 0},
+            {"title": "Barista", "salary": 22000, "min_smarts": 20},
+            {"title": "Teacher", "salary": 45000, "min_smarts": 60},
+            {"title": "Software Engineer", "salary": 90000, "min_smarts": 85}
         ]
     }
 }
