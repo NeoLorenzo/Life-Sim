@@ -100,6 +100,43 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Graveyard:** Persistent records of past lives and epitaphs.
 *   **Technical:** Save/Load functionality and data visualization dashboards.
 
+## ⚖️ Design Philosophy & Abstractions
+
+To maintain playability and focus on emergent storytelling, **Life-Sim** deliberately abstracts specific real-world complexities. We prioritize *decision-making* over *micromanagement*.
+
+### 1. Time Management: The "Macro-Schedule"
+*   **Constraint:** Players do **not** play through individual days, hours, or minutes. There is no "eat, sleep, pee" loop.
+*   **Abstraction:** Time is managed via a **Weekly Schedule**.
+    *   The player allocates their 168 weekly hours into buckets (e.g., 40h Work, 56h Sleep, 14h Skill Practice, 58h Leisure).
+    *   The simulation calculates the *net effect* of this schedule annually (or monthly).
+    *   *Example:* Allocating only 30h to Sleep results in a massive annual Health penalty, without requiring the player to manually click "Sleep" every night.
+
+### 2. Biological Needs: Auto-Regulation
+*   **Constraint:** We do not simulate hunger, thirst, bladder, or hygiene meters.
+*   **Abstraction:** These are bundled into **Cost of Living** and **Health Decay**.
+    *   If a player has money, "Food" is automatically purchased and consumed.
+    *   If a player is broke, Health decays rapidly due to "Malnutrition."
+    *   Hygiene is a modifier on the "Looks" stat, maintained by a "Grooming" time allocation in the schedule.
+
+### 3. Economy: Aggregated Cash Flow
+*   **Constraint:** No manual grocery shopping, utility bill payments, or tax filing.
+*   **Abstraction:** Expenses are aggregated into a single **Monthly Outflow**.
+    *   **Cost of Living:** Derived from location + house quality + family size.
+    *   **Taxes:** Automatically deducted from salary before it hits the player's balance.
+    *   **Inflation:** Applied globally to prices each year.
+
+### 4. Social Interaction: Intent vs. Dialogue
+*   **Constraint:** No branching dialogue trees for every conversation.
+*   **Abstraction:** Interactions are **Intent-Based**.
+    *   Player chooses an intent: *Compliment, Insult, Ask for Money, Flirt*.
+    *   The engine calculates the outcome based on Stats (Smarts/Looks), Relationship Score, and RNG.
+    *   We simulate the *result* of the conversation, not the conversation itself.
+
+### 5. Geography: Node-Based Movement
+*   **Constraint:** No open-world walking or driving physics.
+*   **Abstraction:** The world is a collection of **Nodes** (Home, Work, Gym, Park).
+    *   Travel is instant but incurs a "Commute Time" penalty in the Weekly Schedule based on the distance between nodes (e.g., moving to a suburb increases Commute hours, reducing Leisure hours).
+
 ## 🛠️ Installation & Usage
 
 1.  **Prerequisites:** Python 3.10+, Pygame, NumPy.
