@@ -91,10 +91,11 @@ class LogPanel:
             start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
 
         y = start_y
-        for line in self.logs:
+        for line_data in self.logs:
+            text, color = line_data
             # Optimization: Only draw if within vertical bounds
             if y + constants.LOG_LINE_HEIGHT > self.rect.y and y < self.rect.bottom:
-                text_surf = self.font.render(line, True, constants.COLOR_TEXT)
+                text_surf = self.font.render(text, True, color)
                 screen.blit(text_surf, (self.rect.x + 10, y))
             y += constants.LOG_LINE_HEIGHT
             

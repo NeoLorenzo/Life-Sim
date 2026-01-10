@@ -5,6 +5,7 @@ Holds the core data model for the simulation.
 """
 import logging
 import random
+from .. import constants
 
 class Agent:
     """
@@ -92,8 +93,10 @@ class SimState:
     def __init__(self, config: dict):
         self.config = config
         self.agent = Agent(config["agent"])
-        self.event_log = ["Simulation started."]
+        self.event_log = [("Simulation started.", constants.COLOR_TEXT)]
 
-    def add_log(self, message: str):
+    def add_log(self, message: str, color=None):
         """Adds a message to the in-game event log."""
-        self.event_log.append(message)
+        if color is None:
+            color = constants.COLOR_TEXT
+        self.event_log.append((message, color))
