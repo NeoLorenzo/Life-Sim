@@ -72,6 +72,9 @@ def main():
                         logic.visit_doctor(sim_state)
                     elif action_id == "TOGGLE_ATTR":
                         renderer.toggle_attributes()
+                    else:
+                        # Handle placeholders
+                        sim_state.add_log(f"Feature {action_id} coming soon!", constants.COLOR_TEXT_DIM)
 
             # Render
             renderer.render(sim_state)

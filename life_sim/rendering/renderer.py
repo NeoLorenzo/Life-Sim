@@ -42,46 +42,85 @@ class Renderer:
         
         self.show_attributes = False
         
-        self.buttons = []
-        self._init_buttons()
+        self.buttons = {} # Dict[str, List[Button]]
+        self.tabs = []    # List[Button] (Using Button class for tabs)
+        self.active_tab = "Main"
+        
+        self._init_ui_structure()
         
         self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
 
-    def _init_buttons(self):
-        """Creates the static buttons for the Right Panel."""
+    def _init_ui_structure(self):
+        """Creates Tabs and Action Buttons."""
+        # 1. Init Tabs
+        tab_names = ["Main", "Social", "Assets"]
+        tab_w = constants.PANEL_RIGHT_WIDTH // len(tab_names)
+        tab_h = 30
+        
+        for i, name in enumerate(tab_names):
+            x = self.rect_right.x + (i * tab_w)
+            y = self.rect_right.y
+            # Action ID for a tab is just "TAB_<NAME>"
+            btn = Button(x, y, tab_w, tab_h, name, f"TAB_{name}", self.font_main)
+            self.tabs.append(btn)
+
+        # 2. Init Buttons per Tab
         btn_w = constants.PANEL_RIGHT_WIDTH - 40
         btn_h = 40
         start_x = self.rect_right.x + 20
-        start_y = 50
+        base_y = self.rect_right.y + 50 # Start below tabs
         gap = 10
         
-        # Define Actions
-        actions = [
-            ("Age Up (+1 Year)", "AGE_UP"),
-            ("Find Job", "FIND_JOB"),
-            ("Study (Smarts)", "STUDY"),
-            ("Work Overtime", "WORK"),
-            ("Visit Doctor ($100)", "DOCTOR"),
-            ("Toggle Attributes", "TOGGLE_ATTR")
-        ]
+        # Define Actions per Category
+        # Format: (Text, ActionID)
+        categories = {
+            "Main": [
+                ("Age Up (+1 Year)", "AGE_UP"),
+                ("Find Job", "FIND_JOB"),
+                ("Study (Smarts)", "STUDY"),
+                ("Work Overtime", "WORK"),
+                ("Visit Doctor ($100)", "DOCTOR"),
+                ("Toggle Attributes", "TOGGLE_ATTR")
+            ],
+            "Social": [
+                ("Call Parents", "SOCIAL_PARENTS"), # Placeholder
+                ("Go Clubbing", "SOCIAL_CLUB")      # Placeholder
+            ],
+            "Assets": [
+                ("Check Wallet", "ASSET_WALLET"),   # Placeholder
+                ("Shopping", "ASSET_SHOP")          # Placeholder
+            ]
+        }
         
-        for text, action_id in actions:
-            btn = Button(start_x, start_y, btn_w, btn_h, text, action_id, self.font_main)
-            self.buttons.append(btn)
-            start_y += btn_h + gap
+        for cat, actions in categories.items():
+            self.buttons[cat] = []
+            current_y = base_y
+            for text, action_id in actions:
+                btn = Button(start_x, current_y, btn_w, btn_h, text, action_id, self.font_main)
+                self.buttons[cat].append(btn)
+                current_y += btn_h + gap
 
     def handle_event(self, event):
         """
-        Processes input events and returns an action ID if a button is clicked.
+        Processes input events.
         """
         # Pass to LogPanel (Scrolling)
         self.log_panel.handle_event(event)
         
-        # Pass to Buttons (Clicking)
-        for btn in self.buttons:
-            action = btn.handle_event(event)
-            if action:
-                return action
+        # 1. Check Tabs
+        for tab in self.tabs:
+            action = tab.handle_event(event)
+            if action and action.startswith("TAB_"):
+                self.active_tab = action.replace("TAB_", "")
+                return None # Consumed locally
+        
+        # 2. Check Buttons in Active Tab
+        if self.active_tab in self.buttons:
+            for btn in self.buttons[self.active_tab]:
+                action = btn.handle_event(event)
+                if action:
+                    return action
+                    
         return None
 
     def render(self, sim_state):
@@ -209,13 +248,16 @@ class Renderer:
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_right, 1)
         
-        # Draw Header
-        header = self.font_header.render("Actions", True, constants.COLOR_TEXT)
-        self.screen.blit(header, (self.rect_right.x + 20, 15))
+        # Draw Tabs
+        for tab in self.tabs:
+            # Highlight active tab
+            is_active = (tab.text == self.active_tab)
+            tab.draw(self.screen, active_highlight=is_active)
         
-        # Draw Buttons
-        for btn in self.buttons:
-            btn.draw(self.screen)
+        # Draw Buttons for Active Tab
+        if self.active_tab in self.buttons:
+            for btn in self.buttons[self.active_tab]:
+                btn.draw(self.screen)
 
     def quit(self):
         pygame.quit()

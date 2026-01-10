@@ -24,12 +24,21 @@ class Button:
                 return self.action_id
         return None
 
-    def draw(self, screen):
-        color = constants.COLOR_BTN_HOVER if self.is_hovered else constants.COLOR_BTN_IDLE
+    def draw(self, screen, active_highlight=False):
+        if active_highlight:
+            color = constants.COLOR_ACCENT
+            text_color = constants.COLOR_BG # Dark text on bright background
+        elif self.is_hovered:
+            color = constants.COLOR_BTN_HOVER
+            text_color = constants.COLOR_TEXT
+        else:
+            color = constants.COLOR_BTN_IDLE
+            text_color = constants.COLOR_TEXT
+            
         pygame.draw.rect(screen, color, self.rect)
         pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
         
-        text_surf = self.font.render(self.text, True, constants.COLOR_TEXT)
+        text_surf = self.font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)
         screen.blit(text_surf, text_rect)
 
