@@ -63,10 +63,12 @@
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age, Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
-        *   **Log View:** A scrollable history of all simulation events (Age Up summaries, Action results). Supports mouse-wheel scrolling with clipping logic.
+        *   **Rich Text Logging:** Events are color-coded for instant recognition: **Green** (Income/Positive), **Red** (Damage/Negative), **Blue** (Headers), and **White** (Neutral).
+        *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details, keeping the view clean.
         *   **Attribute Modal:** An overlay rendering three columns of detailed stats when toggled.
     *   **Right Panel (300px):**
-        *   **Interactive Buttons:** Hover-responsive buttons for game actions (Age Up, Find Job, Study, Work, Doctor, Toggle Attributes).
+        *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**) to support expanding gameplay features without clutter.
+        *   **Interactive Buttons:** Hover-responsive buttons for game actions.
         *   **Feedback:** Buttons visually darken on hover (RGB 80,80,80).
 
 ## 🗺️ Roadmap (Planned Features)
@@ -75,11 +77,8 @@ The following features are planned to expand the simulation depth into a compreh
 
 ### Phase 0.5: UX Polish & Advanced UI
 *   **Advanced Visualization:**
-    *   **Rich Text:** Events in the log are color-coded (e.g., Red for Danger, Green for Money) for faster readability.
-    *   **Interactive History:** Past years are grouped; clicking a year expands/collapses its details.
     *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
 *   **Dynamic Menus:**
-    *   **Categorized Actions:** The Right Panel splits into tabs (Activities, Assets, Relationships) rather than a single list.
     *   **Responsive Design:** Support for true full-screen resizing.
 
 ### Phase 1: Genetics, Growth & Identity
