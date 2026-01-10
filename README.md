@@ -4,36 +4,70 @@
 
 ## 🚀 Current Features (MVP 0.5)
 
-### Core Simulation & Identity
-*   **Biological Life Cycle:** Agents age annually, suffering natural health decay and eventual death.
-*   **Procedural Identity:** Agents are generated with specific Names, Genders, Countries of Origin, and Cities based on configuration pools.
-*   **Appearance System:** Tracks physical traits including Eye Color, Hair Color, Skin Tone, Height (cm), and Weight (kg).
-*   **Universal Attribute System:**
+### Core Simulation & Architecture
+*   **Deterministic Simulation Loop:**
+    *   **Master Seed:** The entire simulation (Python `random`, `numpy.random`) is initialized via a single integer seed defined in `config.json`, ensuring 100% reproducibility for debugging and sharing runs.
+    *   **Turn-Based Logic:** The simulation advances in 1-year increments (`process_turn`).
+    *   **Event Logging:** A dual-channel logging system writes runtime events to both the console (stdout) and rotating log files (`logs/run_YYYYMMDD_HHMMSS.log`) with the format `Time | Level | Module | Message`.
+*   **Configuration-Driven Design:**
+    *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
+    *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) are decoupled in `constants.py`.
+
+### Identity & Biology
+*   **Procedural Generation:**
+    *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City drawn from configurable pools.
+    *   **Appearance:** Tracks Eye Color, Hair Color, Skin Tone.
+    *   **Anthropometry:**
+        *   **Height:** Randomized range (Male: 150-200cm, Female: 140-180cm).
+        *   **Weight:** Randomized range (Male: 60-100kg, Female: 45-80kg).
+*   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
     *   **Personality:** Discipline, Willpower, Generosity, Religiousness, Craziness.
-    *   **Hidden:** Karma, Luck, Sexuality.
-*   **Derived Metrics:** Calculates dynamic stats like Body Fat % and Lean Mass based on Weight and Athleticism.
+    *   **Hidden:** Karma, Luck, Sexuality (Hetero/Homo/Bi).
+*   **Derived Metrics (Physiology):**
+    *   **Body Fat %:** Calculated dynamically based on Gender and Athleticism.
+        *   *Formula:* `Base_BF (M:25/F:35) - (Athleticism% * 18) + Random_Variance(-3 to +5)`.
+        *   *Constraint:* Minimum 4.0%.
+    *   **Lean Mass:** Calculated as `Weight_kg * (1 - Body_Fat%)`.
+*   **Aging & Mortality:**
+    *   **Natural Decay:** Every year, Health decreases by a random value between 0 and 5.
+    *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
 
 ### Economy & Career
-*   **Currency System:** Agents earn and spend money; starting balance is configurable.
-*   **Employment Market:** Agents can search for jobs defined in the configuration.
-*   **Qualification Logic:** Job acquisition is gated by stats. High-tier jobs (e.g., Software Engineer) automatically reject applicants with low 'Smarts'.
-*   **Income:** Employed agents receive annual salaries automatically upon aging up.
-*   **Overtime:** Employed agents can perform manual work actions to earn immediate bonuses (1% of salary).
+*   **Job Market:**
+    *   **Data Structure:** Jobs are defined in `config.json` with a `title`, `salary`, and `min_smarts`.
+    *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is determined strictly by `Agent.smarts >= Job.min_smarts`.
+    *   **Income:** Salaries are added to `Agent.money` automatically during the `process_turn` (Age Up) phase.
+*   **Active Income (Overtime):**
+    *   **Mechanic:** Employed agents can manually "Work Overtime."
+    *   **Reward:** Immediate cash bonus equal to **1%** of the annual salary.
+    *   **Constraint:** Action is blocked if the agent is unemployed.
 
 ### Actions & Progression
-*   **Study:** Agents can invest time to increase their 'Smarts' stat to qualify for better jobs, at the cost of a small amount of Health (stress).
-*   **Medical Care:** Agents can visit a doctor to restore Health, provided they have sufficient funds.
-*   **Context-Sensitive Controls:** The UI updates available actions based on the agent's state (e.g., "Work" is only available if employed).
+*   **Education (Study):**
+    *   **Effect:** Increases Smarts by a random value of **2 to 5**.
+    *   **Cost:** Decreases Health by **1** (simulating stress/sedentary lifestyle).
+    *   **Cap:** Smarts is clamped at 100.
+*   **Healthcare (Doctor):**
+    *   **Cost:** Flat fee of **$100**.
+    *   **Effect:** Restores Health by a random value of **10 to 20**.
+    *   **Constraints:** Action fails if `Agent.money < 100`. Health is clamped at 100.
+*   **Toggle Attributes:**
+    *   A UI-only action that pauses the log view to inspect the full list of 15+ agent attributes (Identity, Physical, Personality, Skills).
 
 ### User Interface & Visualization
-*   **High-Resolution Layout:** Runs at 1600x900 with a dedicated Dark Mode theme.
-*   **Three-Panel Architecture:**
-    *   **Left Panel (Status):** Persistent display of Identity, Vitals, and Physical stats.
-    *   **Center Panel (Narrative):** A scrollable history feed controlled via mouse wheel.
-    *   **Right Panel (Action Hub):** Mouse-clickable buttons for all game actions.
-*   **Modal Overlays:** The "Toggle Attributes" feature overlays the center panel to show detailed stats without losing context.
-*   **Mouse Interaction:** Full support for clicking buttons and scrolling lists, replacing the legacy keyboard controls.
+*   **Technical Specs:**
+    *   **Resolution:** Fixed 1600x900 window.
+    *   **Framerate:** Capped at 60 FPS.
+    *   **Theme:** Dark Mode (Background: RGB 20,20,20; Panels: RGB 40,40,40).
+*   **Three-Panel Layout:**
+    *   **Left Panel (300px):** Real-time dashboard showing Name, Age, Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
+    *   **Center Panel (Variable):**
+        *   **Log View:** A scrollable history of all simulation events (Age Up summaries, Action results). Supports mouse-wheel scrolling with clipping logic.
+        *   **Attribute Modal:** An overlay rendering three columns of detailed stats when toggled.
+    *   **Right Panel (300px):**
+        *   **Interactive Buttons:** Hover-responsive buttons for game actions (Age Up, Find Job, Study, Work, Doctor, Toggle Attributes).
+        *   **Feedback:** Buttons visually darken on hover (RGB 80,80,80).
 
 ## 🗺️ Roadmap (Planned Features)
 
