@@ -2,7 +2,7 @@
 
 **Life-Sim** is a modular, extensible life simulation engine built in Python. It simulates the biological, economic, and social trajectory of a single agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
 
-## 🚀 Current Features (MVP 0.1)
+## 🚀 Current Features (MVP 0.5)
 
 ### Core Simulation & Identity
 *   **Biological Life Cycle:** Agents age annually, suffering natural health decay and eventual death.
@@ -27,32 +27,26 @@
 *   **Context-Sensitive Controls:** The UI updates available actions based on the agent's state (e.g., "Work" is only available if employed).
 
 ### User Interface & Visualization
-*   **Tabbed Interface:**
-    *   **Overview Tab:** Displays core stats (Age, Money, Job), current actions, and the narrative event log.
-    *   **Attributes Tab:** A detailed, multi-column inspection screen showing the full biographical, physical, and personality profile of the agent.
-*   **Event Logging:** A scrolling on-screen text log records every significant life event (salary, illness, job offers).
-*   **Game Over State:** Upon death, the simulation locks inputs and displays a final summary.
+*   **High-Resolution Layout:** Runs at 1600x900 with a dedicated Dark Mode theme.
+*   **Three-Panel Architecture:**
+    *   **Left Panel (Status):** Persistent display of Identity, Vitals, and Physical stats.
+    *   **Center Panel (Narrative):** A scrollable history feed controlled via mouse wheel.
+    *   **Right Panel (Action Hub):** Mouse-clickable buttons for all game actions.
+*   **Modal Overlays:** The "Toggle Attributes" feature overlays the center panel to show detailed stats without losing context.
+*   **Mouse Interaction:** Full support for clicking buttons and scrolling lists, replacing the legacy keyboard controls.
 
 ## 🗺️ Roadmap (Planned Features)
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
-### Phase 0.5: UI Overhaul & UX Polish
-*   **Full-Screen Layout:**
-    *   **Responsive Design:** The application runs in full-screen mode (or maximized window), utilizing the entire display area.
-    *   **Three-Panel Architecture:**
-        *   **Left Panel (Status):** Fixed sidebar containing the Agent's Portrait (placeholder), Core Stats (Health, Happiness, etc.), and Financial Summary.
-        *   **Center Panel (Narrative):** The primary focus. A large, scrollable history feed that resembles a social media timeline or chat log.
-            *   **Rich Text:** Events are color-coded (e.g., Red for Danger, Green for Money).
-            *   **Interactive Elements:** Past years are grouped; clicking a year expands/collapses its details.
-        *   **Right Panel (Action Hub):** A dynamic menu system for "Activities," "Assets," "Relationships," and "Career."
-            *   **Contextual Buttons:** The "Age Up" button is prominent and always accessible at the bottom.
-*   **Navigation & Controls:**
-    *   **Mouse Support:** Full click/scroll support for the history log and menus (moving away from keyboard-only shortcuts).
-    *   **Modal Windows:** Pop-up dialogs for complex interactions (e.g., "Visit Doctor" opens a modal with treatment options and prices).
-*   **Visual Polish:**
-    *   **Theming:** Consistent color palette (Dark Mode default) with distinct visual hierarchies.
-    *   **Typography:** Use of legible, scalable fonts for the narrative log to ensure readability on high-res screens.
+### Phase 0.5: UX Polish & Advanced UI
+*   **Advanced Visualization:**
+    *   **Rich Text:** Events in the log are color-coded (e.g., Red for Danger, Green for Money) for faster readability.
+    *   **Interactive History:** Past years are grouped; clicking a year expands/collapses its details.
+    *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
+*   **Dynamic Menus:**
+    *   **Categorized Actions:** The Right Panel splits into tabs (Activities, Assets, Relationships) rather than a single list.
+    *   **Responsive Design:** Support for true full-screen resizing.
 
 ### Phase 1: Genetics, Growth & Skills
 *   **Aging & Mortality:**

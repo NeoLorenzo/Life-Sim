@@ -6,10 +6,11 @@ Handles Pygame initialization and drawing.
 import pygame
 import logging
 from .. import constants
+from .ui import Button, LogPanel
 
 class Renderer:
     """
-    Handles drawing the SimState to the screen.
+    Handles drawing the SimState to the screen using a 3-panel layout.
     """
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -17,106 +18,119 @@ class Renderer:
         pygame.init()
         self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
         pygame.display.set_caption(constants.WINDOW_TITLE)
-        self.font = pygame.font.SysFont("Arial", 24)
-        self.log_font = pygame.font.SysFont("Consolas", constants.LOG_FONT_SIZE)
         
-        # UI State
-        self.view_mode = "OVERVIEW" # Options: OVERVIEW, ATTRIBUTES
+        # Fonts
+        self.font_main = pygame.font.SysFont("Arial", constants.FONT_SIZE_MAIN)
+        self.font_header = pygame.font.SysFont("Arial", constants.FONT_SIZE_HEADER, bold=True)
+        self.font_log = pygame.font.SysFont("Consolas", constants.FONT_SIZE_LOG)
         
-        self.logger.info("Renderer initialized (Pygame).")
-
-    def toggle_view(self):
-        """Switches between UI tabs."""
-        if self.view_mode == "OVERVIEW":
-            self.view_mode = "ATTRIBUTES"
-        else:
-            self.view_mode = "OVERVIEW"
-
-    def render(self, sim_state):
-        """
-        Draws the current state based on view mode.
-        """
-        self.screen.fill(constants.COLOR_BG)
+        # Layout Calculation
+        self.rect_left = pygame.Rect(0, 0, constants.PANEL_LEFT_WIDTH, constants.SCREEN_HEIGHT)
+        self.rect_right = pygame.Rect(constants.SCREEN_WIDTH - constants.PANEL_RIGHT_WIDTH, 0, constants.PANEL_RIGHT_WIDTH, constants.SCREEN_HEIGHT)
         
-        # Draw Tab Indicator
-        tab_text = f"Tab: {self.view_mode} (Press TAB to switch)"
-        tab_surf = self.font.render(tab_text, True, (150, 150, 150))
-        self.screen.blit(tab_surf, (50, 10))
-
-        if self.view_mode == "OVERVIEW":
-            self._render_overview(sim_state)
-        elif self.view_mode == "ATTRIBUTES":
-            self._render_attributes(sim_state)
-            
-        pygame.display.flip()
-
-    def _render_overview(self, sim_state):
-        # Render Event Log (Only in Overview)
-        visible_logs = sim_state.event_log[-constants.MAX_LOG_LINES:]
-        log_y = constants.LOG_Y
+        center_w = constants.SCREEN_WIDTH - constants.PANEL_LEFT_WIDTH - constants.PANEL_RIGHT_WIDTH
+        self.rect_center = pygame.Rect(constants.PANEL_LEFT_WIDTH, 0, center_w, constants.SCREEN_HEIGHT)
         
-        for line in visible_logs:
-            log_surf = self.log_font.render(line, True, constants.COLOR_TEXT)
-            self.screen.blit(log_surf, (constants.LOG_X, log_y))
-            log_y += constants.LOG_LINE_HEIGHT
+        # Initialize UI Elements
+        self.log_panel = LogPanel(
+            self.rect_center.x, 
+            self.rect_center.y, 
+            self.rect_center.width, 
+            self.rect_center.height, 
+            self.font_log
+        )
+        
+        self.show_attributes = False
+        
+        self.buttons = []
+        self._init_buttons()
+        
+        self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
 
-        agent = sim_state.agent
-        stats = [
-            f"Age: {agent.age}",
-            f"Health: {agent.health}",
-            f"Happiness: {agent.happiness}",
-            f"Smarts: {agent.smarts}",
-            f"Looks: {agent.looks}",
-            f"Money: ${agent.money}",
-            f"Job: {agent.job['title'] if agent.job else 'Unemployed'}"
+    def _init_buttons(self):
+        """Creates the static buttons for the Right Panel."""
+        btn_w = constants.PANEL_RIGHT_WIDTH - 40
+        btn_h = 40
+        start_x = self.rect_right.x + 20
+        start_y = 50
+        gap = 10
+        
+        # Define Actions
+        actions = [
+            ("Age Up (+1 Year)", "AGE_UP"),
+            ("Find Job", "FIND_JOB"),
+            ("Study (Smarts)", "STUDY"),
+            ("Work Overtime", "WORK"),
+            ("Visit Doctor ($100)", "DOCTOR"),
+            ("Toggle Attributes", "TOGGLE_ATTR")
         ]
         
-        y_offset = 50
-        for line in stats:
-            text_surf = self.font.render(line, True, constants.COLOR_TEXT)
-            self.screen.blit(text_surf, (50, y_offset))
-            y_offset += 40
-            
-        # Render Controls
-        if sim_state.agent.is_alive:
-            controls = [
-                "SPACE: Age Up",
-                "J: Find Job",
-                "S: Study (Smarts)",
-                "W: Overtime",
-                "D: Doctor (-$100)"
-            ]
-            color = constants.COLOR_ACCENT
-        else:
-            controls = ["GAME OVER - Check Logs"]
-            color = constants.COLOR_DEATH
-            
-        y_instr = constants.SCREEN_HEIGHT - 180
-        for line in controls:
-            instr_surf = self.font.render(line, True, color)
-            self.screen.blit(instr_surf, (50, y_instr))
-            y_instr += 30
+        for text, action_id in actions:
+            btn = Button(start_x, start_y, btn_w, btn_h, text, action_id, self.font_main)
+            self.buttons.append(btn)
+            start_y += btn_h + gap
 
-    def _render_attributes(self, sim_state):
+    def handle_event(self, event):
+        """
+        Processes input events and returns an action ID if a button is clicked.
+        """
+        # Pass to LogPanel (Scrolling)
+        self.log_panel.handle_event(event)
+        
+        # Pass to Buttons (Clicking)
+        for btn in self.buttons:
+            action = btn.handle_event(event)
+            if action:
+                return action
+        return None
+
+    def render(self, sim_state):
+        """Draws the full UI."""
+        self.screen.fill(constants.COLOR_BG)
+        
+        # Update Log Panel Content
+        self.log_panel.update_logs(sim_state.event_log)
+        
+        # Draw Panels
+        self._draw_left_panel(sim_state)
+        
+        if self.show_attributes:
+            self._draw_attributes_modal(sim_state)
+        else:
+            self.log_panel.draw(self.screen)
+            
+        self._draw_right_panel(sim_state)
+        
+        pygame.display.flip()
+
+    def toggle_attributes(self):
+        self.show_attributes = not self.show_attributes
+
+    def _draw_attributes_modal(self, sim_state):
+        """Draws the detailed attributes overlay in the center panel."""
+        # Draw Background
+        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
+        
         agent = sim_state.agent
         
-        # Helper to draw a column of text
+        # Helper to draw a column
         def draw_column(title, lines, x, y):
-            title_surf = self.font.render(title, True, constants.COLOR_ACCENT)
+            title_surf = self.font_header.render(title, True, constants.COLOR_ACCENT)
             self.screen.blit(title_surf, (x, y))
-            y += 30
+            y += 40
             for line in lines:
-                text_surf = self.font.render(line, True, constants.COLOR_TEXT)
+                text_surf = self.font_main.render(line, True, constants.COLOR_TEXT)
                 self.screen.blit(text_surf, (x, y))
-                y += 25
+                y += 30
 
-        # Column 1: Status & Identity
+        # Layout Columns within Center Panel
+        col_width = self.rect_center.width // 3
+        start_x = self.rect_center.x + 20
+        start_y = 50
+        
+        # Column 1: Identity
         bio_lines = [
-            f"Name: {agent.first_name} {agent.last_name}",
-            f"Age: {agent.age}",
-            f"Money: ${agent.money}",
-            f"Job: {agent.job['title'] if agent.job else 'Unemployed'}",
-            "---",
             f"Gender: {agent.gender}",
             f"Origin: {agent.city}, {agent.country}",
             f"Height: {agent.height_cm} cm",
@@ -126,11 +140,10 @@ class Renderer:
             f"Skin: {agent.skin_tone}",
             f"Sexuality: {agent.sexuality}"
         ]
-        draw_column("Status & Identity", bio_lines, 50, 50)
+        draw_column("Identity", bio_lines, start_x, start_y)
 
-        # Column 2: Physical Stats
+        # Column 2: Physical
         phys_lines = [
-            f"Health: {agent.health}",
             f"Strength: {agent.strength}",
             f"Athleticism: {agent.athleticism}",
             f"Endurance: {agent.endurance}",
@@ -139,12 +152,10 @@ class Renderer:
             f"Fertility: {agent.fertility}",
             f"Libido: {agent.libido}"
         ]
-        draw_column("Physical", phys_lines, 300, 50)
+        draw_column("Physical", phys_lines, start_x + col_width, start_y)
 
-        # Column 3: Personality & Hidden
+        # Column 3: Personality
         pers_lines = [
-            f"Smarts: {agent.smarts}",
-            f"Looks: {agent.looks}",
             f"Discipline: {agent.discipline}",
             f"Willpower: {agent.willpower}",
             f"Generosity: {agent.generosity}",
@@ -153,16 +164,58 @@ class Renderer:
             f"Karma: {agent.karma}",
             f"Luck: {agent.luck}"
         ]
-        draw_column("Personality", pers_lines, 550, 50)
+        draw_column("Personality", pers_lines, start_x + (col_width * 2), start_y)
         
-        # Skills Section (Bottom)
+        # Skills (Bottom)
         if agent.skills:
             skill_lines = [f"{k}: {v}" for k, v in agent.skills.items()]
         else:
             skill_lines = ["No skills learned yet."]
         
-        # Moved down to avoid overlap with Identity column
-        draw_column("Skills", skill_lines, 50, 450)
+        draw_column("Skills", skill_lines, start_x, start_y + 400)
+
+    def _draw_left_panel(self, sim_state):
+        pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
+        
+        agent = sim_state.agent
+        
+        # Helper for text
+        x = self.rect_left.x + 20
+        y = 30
+        
+        def draw_text(text, font=self.font_main, color=constants.COLOR_TEXT):
+            surf = font.render(text, True, color)
+            self.screen.blit(surf, (x, y))
+            return surf.get_height() + 5
+
+        y += draw_text(f"{agent.first_name} {agent.last_name}", self.font_header, constants.COLOR_ACCENT)
+        y += 10
+        y += draw_text(f"Age: {agent.age}")
+        y += draw_text(f"Money: ${agent.money}", color=constants.COLOR_ACCENT)
+        y += draw_text(f"Job: {agent.job['title'] if agent.job else 'Unemployed'}")
+        y += 20
+        y += draw_text("--- Vitals ---", color=constants.COLOR_TEXT_DIM)
+        y += draw_text(f"Health: {agent.health}")
+        y += draw_text(f"Happiness: {agent.happiness}")
+        y += draw_text(f"Smarts: {agent.smarts}")
+        y += draw_text(f"Looks: {agent.looks}")
+        y += 20
+        y += draw_text("--- Physical ---", color=constants.COLOR_TEXT_DIM)
+        y += draw_text(f"Energy: {agent.endurance}")
+        y += draw_text(f"Fitness: {agent.athleticism}")
+
+    def _draw_right_panel(self, sim_state):
+        pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_right, 1)
+        
+        # Draw Header
+        header = self.font_header.render("Actions", True, constants.COLOR_TEXT)
+        self.screen.blit(header, (self.rect_right.x + 20, 15))
+        
+        # Draw Buttons
+        for btn in self.buttons:
+            btn.draw(self.screen)
 
     def quit(self):
         pygame.quit()

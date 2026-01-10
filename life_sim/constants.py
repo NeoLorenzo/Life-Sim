@@ -5,23 +5,36 @@ Static values that do not change between simulation runs.
 """
 
 # Window Settings
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-WINDOW_TITLE = "Life-Sim MVP 0.1"
+SCREEN_WIDTH = 1600
+SCREEN_HEIGHT = 900
+WINDOW_TITLE = "Life-Sim MVP 0.5"
 FPS = 60
 
+# Layout Dimensions
+PANEL_LEFT_WIDTH = 300
+PANEL_RIGHT_WIDTH = 300
+# Center panel takes the remaining width
+
 # Colors (R, G, B)
-COLOR_BG = (30, 30, 30)
-COLOR_TEXT = (240, 240, 240)
+COLOR_BG = (20, 20, 20)           # Main Window Background
+COLOR_PANEL_BG = (40, 40, 40)     # Side Panels
+COLOR_LOG_BG = (10, 10, 10)       # Center Log Background
+COLOR_BORDER = (60, 60, 60)       # Panel Borders
+
+COLOR_TEXT = (220, 220, 220)
+COLOR_TEXT_DIM = (150, 150, 150)
 COLOR_ACCENT = (100, 200, 100)
 COLOR_DEATH = (200, 50, 50)
 
+COLOR_BTN_IDLE = (60, 60, 60)
+COLOR_BTN_HOVER = (80, 80, 80)
+COLOR_BTN_CLICK = (100, 100, 100)
+
 # UI Settings
-LOG_FONT_SIZE = 18
-LOG_X = 300
-LOG_Y = 50
-LOG_LINE_HEIGHT = 25
-MAX_LOG_LINES = 20
+FONT_SIZE_MAIN = 20
+FONT_SIZE_HEADER = 24
+FONT_SIZE_LOG = 18
+LOG_LINE_HEIGHT = 24
 
 # File Paths
 LOG_DIR = "logs"

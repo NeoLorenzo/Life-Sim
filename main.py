@@ -54,22 +54,25 @@ def main():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_TAB:
-                        renderer.toggle_view()
-                    elif event.key == pygame.K_SPACE:
+                
+                # Pass event to UI
+                action_id = renderer.handle_event(event)
+                
+                if action_id:
+                    logger.info(f"Action triggered: {action_id}")
+                    if action_id == "AGE_UP":
                         logic.process_turn(sim_state)
-                    elif event.key == pygame.K_w:
-                        logic.work(sim_state)
-                    elif event.key == pygame.K_j:
+                    elif action_id == "FIND_JOB":
                         logic.find_job(sim_state)
-                    elif event.key == pygame.K_s:
+                    elif action_id == "STUDY":
                         logic.study(sim_state)
-                    elif event.key == pygame.K_d:
+                    elif action_id == "WORK":
+                        logic.work(sim_state)
+                    elif action_id == "DOCTOR":
                         logic.visit_doctor(sim_state)
-            
-            # Update (No continuous update for this MVP, only event-driven)
-            
+                    elif action_id == "TOGGLE_ATTR":
+                        renderer.toggle_attributes()
+
             # Render
             renderer.render(sim_state)
             
