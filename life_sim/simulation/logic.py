@@ -40,7 +40,9 @@ def process_turn(sim_state: SimState):
     agent.health = max(0, agent.health - decay)
     
     # 3. Generate Event Log
-    sim_state.add_log(f"--- Age {agent.age} ---", constants.COLOR_LOG_HEADER)
+    # Start the new year bucket
+    sim_state.start_new_year(agent.age)
+    
     if decay > 0:
         sim_state.add_log(f"Health declined by {decay}.", constants.COLOR_LOG_NEGATIVE)
     else:

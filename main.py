@@ -56,7 +56,7 @@ def main():
                     running = False
                 
                 # Pass event to UI
-                action_id = renderer.handle_event(event)
+                action_id = renderer.handle_event(event, sim_state)
                 
                 if action_id:
                     logger.info(f"Action triggered: {action_id}")

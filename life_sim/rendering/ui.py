@@ -47,69 +47,72 @@ class LogPanel:
     def __init__(self, x, y, w, h, font):
         self.rect = pygame.Rect(x, y, w, h)
         self.font = font
-        self.scroll_offset = 0 # 0 means showing the latest (bottom)
-        self.logs = []
+        self.scroll_offset = 0 
+        self.logs = [] # List of dicts from get_flat_log_for_rendering
         self.total_content_height = 0
 
     def update_logs(self, logs):
         self.logs = logs
         self.total_content_height = len(logs) * constants.LOG_LINE_HEIGHT
 
-    def handle_event(self, event):
-        """Handles mouse wheel scrolling."""
+    def handle_event(self, event, sim_state):
+        """Handles mouse wheel scrolling and clicking."""
         if event.type == pygame.MOUSEWHEEL:
-            # Only scroll if mouse is over the panel
             mouse_pos = pygame.mouse.get_pos()
             if self.rect.collidepoint(mouse_pos):
-                # Scroll speed (Inverted direction)
                 self.scroll_offset += event.y * constants.LOG_LINE_HEIGHT
-                
-                # Clamp scrolling
-                # Min: 0 (Bottom of log)
-                # Max: Content Height - Panel Height (Top of log)
                 max_scroll = max(0, self.total_content_height - self.rect.height)
                 self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
+                
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1 and self.rect.collidepoint(event.pos):
+                # Calculate which line was clicked
+                # We need to reverse-engineer the Y position logic from draw()
+                # This is tricky because draw() calculates start_y dynamically.
+                # Let's recalculate start_y here.
+                
+                visible_height = self.rect.height
+                if self.total_content_height < visible_height:
+                    start_y = self.rect.y
+                else:
+                    start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
+                
+                # Relative Y click
+                click_y = event.pos[1]
+                
+                # Find the index
+                # line_y = start_y + (index * height)
+                # index = (click_y - start_y) // height
+                
+                clicked_index = int((click_y - start_y) // constants.LOG_LINE_HEIGHT)
+                
+                if 0 <= clicked_index < len(self.logs):
+                    item = self.logs[clicked_index]
+                    if item["is_header"]:
+                        sim_state.toggle_year(item["index"])
 
     def draw(self, screen):
-        # Draw Background
         pygame.draw.rect(screen, constants.COLOR_LOG_BG, self.rect)
-        
-        # Create a clipping area so text doesn't spill out
         old_clip = screen.get_clip()
         screen.set_clip(self.rect)
         
-        # Calculate start position
-        # We want to render from the bottom up if scroll is 0
-        # But standard rendering is top-down.
-        
-        # Let's render top-down based on scroll.
-        # If scroll_offset is 0, we want to see the LAST lines.
-        # So y_start should be such that the last line is at the bottom.
-        
         visible_height = self.rect.height
-        
-        # Y position of the very first log line relative to panel top
-        # If total height < visible, start at top.
-        # If total height > visible, start at (visible - total) + scroll_offset
-        
         if self.total_content_height < visible_height:
             start_y = self.rect.y
         else:
-            # Default: align bottom of content to bottom of panel
-            # scroll_offset moves it DOWN (showing earlier logs)
             start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
 
         y = start_y
-        for line_data in self.logs:
-            text, color = line_data
-            # Optimization: Only draw if within vertical bounds
+        for item in self.logs:
             if y + constants.LOG_LINE_HEIGHT > self.rect.y and y < self.rect.bottom:
-                text_surf = self.font.render(text, True, color)
-                screen.blit(text_surf, (self.rect.x + 10, y))
+                # Draw expand/collapse indicator for headers
+                prefix = ""
+                if item["is_header"]:
+                    prefix = "[-] " if item["expanded"] else "[+] "
+                
+                text_surf = self.font.render(prefix + item["text"], True, item["color"])
+                screen.blit(text_surf, (self.rect.x + 10 + item["indent"], y))
             y += constants.LOG_LINE_HEIGHT
             
-        # Restore clip
         screen.set_clip(old_clip)
-        
-        # Draw Border
         pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)

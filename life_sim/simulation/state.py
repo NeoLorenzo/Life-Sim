@@ -93,10 +93,94 @@ class SimState:
     def __init__(self, config: dict):
         self.config = config
         self.agent = Agent(config["agent"])
-        self.event_log = [("Simulation started.", constants.COLOR_TEXT)]
+        
+        # Structure: List of dictionaries
+        # [
+        #   {"header": ("--- Age 0 ---", COLOR), "events": [("Born", COLOR), ...], "expanded": False},
+        #   ...
+        # ]
+        self.history = []
+        
+        # Buffer for the current year being simulated
+        self.current_year_data = {
+            "header": ("--- Simulation Start ---", constants.COLOR_LOG_HEADER),
+            "events": [("Simulation started.", constants.COLOR_TEXT)],
+            "expanded": True
+        }
+
+    def start_new_year(self, age):
+        """Finalizes the current year and starts a new one."""
+        # Archive current year (collapse it by default)
+        self.current_year_data["expanded"] = False
+        self.history.append(self.current_year_data)
+        
+        # Start new year
+        self.current_year_data = {
+            "header": (f"--- Age {age} ---", constants.COLOR_LOG_HEADER),
+            "events": [],
+            "expanded": True
+        }
 
     def add_log(self, message: str, color=None):
-        """Adds a message to the in-game event log."""
+        """Adds a message to the current year's event log."""
         if color is None:
             color = constants.COLOR_TEXT
-        self.event_log.append((message, color))
+        self.current_year_data["events"].append((message, color))
+        
+    def get_flat_log_for_rendering(self):
+        """
+        Returns a flat list of (text, color, indent_level, is_header, year_index) 
+        for the UI to render.
+        """
+        flat = []
+        
+        # 1. Past Years
+        for i, year in enumerate(self.history):
+            # Header
+            flat.append({
+                "text": year["header"][0],
+                "color": year["header"][1],
+                "indent": 0,
+                "is_header": True,
+                "index": i,
+                "expanded": year["expanded"]
+            })
+            # Events (if expanded)
+            if year["expanded"]:
+                for msg, col in year["events"]:
+                    flat.append({
+                        "text": msg,
+                        "color": col,
+                        "indent": 20,
+                        "is_header": False,
+                        "index": None
+                    })
+                    
+        # 2. Current Year (Always show header + events)
+        curr = self.current_year_data
+        flat.append({
+            "text": curr["header"][0],
+            "color": curr["header"][1],
+            "indent": 0,
+            "is_header": True,
+            "index": "CURRENT", # Special marker
+            "expanded": curr["expanded"]
+        })
+        if curr["expanded"]:
+            for msg, col in curr["events"]:
+                flat.append({
+                    "text": msg,
+                    "color": col,
+                    "indent": 20,
+                    "is_header": False,
+                    "index": None
+                })
+                
+        return flat
+        
+    def toggle_year(self, index):
+        """Toggles the expansion state of a historical year."""
+        if index == "CURRENT":
+            self.current_year_data["expanded"] = not self.current_year_data["expanded"]
+        elif 0 <= index < len(self.history):
+            self.history[index]["expanded"] = not self.history[index]["expanded"]

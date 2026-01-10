@@ -100,12 +100,14 @@ class Renderer:
                 self.buttons[cat].append(btn)
                 current_y += btn_h + gap
 
-    def handle_event(self, event):
+    def handle_event(self, event, sim_state=None):
         """
         Processes input events.
         """
-        # Pass to LogPanel (Scrolling)
-        self.log_panel.handle_event(event)
+        # Pass to LogPanel (Scrolling + Clicking headers)
+        # We need sim_state to toggle years
+        if sim_state:
+            self.log_panel.handle_event(event, sim_state)
         
         # 1. Check Tabs
         for tab in self.tabs:
@@ -128,7 +130,8 @@ class Renderer:
         self.screen.fill(constants.COLOR_BG)
         
         # Update Log Panel Content
-        self.log_panel.update_logs(sim_state.event_log)
+        # Now we pass the structured data generator
+        self.log_panel.update_logs(sim_state.get_flat_log_for_rendering())
         
         # Draw Panels
         self._draw_left_panel(sim_state)
