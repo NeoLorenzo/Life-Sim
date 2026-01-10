@@ -37,6 +37,23 @@
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
+### Phase 0.5: UI Overhaul & UX Polish
+*   **Full-Screen Layout:**
+    *   **Responsive Design:** The application runs in full-screen mode (or maximized window), utilizing the entire display area.
+    *   **Three-Panel Architecture:**
+        *   **Left Panel (Status):** Fixed sidebar containing the Agent's Portrait (placeholder), Core Stats (Health, Happiness, etc.), and Financial Summary.
+        *   **Center Panel (Narrative):** The primary focus. A large, scrollable history feed that resembles a social media timeline or chat log.
+            *   **Rich Text:** Events are color-coded (e.g., Red for Danger, Green for Money).
+            *   **Interactive Elements:** Past years are grouped; clicking a year expands/collapses its details.
+        *   **Right Panel (Action Hub):** A dynamic menu system for "Activities," "Assets," "Relationships," and "Career."
+            *   **Contextual Buttons:** The "Age Up" button is prominent and always accessible at the bottom.
+*   **Navigation & Controls:**
+    *   **Mouse Support:** Full click/scroll support for the history log and menus (moving away from keyboard-only shortcuts).
+    *   **Modal Windows:** Pop-up dialogs for complex interactions (e.g., "Visit Doctor" opens a modal with treatment options and prices).
+*   **Visual Polish:**
+    *   **Theming:** Consistent color palette (Dark Mode default) with distinct visual hierarchies.
+    *   **Typography:** Use of legible, scalable fonts for the narrative log to ensure readability on high-res screens.
+
 ### Phase 1: Genetics, Growth & Skills
 *   **Aging & Mortality:**
     *   **Declining Vitality:** Maximum Health capacity decreases annually (e.g., Max Health is 100 at age 20, but only 60 at age 80).
@@ -54,79 +71,115 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Manual Character Creator:** A UI screen to manually select Name, Appearance, and Attributes before starting the simulation.
 
 ### Phase 2: Social Web & Relationships
-*   **Family Generation:** Procedural creation of parents and siblings with genetic stat inheritance.
+*   **Family Generation:** Procedural creation of parents, stepparents, and siblings with genetic stat inheritance.
 *   **Relationship Dynamics:**
-    *   **Interactions:** Spend time, conversation, ask for money, argue, insult.
+    *   **Interactions:** Spend time, conversation, ask for money, argue, insult, prank, rumor spreading.
     *   **Status:** Relationship bars (0-100) that fluctuate based on interactions and random events.
 *   **Romance:**
-    *   **Dating:** Dating apps, blind dates, and random encounters.
-    *   **Partnership:** Engagement, marriage (with prenups), and divorce settlements.
+    *   **Dating:** Dating apps, blind dates, hookups, and random encounters.
+    *   **Partnership:** Engagement, marriage (with prenups), eloping, and divorce settlements.
+    *   **Cheating:** Affairs, paternity tests, and confrontation mechanics.
 *   **Progeny:**
-    *   **Reproduction:** Pregnancy mechanics, birth events, and adoption systems.
-    *   **Parenting:** Interactions with offspring affecting their future stats.
-*   **Social Circles:** Friends, best friends, enemies, and workplace cliques.
-*   **Pets:** Adoption (shelter/breeder), exotic pets, and pet interactions/health.
+    *   **Reproduction:** Pregnancy mechanics, birth events, IVF, sperm donors, surrogacy, and adoption systems.
+    *   **Parenting:** Interactions with offspring affecting their future stats; disowning children.
+*   **Social Circles:** Friends, best friends, enemies, workplace cliques, and supervisors.
+*   **Pets:** Adoption (shelter/breeder), exotic pets (tigers, monkeys), pet interactions, and veterinary health.
 
 ### Phase 3: Assets, Economy & Lifestyle
-*   **Real Estate:**
+*   **Real Estate & Landlord System:**
     *   **Market:** Dynamic housing market with varying condition and prices.
     *   **Ownership:** Mortgages, cash purchases, selling, and flipping houses.
-    *   **Maintenance:** Upkeep costs, renovations, and random disasters (fires, floods).
-*   **Vehicles:** Purchasing new/used cars, maintenance costs, and breakdown events.
-*   **Personal Assets:** Jewelry, heirlooms, and musical instruments.
+    *   **Landlord:** Renting out properties, screening tenants, evictions, and handling maintenance requests.
+    *   **Upgrades:** Adding pools, gyms, or renovations to increase value.
+*   **Vehicles:** Purchasing new/used cars, boats, and aircraft; maintenance costs and breakdown events.
+*   **Personal Assets:**
+    *   **Jewelry:** Buying/selling rings, necklaces (market fluctuation).
+    *   **Heirlooms:** Rare items passed down through generations.
+    *   **Museum:** Curating a collection of taxidermy or rare artifacts.
 *   **Financial Management:**
     *   **Banking:** Savings accounts, debt management, and student loans.
     *   **Gambling:** Casino games (Blackjack, Horse Racing), Lottery, and addiction mechanics.
-    *   **Taxation:** Annual tax rates based on income brackets and location.
+    *   **Taxation:** Annual tax rates based on income brackets and location; tax evasion risks.
 
 ### Phase 4: Education, Career & Fame
 *   **Education System:**
-    *   **Primary/Secondary:** Public vs. Private schools, study habits, extracurriculars.
-    *   **Higher Ed:** University majors, scholarships, student loans, and Greek life.
-    *   **Graduate:** Law School, Medical School, Business School, and PhD programs.
+    *   **Primary/Secondary:** Public vs. Private schools, study habits, extracurriculars, cheating on tests, and popularity.
+    *   **Higher Ed:** University majors, scholarships, student loans, Greek life (Fraternities/Sororities).
+    *   **Graduate:** Law School, Medical School, Business School, Pharmacy, Nursing, and PhD programs.
 *   **Advanced Careers:**
-    *   **Specialty Paths:** Military service (deployment logic), Politics (campaigns), and Corporate ladders.
-    *   **Performance:** Musician (bands/solo), Actor (auditions), and Professional Athlete (drafts/stats).
+    *   **Specialty Paths:** Military service (deployment logic/rank), Politics (campaigns/elections), and Corporate ladders.
+    *   **Performance:** Musician (bands/solo/contracts), Actor (auditions/agents), and Professional Athlete (drafts/stats/championships).
+    *   **Modeling:** Auditions, photoshoots, and runway gigs.
 *   **Fame System:**
-    *   **Social Media:** Platforms, followers, viral posts, and verification.
-    *   **Publicity:** Talk shows, commercials, photoshoots, and scandals.
+    *   **Social Media:** Platforms, followers, viral posts, verification, and monetization.
+    *   **Publicity:** Talk shows, commercials, photoshoots, scandals, and writing books.
 
 ### Phase 5: Activities, Crime & Health
 *   **Health & Wellness:**
-    *   **Medical:** Plastic surgery, fertility treatments, gender reassignment, and alternative medicine.
+    *   **Medical:** Plastic surgery (botched risks), fertility treatments, gender reassignment, and alternative medicine (acupuncture/chiropractor).
     *   **Mental Health:** Therapy, psychiatry, and meditation.
     *   **Addiction:** Alcohol and drug dependency mechanics with rehab options.
-    *   **Fitness:** Gym, martial arts, and walks.
+    *   **Fitness:** Gym, martial arts, walks, and gardening.
+    *   **Salon & Spa:** Tanning, manicures, and massages.
 *   **Crime & Justice:**
-    *   **Activities:** Shoplifting, burglary, grand theft auto, embezzlement, and violent crimes.
-    *   **Legal System:** Police encounters, lawyers, trials, and sentencing.
-    *   **Prison:** Prison riots, gangs, escape attempts, and parole boards.
+    *   **Activities:** Shoplifting, burglary, grand theft auto, embezzlement, bank robbery, train robbery, and murder.
+    *   **Legal System:** Police encounters, lawyers (public defender vs expensive), trials, and sentencing.
+    *   **Prison:** Prison riots, gangs, escape attempts, appeals, and parole boards.
 *   **Leisure:**
-    *   **Travel:** Vacations (First class/Economy), cruises, and emigration.
-    *   **Hobbies:** Learning instruments, gardening, reading.
+    *   **Travel:** Vacations (First class/Economy), cruises, and emigration (legal/illegal).
+    *   **Hobbies:** Learning instruments, reading books, clubbing, and cinema.
 
 ### Phase 6: Legacy & Meta-Game
-*   **Inheritance:** Wills, estate division, and estate taxes.
+*   **Inheritance:** Wills, estate division, charity donations, and estate taxes.
 *   **Dynasty:** "Continue as Child" mechanic to play through multiple generations.
-*   **Achievements:** Tracking ribbons and trophies for specific life outcomes.
+*   **Achievements:** Tracking ribbons (e.g., "Mediocre", "Loaded", "Lustful") and trophies for specific life outcomes.
 *   **Graveyard:** Persistent records of past lives and epitaphs.
-*   **Technical:** Save/Load functionality and data visualization dashboards.
+*   **Technical:** Save/Load functionality, data visualization dashboards, and "God Mode" (editing NPC stats).
 
 ### Phase 7: Developmental Psychology & Genetics
 *   **Genotype vs. Phenotype System:**
-    *   **Genetic Potential:** Agents spawn with a "Genetic Range" for attributes (e.g., IQ Potential: 110-130, Height Potential: 175cm-180cm).
-    *   **Realized Attributes:** Actual stats start low and grow based on environmental factors (Nutrition, Education, Parenting) within the genetic bounds.
-    *   **Hard vs. Soft Limits:**
-        *   *Hard:* Height, Eye Color, Bone Structure.
-        *   *Soft:* Weight (Metabolism tendency), Intelligence (Neuroplasticity), Strength (Myostatin levels).
+    *   **Genetic Potential:** Agents spawn with a "Genetic Range" for attributes.
+    *   **Realized Attributes:** Actual stats start low and grow based on environmental factors within genetic bounds.
 *   **Developmental Stages (0-18 Years):**
-    *   **Infancy (0-2):** Motor skill development, "Trust vs. Mistrust" (Parental bonding mechanics).
-    *   **Early Childhood (3-6):** Language acquisition, curiosity events, and potty training (affects Discipline).
-    *   **School Age (7-12):** Socialization, academic foundations, and bullying encounters.
-    *   **Adolescence (13-18):** Puberty mechanics, rebellion, and risk-taking behaviors.
+    *   **Infancy (0-2):** Motor skill development, "Trust vs. Mistrust".
+    *   **Early Childhood (3-6):** Language acquisition, curiosity events.
+    *   **School Age (7-12):** Socialization, academic foundations, and bullying.
+    *   **Adolescence (13-18):** Puberty mechanics, rebellion, and risk-taking.
 *   **Emergent Identity:**
-    *   **Discovery Mechanics:** Traits like Sexuality, Religiousness, and Political alignment are not pre-set but emerge dynamically based on reactions to formative events (e.g., "First Crush" scenarios).
-    *   **Core Memories:** Significant childhood events that permanently buff/debuff specific personality traits (e.g., "Won the Science Fair" -> Permanent Confidence boost).
+    *   **Discovery Mechanics:** Traits like Sexuality and Religiousness emerge dynamically.
+    *   **Core Memories:** Significant childhood events that permanently buff/debuff personality.
+
+### Phase 8: Special Careers & Organizations
+*   **Royalty:**
+    *   **Titles:** Born into or marrying into royalty (Baron to King/Queen).
+    *   **Duties:** Public service, respect meter, laws, and execution power.
+    *   **Exile:** Abdication or being overthrown.
+*   **Organized Crime (Mafia):**
+    *   **Hierarchy:** Joining a family, rising from Soldier to Godfather.
+    *   **Rackets:** Extortion, whacking, ratting out the family, and turf wars.
+*   **Business Tycoon:**
+    *   **Startup:** Creating a company, naming it, and choosing a sector.
+    *   **Management:** Product design, marketing, opening factories, and selling the company.
+*   **Cults:**
+    *   **Leadership:** Starting a commune, recruiting followers, and choosing a doctrine.
+    *   **Events:** Ceremonies, compounds, and standoffs with authorities.
+*   **Secret Agent:**
+    *   **Espionage:** Infiltrating enemy networks, hacking, and assassination missions.
+*   **Astronaut:**
+    *   **Space Academy:** Flight training and fitness tests.
+    *   **Missions:** Spacewalks, research, and alien encounters.
+*   **Street Hustler:**
+    *   **Life on the Streets:** Busking, panhandling, and street scams (Three-card Monte).
+
+### Phase 9: Interactive Systems & Mini-Games
+*   **Skill-Based Challenges:**
+    *   **Burglary:** Maze-based mini-game to avoid dogs/owners and steal loot.
+    *   **Prison Escape:** Grid-based puzzle to evade guards.
+    *   **Military Deployment:** Minesweeper-style logic game for survival.
+    *   **Intelligence:** IQ Tests and memory patterns.
+*   **Supernatural Events:**
+    *   **Paranormal:** Haunted houses, exorcisms, and ghost encounters.
+    *   **Sci-Fi:** Time travel (Age reversal) and alien abductions.
 
 ## ⚖️ Design Philosophy & Abstractions
 
