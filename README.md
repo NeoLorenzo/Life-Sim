@@ -75,13 +75,13 @@
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
-### Phase 0.5: UX Polish & Advanced UI
+### UX Polish & Advanced UI
 *   **Advanced Visualization:**
     *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
 *   **Dynamic Menus:**
     *   **Responsive Design:** Support for true full-screen resizing.
 
-### Phase 1: Genetics, Growth & Identity
+### Genetics, Growth & Identity
 *   **Aging & Mortality:**
     *   **Declining Vitality:** Maximum Health capacity decreases annually.
     *   **The Century Limit:** A hard mortality cap ensures Maximum Health reaches 0 at age 100.
@@ -116,7 +116,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Socialized Services:** Logic checking the `Country_ID`. If the agent is born in specific countries (e.g., UK, Canada, Norway), "Visit Doctor" and "University" actions are free (tax-funded). In others (USA), they incur high costs.
     *   **Royalty RNG:** In monarchies (Japan, UK, Saudi Arabia, etc.), a tiny RNG chance to be born into the Royal Family, overriding standard parents with Royal NPCs.
 
-### Phase 2: Social Web & Relationships
+### Social Web & Relationships
 *   **Family Generation:** Procedural creation of parents, stepparents, and siblings.
 *   **Relationship Dynamics:**
     *   **Interactions:** Spend time, conversation, argue, insult, prank, rumor spreading.
@@ -166,7 +166,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **The Rumble:** A specific "Attack" option for Enemies. Unlike standard assaults, this is a mutual combat event.
     *   **Lethal Force:** The ability to attempt to murder an enemy directly (without a hitman). Success depends on Strength/Weapon, but carries the highest risk of prison.
 
-### Phase 3: Assets, Economy & Lifestyle
+### Assets, Economy & Lifestyle
 *   **Real Estate & Landlord System:**
     *   **Market:** Dynamic housing market.
     *   **Ownership:** Mortgages, cash purchases, flipping.
@@ -203,7 +203,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Drive:** "Go for a Drive" action for owned vehicles. Increases Happiness but carries a risk of "Car Accident" events (Health damage/Lawsuits).
     *   **Play:** Specific interaction for pets (e.g., "Play with Dog") distinct from walking, essential for maintaining the Pet Relationship bar.
 
-### Phase 4: Education, Career & Fame
+### Education, Career & Fame
 *   **Education System:**
     *   **Primary/Secondary:** Public vs. Private, study habits, extracurriculars.
     *   **Academic Authority:** Specific interactions with Teachers/Professors (Suck up, Flirt, Insult). Poor relationships lead to bad grades or suspension.
@@ -253,7 +253,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Side Hustles:** Adults can work "Freelance" apps (Ride Share, Food Delivery) alongside their full-time job.
     *   **Risk:** High stress accumulation and random events (e.g., "Passenger vomited in your car").
 
-### Phase 5: Activities, Crime & Health
+### Activities, Crime & Health
 *   **Health & Wellness:**
     *   **Specific Pathology:** Instead of generic "Health Low," agents contract specific ailments (High Blood Pressure, Bunions, Cancer, Erectile Dysfunction) requiring specific treatments.
     *   **Medical:** Plastic surgery, fertility, gender reassignment.
@@ -321,7 +321,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Political Asylum:** If the agent lives in a country with low "Stability" or is being persecuted, they can apply for Asylum in another country (bypassing financial requirements).
     *   **Deportation:** If an agent emigrates illegally or commits crimes on a Visa, they are forcibly returned to their spawn country.
 
-### Phase 6: Legacy & Meta-Game
+### Legacy & Meta-Game
 *   **End of Life Protocols:**
     *   **Funeral Planning:** Selecting method (Burial vs. Cremation), casket type, and location.
     *   **Attendees:** Logic determining who shows up based on Relationship stats (e.g., "Your ungrateful son didn't attend").
@@ -338,7 +338,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **God Mode (NPC Editor):** An interface to edit the stats of existing NPCs (e.g., lowering a Boss's "Professionalism" or a Spouse's "Willpower").
     *   **Surrender:** A menu option to end the current life immediately (Suicide), triggering the End of Life sequence without waiting for natural death.
 
-### Phase 7: Psychology, Scenarios & Genetics
+### Psychology, Scenarios & Genetics
 *   **The Scenario Engine (Moral Dilemmas):**
     *   **Random Pop-ups:** A system that interrupts the "Age Up" flow with multiple-choice scenarios.
     *   **Moral Choices:** *Example:* "You find a wallet with $100." (Keep it / Return it / Leave it).
@@ -356,7 +356,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Discovery:** Sexuality/Religiousness emerge dynamically.
     *   **Core Memories:** Events permanently buffing/debuffing personality.
 
-### Phase 8: Special Careers & Organizations
+### Special Careers & Organizations
 *   **Royalty:**
     *   **Titles:** Baron to King/Queen.
     *   **Duties:** Public service, laws, executions.
@@ -378,7 +378,7 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Street Hustler:**
     *   **Streets:** Busking, panhandling, scams.
 
-### Phase 9: Interactive Systems & Mini-Games
+### Interactive Systems & Mini-Games
 *   **Skill-Based Challenges:**
     *   **Burglary:** Maze-based stealth game.
     *   **Prison Escape:** Grid-based puzzle.
@@ -470,9 +470,3 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     ```bash
     python main.py
     ```
-4.  **Controls:**
-    *   `SPACE`: Age Up (Next Year)
-    *   `J`: Find Job
-    *   `S`: Study
-    *   `W`: Work Overtime
-    *   `D`: Visit Doctor
