@@ -109,13 +109,25 @@ class Agent:
 
     def _recalculate_max_health(self):
         """
-        Calculates health cap based on age.
-        Formula: Quadratic decay ensuring 0 max_health at age 100.
-        Curve: 100 - (age^2 / 100)
+        Calculates health cap based on age using a 3-stage 'Prime of Life' curve.
+        1. Childhood (0-20): Grows from 70 to 100.
+        2. Prime (20-50): Stays at 100.
+        3. Senescence (50-100): Decays quadratically to 0.
         """
-        # Rule 8: Scientifically-grounded abstraction for Frailty/Senescence
-        decay = (self.age ** 2) / 100.0
-        self.max_health = int(max(0, 100 - decay))
+        if self.age < 20:
+            # Growth Phase: 70 base + 1.5 per year
+            self.max_health = int(70 + (1.5 * self.age))
+        elif self.age < 50:
+            # Prime Phase
+            self.max_health = 100
+        else:
+            # Senescence Phase: 100 - ((age - 50)^2 / 25)
+            # At age 50: 100 - 0 = 100
+            # At age 75: 100 - 25 = 75
+            # At age 100: 100 - 100 = 0
+            decay = ((self.age - 50) ** 2) / 25.0
+            self.max_health = int(max(0, 100 - decay))
+
         # Ensure current health never exceeds the new cap
         if self.health > self.max_health:
             self.health = self.max_health
