@@ -32,7 +32,6 @@
     *   **BMI:** Automatically calculated to track physical condition.
 *   **Aging & Mortality:**
     *   **The Century Limit:** A hard biological cap (`max_health`) decays quadratically ($100 - age^2/100$), ensuring mortality by age 100 regardless of medical intervention.
-    *   **Natural Decay:** Every year, current Health decreases by a random value between 0 and 5.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
 
 ### Economy & Career

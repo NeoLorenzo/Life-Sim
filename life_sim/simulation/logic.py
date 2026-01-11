@@ -57,21 +57,11 @@ def process_turn(sim_state: SimState):
         agent.money += salary
         sim_state.add_log(f"Earned ${salary} from {agent.job['title']}.", constants.COLOR_LOG_POSITIVE)
     
-    # 2. Stat Decay (Random 0-5 health loss per year)
-    # Rule 12: Uses global random which was seeded in main.py
-    decay = random.randint(0, 5)
-    agent.health = max(0, agent.health - decay)
-    
-    # 3. Generate Event Log
+    # 2. Generate Event Log
     # Start the new year bucket
     sim_state.start_new_year(agent.age)
-    
-    if decay > 0:
-        sim_state.add_log(f"Health declined by {decay}.", constants.COLOR_LOG_NEGATIVE)
-    else:
-        sim_state.add_log("You felt great this year.", constants.COLOR_LOG_POSITIVE)
 
-    # 4. Death Check
+    # 3. Death Check
     if agent.health <= 0:
         agent.is_alive = False
         sim_state.add_log("You have died.", constants.COLOR_DEATH)
