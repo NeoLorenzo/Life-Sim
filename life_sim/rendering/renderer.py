@@ -178,6 +178,7 @@ class Renderer:
             f"Height: {agent.height_cm} cm",
             f"Height Pot: {agent.genetic_height_potential} cm",
             f"Weight: {agent.weight_kg} kg",
+            f"BMI: {agent.bmi}",
             f"Eyes: {agent.eye_color}",
             f"Hair: {agent.hair_color}",
             f"Skin: {agent.skin_tone}",

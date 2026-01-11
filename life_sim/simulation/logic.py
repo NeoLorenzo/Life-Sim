@@ -48,7 +48,10 @@ def process_turn(sim_state: SimState):
         if random.random() < 0.33:
             agent.height_cm -= 1
 
-    # 1c. Process Salary
+    # 1c. Update Physique (Weight/BMI)
+    agent._recalculate_physique()
+
+    # 1d. Process Salary
     if agent.job:
         salary = agent.job['salary']
         agent.money += salary

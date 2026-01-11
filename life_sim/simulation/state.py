@@ -82,7 +82,12 @@ class Agent:
         reduction = (self.athleticism / 100.0) * 18.0 # Up to 18% reduction
         variance = random.uniform(-3.0, 5.0)
         self.body_fat = max(4.0, round(base_bf - reduction + variance, 1))
-        self.lean_mass = round(self.weight_kg * (1 - (self.body_fat / 100.0)), 1)
+        
+        # Initialize dynamic physique stats
+        self.lean_mass = 0
+        self.weight_kg = 0
+        self.bmi = 0
+        self._recalculate_physique()
         
         # Personality
         self.discipline = self._rand_attr(attr_config, "discipline")
@@ -118,6 +123,36 @@ class Agent:
     def _rand_attr(self, config, name):
         """Helper to get random attribute within config range."""
         return random.randint(config.get(f"{name}_min", 0), config.get(f"{name}_max", 100))
+
+    def _recalculate_physique(self):
+        """
+        Updates Lean Mass, Weight, and BMI based on current Height and Athleticism.
+        Uses a 'Lean Body Mass Index' (LBMI) abstraction.
+        """
+        # 1. Determine Base LBMI (Lean Mass / Height^2)
+        # Male range: 18 (Skinny) - 24 (Muscular)
+        # Female range: 15 (Skinny) - 21 (Muscular)
+        base_lbmi = 18.0 if self.gender == "Male" else 15.0
+        athletic_bonus = (self.athleticism / 100.0) * 6.0
+        current_lbmi = base_lbmi + athletic_bonus
+        
+        # 2. Calculate Lean Mass (LBMI * Height_m^2)
+        height_m = self.height_cm / 100.0
+        self.lean_mass = round(current_lbmi * (height_m ** 2), 1)
+        
+        # 3. Calculate Total Weight (Lean Mass + Body Fat)
+        # Weight = Lean / (1 - BF%)
+        bf_decimal = self.body_fat / 100.0
+        # Prevent division by zero or negative mass
+        if bf_decimal >= 1.0: bf_decimal = 0.99 
+        
+        self.weight_kg = round(self.lean_mass / (1 - bf_decimal), 1)
+        
+        # 4. Calculate BMI
+        if height_m > 0:
+            self.bmi = round(self.weight_kg / (height_m ** 2), 1)
+        else:
+            self.bmi = 0
 
 class SimState:
     """
