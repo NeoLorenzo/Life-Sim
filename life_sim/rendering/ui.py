@@ -52,8 +52,56 @@ class LogPanel:
         self.total_content_height = 0
 
     def update_logs(self, logs):
-        self.logs = logs
-        self.total_content_height = len(logs) * constants.LOG_LINE_HEIGHT
+        """
+        Processes raw logs into wrapped render lines.
+        """
+        self.logs = [] # We now render from self.render_lines, but keep this if needed
+        self.render_lines = []
+        
+        # Width available for text (rect width - padding)
+        max_width = self.rect.width - 20
+        space_w = self.font.size(' ')[0]
+        
+        for item in logs:
+            # Determine prefix for headers
+            prefix = ""
+            if item["is_header"]:
+                prefix = "[-] " if item["expanded"] else "[+] "
+            
+            full_text = prefix + item["text"]
+            indent = item["indent"]
+            
+            # Word Wrap Logic
+            words = full_text.split(' ')
+            current_line = []
+            current_w = 0
+            
+            for word in words:
+                word_w = self.font.size(word)[0]
+                
+                # Check if word fits
+                if current_w + word_w <= max_width - indent:
+                    current_line.append(word)
+                    current_w += word_w + space_w
+                else:
+                    # Push current line
+                    if current_line:
+                        self.render_lines.append({
+                            **item,
+                            "display_text": ' '.join(current_line)
+                        })
+                    # Start new line with current word
+                    current_line = [word]
+                    current_w = word_w + space_w
+            
+            # Push remaining
+            if current_line:
+                self.render_lines.append({
+                    **item,
+                    "display_text": ' '.join(current_line)
+                })
+
+        self.total_content_height = len(self.render_lines) * constants.LOG_LINE_HEIGHT
 
     def handle_event(self, event, sim_state):
         """Handles mouse wheel scrolling and clicking."""
@@ -66,28 +114,17 @@ class LogPanel:
                 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and self.rect.collidepoint(event.pos):
-                # Calculate which line was clicked
-                # We need to reverse-engineer the Y position logic from draw()
-                # This is tricky because draw() calculates start_y dynamically.
-                # Let's recalculate start_y here.
-                
                 visible_height = self.rect.height
                 if self.total_content_height < visible_height:
                     start_y = self.rect.y
                 else:
                     start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
                 
-                # Relative Y click
                 click_y = event.pos[1]
-                
-                # Find the index
-                # line_y = start_y + (index * height)
-                # index = (click_y - start_y) // height
-                
                 clicked_index = int((click_y - start_y) // constants.LOG_LINE_HEIGHT)
                 
-                if 0 <= clicked_index < len(self.logs):
-                    item = self.logs[clicked_index]
+                if 0 <= clicked_index < len(self.render_lines):
+                    item = self.render_lines[clicked_index]
                     if item["is_header"]:
                         sim_state.toggle_year(item["index"])
 
@@ -103,14 +140,10 @@ class LogPanel:
             start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
 
         y = start_y
-        for item in self.logs:
+        for item in self.render_lines:
             if y + constants.LOG_LINE_HEIGHT > self.rect.y and y < self.rect.bottom:
-                # Draw expand/collapse indicator for headers
-                prefix = ""
-                if item["is_header"]:
-                    prefix = "[-] " if item["expanded"] else "[+] "
-                
-                text_surf = self.font.render(prefix + item["text"], True, item["color"])
+                # Render the pre-wrapped text
+                text_surf = self.font.render(item["display_text"], True, item["color"])
                 screen.blit(text_surf, (self.rect.x + 10 + item["indent"], y))
             y += constants.LOG_LINE_HEIGHT
             

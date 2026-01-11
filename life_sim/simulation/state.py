@@ -170,9 +170,62 @@ class SimState:
         self.history = []
         
         # Buffer for the current year being simulated
+        # Generate Narrative Birth Message
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        birth_month = random.choice(months)
+        birth_day = random.randint(1, 28)
+        
+        pronoun = "He" if self.agent.gender == "Male" else "She"
+        possessive = "His" if self.agent.gender == "Male" else "Her"
+        obj_pronoun = "him" if self.agent.gender == "Male" else "her"
+
+        # 1. Appearance Reaction
+        if self.agent.looks > 85:
+            looks_txt = f"The doctor pauses. \"This might be the most beautiful baby I've ever seen.\""
+        elif self.agent.looks > 60:
+            looks_txt = f"The nurses are cooing over {possessive} {self.agent.eye_color.lower()} eyes."
+        elif self.agent.looks < 30:
+            looks_txt = f"The mother hesitates before holding {obj_pronoun}. \"{pronoun} has... character.\""
+        else:
+            looks_txt = f"{pronoun} has {possessive} mother's {self.agent.eye_color.lower()} eyes and {self.agent.hair_color.lower()} hair."
+
+        # 2. Physical/Strength Reaction
+        if self.agent.strength > 80:
+            phys_txt = f"{pronoun} is gripping the nurse's finger tightly. Surprisingly strong!"
+        elif self.agent.health < 40:
+            phys_txt = f"{pronoun} is breathing shallowly and looks quite frail."
+        else:
+            phys_txt = f"{pronoun} is a healthy size, weighing {self.agent.weight_kg}kg."
+
+        # 3. Personality/Behavior Reaction
+        if self.agent.craziness > 80:
+            pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
+        elif self.agent.discipline > 70:
+            pers_txt = f"{pronoun} is unusually calm, observing the room silently."
+        elif self.agent.smarts > 80:
+            pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
+        else:
+            pers_txt = f"{pronoun} is crying softly, looking for warmth."
+
+        # 4. Luck/Karma Flavor
+        if self.agent.luck > 90:
+            luck_txt = "A double rainbow appeared outside the hospital window just now."
+        elif self.agent.luck < 20:
+            luck_txt = "The hospital power flickered right as {pronoun} was delivered."
+        else:
+            luck_txt = f"Welcome to the world, {self.agent.first_name}."
+
         self.current_year_data = {
-            "header": ("--- Simulation Start ---", constants.COLOR_LOG_HEADER),
-            "events": [("Simulation started.", constants.COLOR_TEXT)],
+            "header": ("--- Life Begins ---", constants.COLOR_LOG_HEADER),
+            "events": [
+                (f"Name: {self.agent.first_name} {self.agent.last_name}", constants.COLOR_ACCENT),
+                (f"Born: {birth_month} {birth_day}, Year 0 in {self.agent.city}, {self.agent.country}", constants.COLOR_TEXT),
+                (f"Nurse: \"It's a {self.agent.gender}!\"", constants.COLOR_LOG_POSITIVE),
+                (looks_txt, constants.COLOR_TEXT),
+                (phys_txt, constants.COLOR_TEXT),
+                (pers_txt, constants.COLOR_TEXT),
+                (luck_txt, constants.COLOR_TEXT_DIM)
+            ],
             "expanded": True
         }
 
