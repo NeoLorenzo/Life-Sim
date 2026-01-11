@@ -18,8 +18,8 @@
     *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City drawn from configurable pools.
     *   **Appearance:** Tracks Eye Color, Hair Color, Skin Tone.
     *   **Anthropometry:**
-        *   **Height:** Randomized range (Male: 150-200cm, Female: 140-180cm).
-        *   **Weight:** Randomized range (Male: 60-100kg, Female: 45-80kg).
+        *   **Height:** Dynamic growth system. Agents start small, grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
+        *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
 *   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
     *   **Personality:** Discipline, Willpower, Generosity, Religiousness, Craziness.
@@ -28,9 +28,11 @@
     *   **Body Fat %:** Calculated dynamically based on Gender and Athleticism.
         *   *Formula:* `Base_BF (M:25/F:35) - (Athleticism% * 18) + Random_Variance(-3 to +5)`.
         *   *Constraint:* Minimum 4.0%.
-    *   **Lean Mass:** Calculated as `Weight_kg * (1 - Body_Fat%)`.
+    *   **Lean Mass:** Calculated dynamically (`LBMI * Height²`).
+    *   **BMI:** Automatically calculated to track physical condition.
 *   **Aging & Mortality:**
-    *   **Natural Decay:** Every year, Health decreases by a random value between 0 and 5.
+    *   **The Century Limit:** A hard biological cap (`max_health`) decays quadratically ($100 - age^2/100$), ensuring mortality by age 100 regardless of medical intervention.
+    *   **Natural Decay:** Every year, current Health decreases by a random value between 0 and 5.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
 
 ### Economy & Career
@@ -82,13 +84,6 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Responsive Design:** Support for true full-screen resizing.
 
 ### Genetics, Growth & Identity
-*   **Aging & Mortality:**
-    *   **Declining Vitality:** Maximum Health capacity decreases annually.
-    *   **The Century Limit:** A hard mortality cap ensures Maximum Health reaches 0 at age 100.
-    *   **Frailty:** Reduced health buffer makes minor events lethal in old age.
-*   **Genetics Engine:**
-    *   **Height Potential:** Agents grow towards a genetic max, then shrink in seniority.
-    *   **Dynamic Physiology:** Weight/muscle fluctuate based on Age, Athleticism, and Metabolism.
 *   **Legal Identity & Transition:**
     *   **Name Changes:** Ability to visit the courthouse to legally change First or Last name (e.g., to evade a bad reputation or after marriage).
     *   **Gender Identity:** A dedicated identity tab to socially transition (Transgender/Non-Binary) independent of medical surgery. This affects pronouns in the log and relationship reactions from conservative family members.
