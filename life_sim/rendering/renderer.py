@@ -46,6 +46,12 @@ class Renderer:
         self.tabs = []    # List[Button] (Using Button class for tabs)
         self.active_tab = "Main"
         
+        # Visibility Logic (Action ID -> Lambda accepting agent)
+        self.visibility_rules = {
+            "FIND_JOB": lambda agent: agent.age >= 16,
+            "WORK": lambda agent: agent.job is not None
+        }
+        
         self._init_ui_structure()
         
         self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
@@ -119,6 +125,12 @@ class Renderer:
         # 2. Check Buttons in Active Tab
         if self.active_tab in self.buttons:
             for btn in self.buttons[self.active_tab]:
+                # Check Visibility Rule
+                if sim_state:
+                    rule = self.visibility_rules.get(btn.action_id)
+                    if rule and not rule(sim_state.agent):
+                        continue
+
                 action = btn.handle_event(event)
                 if action:
                     return action
@@ -260,10 +272,24 @@ class Renderer:
             is_active = (tab.text == self.active_tab)
             tab.draw(self.screen, active_highlight=is_active)
         
-        # Draw Buttons for Active Tab
+        # Draw Buttons for Active Tab with Dynamic Layout
         if self.active_tab in self.buttons:
+            # Start Y position (below tabs)
+            current_y = self.rect_right.y + 50
+            gap = 10
+            
             for btn in self.buttons[self.active_tab]:
+                # Check Visibility
+                rule = self.visibility_rules.get(btn.action_id)
+                if rule and not rule(sim_state.agent):
+                    continue
+                
+                # Update Position (Dynamic Layout)
+                btn.rect.y = current_y
                 btn.draw(self.screen)
+                
+                # Advance Y
+                current_y += btn.rect.height + gap
 
     def quit(self):
         pygame.quit()
