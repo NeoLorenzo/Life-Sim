@@ -18,7 +18,7 @@
     *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City drawn from configurable pools.
     *   **Appearance:** Tracks Eye Color, Hair Color, Skin Tone.
     *   **Anthropometry:**
-        *   **Height:** Dynamic growth system. Agents start small, grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
+        *   **Height:** Dynamic growth system. Agents start small (~50cm), grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
         *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
 *   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
@@ -31,7 +31,10 @@
     *   **Lean Mass:** Calculated dynamically (`LBMI * Height²`).
     *   **BMI:** Automatically calculated to track physical condition.
 *   **Aging & Mortality:**
-    *   **The Century Limit:** A hard biological cap (`max_health`) decays quadratically ($100 - age^2/100$), ensuring mortality by age 100 regardless of medical intervention.
+    *   **The "Prime of Life" Curve:** `max_health` is not static.
+        *   *Childhood (0-20):* Capacity grows linearly from 70 to 100.
+        *   *Prime (20-50):* Capacity peaks at 100.
+        *   *Senescence (50+):* Capacity decays quadratically ($100 - (age-50)^2/25$), hitting 0 at age 100.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
     *   *Note:* Random annual health decay has been removed to pave the way for a specific pathology/disease system.
 
@@ -39,6 +42,7 @@
 *   **Job Market:**
     *   **Data Structure:** Jobs are defined in `config.json` with a `title`, `salary`, and `min_smarts`.
     *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is determined strictly by `Agent.smarts >= Job.min_smarts`.
+    *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
     *   **Income:** Salaries are added to `Agent.money` automatically during the `process_turn` (Age Up) phase.
 *   **Active Income (Overtime):**
     *   **Mechanic:** Employed agents can manually "Work Overtime."
@@ -52,7 +56,7 @@
     *   **Cap:** Smarts is clamped at 100.
 *   **Healthcare (Doctor):**
     *   **Cost:** Flat fee of **$100**.
-    *   **Effect:** Restores Health by a random value of **10 to 20** (up to `max_health`).
+    *   **Effect:** Restores Health by a random value of **10 to 20** (clamped to the current `max_health`).
     *   **Constraints:** Action fails if `Agent.money < 100`.
 *   **Toggle Attributes:**
     *   A UI-only action that pauses the log view to inspect the full list of 15+ agent attributes (Identity, Physical, Personality, Skills).
@@ -70,9 +74,10 @@
         *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
         *   **Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats (including BMI/Height Potential), and Personality.
     *   **Right Panel (300px):**
-        *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**) to support expanding gameplay features without clutter.
-        *   **Interactive Buttons:** Hover-responsive buttons for game actions.
-        *   **Feedback:** Buttons visually darken on hover (RGB 80,80,80).
+        *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
+        *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
+        *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
+        *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80).
 
 ## 🗺️ Roadmap (Planned Features)
 
