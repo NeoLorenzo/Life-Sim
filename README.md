@@ -33,6 +33,7 @@
 *   **Aging & Mortality:**
     *   **The Century Limit:** A hard biological cap (`max_health`) decays quadratically ($100 - age^2/100$), ensuring mortality by age 100 regardless of medical intervention.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
+    *   *Note:* Random annual health decay has been removed to pave the way for a specific pathology/disease system.
 
 ### Economy & Career
 *   **Job Market:**
@@ -51,8 +52,8 @@
     *   **Cap:** Smarts is clamped at 100.
 *   **Healthcare (Doctor):**
     *   **Cost:** Flat fee of **$100**.
-    *   **Effect:** Restores Health by a random value of **10 to 20**.
-    *   **Constraints:** Action fails if `Agent.money < 100`. Health is clamped at 100.
+    *   **Effect:** Restores Health by a random value of **10 to 20** (up to `max_health`).
+    *   **Constraints:** Action fails if `Agent.money < 100`.
 *   **Toggle Attributes:**
     *   A UI-only action that pauses the log view to inspect the full list of 15+ agent attributes (Identity, Physical, Personality, Skills).
 
@@ -64,9 +65,10 @@
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age, Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
-        *   **Rich Text Logging:** Events are color-coded for instant recognition: **Green** (Income/Positive), **Red** (Damage/Negative), **Blue** (Headers), and **White** (Neutral).
-        *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details, keeping the view clean.
-        *   **Attribute Modal:** An overlay rendering three columns of detailed stats when toggled.
+        *   **Narrative Engine:** Replaced generic start messages with a detailed "Birth Certificate" log, featuring randomized dates and flavor text reactive to the baby's stats (e.g., "Screaming uncontrollably" for high Craziness).
+        *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
+        *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
+        *   **Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats (including BMI/Height Potential), and Personality.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**) to support expanding gameplay features without clutter.
         *   **Interactive Buttons:** Hover-responsive buttons for game actions.
