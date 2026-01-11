@@ -35,8 +35,9 @@ class Button:
             color = constants.COLOR_BTN_IDLE
             text_color = constants.COLOR_TEXT
             
-        pygame.draw.rect(screen, color, self.rect)
-        pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
+        # Draw with rounded corners
+        pygame.draw.rect(screen, color, self.rect, border_radius=6)
+        pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1, border_radius=6)
         
         text_surf = self.font.render(self.text, True, text_color)
         text_rect = text_surf.get_rect(center=self.rect.center)

@@ -82,11 +82,11 @@ class Renderer:
         categories = {
             "Main": [
                 ("Age Up (+1 Year)", "AGE_UP"),
-                ("Find Job", "FIND_JOB"),
                 ("Study (Smarts)", "STUDY"),
-                ("Work Overtime", "WORK"),
                 ("Visit Doctor ($100)", "DOCTOR"),
-                ("Toggle Attributes", "TOGGLE_ATTR")
+                ("Find Job", "FIND_JOB"),
+                ("Work Overtime", "WORK"),
+                ("View Attributes", "TOGGLE_ATTR")
             ],
             "Social": [
                 ("Call Parents", "SOCIAL_PARENTS"), # Placeholder
@@ -275,8 +275,8 @@ class Renderer:
         # Draw Buttons for Active Tab with Dynamic Layout
         if self.active_tab in self.buttons:
             # Start Y position (below tabs)
-            current_y = self.rect_right.y + 50
-            gap = 10
+            current_y = self.rect_right.y + 60
+            gap = 12
             
             for btn in self.buttons[self.active_tab]:
                 # Check Visibility
