@@ -28,6 +28,14 @@ def process_turn(sim_state: SimState):
     # 1. Age Up
     agent.age += 1
     
+    # 1a. Recalculate Health Cap (Frailty)
+    old_cap = agent.max_health
+    agent._recalculate_max_health()
+    if agent.max_health < old_cap:
+        # Optional: Log significant drops in vitality? 
+        # Keeping it silent for now to avoid log spam, visible in UI.
+        pass
+
     # 1b. Process Salary
     if agent.job:
         salary = agent.job['salary']
@@ -125,7 +133,8 @@ def visit_doctor(sim_state: SimState):
     agent.money -= cost
     recovery = random.randint(10, 20)
     old_health = agent.health
-    agent.health = min(100, agent.health + recovery)
+    # Clamp to max_health instead of static 100
+    agent.health = min(agent.max_health, agent.health + recovery)
     
     sim_state.add_log(f"Dr. Mario treated you. Health +{agent.health - old_health}.", constants.COLOR_LOG_POSITIVE)
     logger.info(f"Action: Doctor. Cost: {cost}, Health: {agent.health}")

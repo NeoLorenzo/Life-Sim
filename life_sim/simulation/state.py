@@ -20,10 +20,14 @@ class Agent:
         
         self.age = agent_config.get("initial_age", 0)
         self.health = agent_config.get("initial_health", 50)
+        self.max_health = 100 # Capacity starts at 100
         self.happiness = agent_config.get("initial_happiness", 50)
         self.smarts = agent_config.get("initial_smarts", 50)
         self.looks = agent_config.get("initial_looks", 50)
         self.money = agent_config.get("initial_money", 0)
+        
+        self._recalculate_max_health()
+
         self.job = None  # None or dict {"title": str, "salary": int}
         self.is_alive = True
         
@@ -81,6 +85,19 @@ class Agent:
         self.skills = {} 
 
         self.logger.info(f"Agent initialized: {self.first_name} {self.last_name} ({self.gender}) from {self.city}, {self.country}")
+
+    def _recalculate_max_health(self):
+        """
+        Calculates health cap based on age.
+        Formula: Quadratic decay ensuring 0 max_health at age 100.
+        Curve: 100 - (age^2 / 100)
+        """
+        # Rule 8: Scientifically-grounded abstraction for Frailty/Senescence
+        decay = (self.age ** 2) / 100.0
+        self.max_health = int(max(0, 100 - decay))
+        # Ensure current health never exceeds the new cap
+        if self.health > self.max_health:
+            self.health = self.max_health
 
     def _rand_attr(self, config, name):
         """Helper to get random attribute within config range."""

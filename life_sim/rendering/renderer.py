@@ -186,6 +186,7 @@ class Renderer:
 
         # Column 2: Physical
         phys_lines = [
+            f"Max Health: {agent.max_health}",
             f"Strength: {agent.strength}",
             f"Athleticism: {agent.athleticism}",
             f"Endurance: {agent.endurance}",
@@ -238,7 +239,7 @@ class Renderer:
         y += draw_text(f"Job: {agent.job['title'] if agent.job else 'Unemployed'}")
         y += 20
         y += draw_text("--- Vitals ---", color=constants.COLOR_TEXT_DIM)
-        y += draw_text(f"Health: {agent.health}")
+        y += draw_text(f"Health: {agent.health}/{agent.max_health}")
         y += draw_text(f"Happiness: {agent.happiness}")
         y += draw_text(f"Smarts: {agent.smarts}")
         y += draw_text(f"Looks: {agent.looks}")
