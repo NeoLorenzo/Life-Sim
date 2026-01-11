@@ -47,7 +47,23 @@ class Agent:
         self.eye_color = random.choice(app_conf.get("eye_colors", ["Brown"]))
         self.hair_color = random.choice(app_conf.get("hair_colors", ["Brown"]))
         self.skin_tone = random.choice(app_conf.get("skin_tones", ["Fair"]))
-        self.height_cm = random.randint(150, 200) if self.gender == "Male" else random.randint(140, 180)
+        
+        # Height Genetics & Growth
+        # Potential is determined by gender ranges
+        pot_min = 150 if self.gender == "Male" else 140
+        pot_max = 200 if self.gender == "Male" else 180
+        self.genetic_height_potential = random.randint(pot_min, pot_max)
+        
+        # Initial Height Calculation (based on start age)
+        if self.age >= 20:
+            self.height_cm = self.genetic_height_potential
+        elif self.age == 0:
+            self.height_cm = 50 # Average newborn
+        else:
+            # Rough linear interpolation for starting mid-childhood
+            progress = self.age / 20.0
+            self.height_cm = 50 + int((self.genetic_height_potential - 50) * progress)
+
         self.weight_kg = random.randint(60, 100) if self.gender == "Male" else random.randint(45, 80)
 
         # --- Extended Attributes ---

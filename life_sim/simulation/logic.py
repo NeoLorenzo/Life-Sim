@@ -32,11 +32,23 @@ def process_turn(sim_state: SimState):
     old_cap = agent.max_health
     agent._recalculate_max_health()
     if agent.max_health < old_cap:
-        # Optional: Log significant drops in vitality? 
-        # Keeping it silent for now to avoid log spam, visible in UI.
         pass
 
-    # 1b. Process Salary
+    # 1b. Process Growth / Aging (Height)
+    if agent.age <= 20 and agent.height_cm < agent.genetic_height_potential:
+        # Growth Phase: Close the gap to potential
+        # Simple abstraction: Grow a portion of the remaining gap
+        gap = agent.genetic_height_potential - agent.height_cm
+        years_left = 21 - agent.age
+        growth = int(gap / years_left) + random.randint(0, 2)
+        agent.height_cm = min(agent.genetic_height_potential, agent.height_cm + growth)
+    elif agent.age > 60:
+        # Seniority Phase: Shrinkage (Spinal compression)
+        # ~33% chance to lose 1cm per year
+        if random.random() < 0.33:
+            agent.height_cm -= 1
+
+    # 1c. Process Salary
     if agent.job:
         salary = agent.job['salary']
         agent.money += salary
