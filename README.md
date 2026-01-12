@@ -12,11 +12,15 @@
 *   **Configuration-Driven Design:**
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
     *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) are decoupled in `constants.py`.
+*   **Multi-Agent Architecture:**
+    *   **Unified Entity Model:** The `Agent` class has been refactored to support both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
+    *   **The "Truman Show" Optimization:** To maintain performance, the simulation uses a dual-update loop. The Player receives full simulation fidelity (events, salary, happiness), while NPCs run on a lightweight "Lazy Evaluation" loop that processes only critical biological functions (Aging, Health Decay, Death Checks) to keep the world alive without CPU overhead.
 
 ### Identity & Biology
 *   **Procedural Generation:**
     *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City drawn from configurable pools.
     *   **Appearance:** Tracks Eye Color, Hair Color, Skin Tone.
+    *   **Family Generation:** The simulation automatically generates a Mother and Father at startup. Their ages, jobs, and initial wealth are procedurally generated relative to the player, creating immediate social context (e.g., "Teen Parents" vs. "Older Parents").
     *   **Anthropometry:**
         *   **Height:** Dynamic growth system. Agents start small (~50cm), grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
         *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
@@ -36,7 +40,7 @@
         *   *Prime (20-50):* Capacity peaks at 100.
         *   *Senescence (50+):* Capacity decays quadratically ($100 - (age-50)^2/25$), hitting 0 at age 100.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
-    *   *Note:* Random annual health decay has been removed to pave the way for a specific pathology/disease system.
+    *   **Natural Entropy:** NPCs over age 50 experience slight random health decay annually, ensuring natural death occurs variably between ages 85-100 rather than strictly at the mathematical cap.
 
 ### Economy & Career
 *   **Job Market:**
@@ -69,14 +73,16 @@
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age, Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
-        *   **Narrative Engine:** Replaced generic start messages with a detailed "Birth Certificate" log, featuring randomized dates and flavor text reactive to the baby's stats (e.g., "Screaming uncontrollably" for high Craziness).
+        *   **Advanced Narrative Engine:** Replaced generic start messages with a **Novelistic Story Generator**. The engine synthesizes Weather, City Atmosphere, Socio-Economic Status (Wealth vs. Marital Happiness), Parental Age Gaps, and Personality Quirks to generate a unique, cohesive opening paragraph for every life (e.g., "Born during a storm to a 'Crazy' father checking for tracking chips").
         *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
         *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
-        *   **Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats (including BMI/Height Potential), and Personality.
+        *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal can now inspect **any** agent (Player or NPC) to view their hidden stats.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
+        *   **Social Dashboard:** The Social Tab now features a **Relationship List**. It renders dynamic cards for known contacts (Parents) displaying Name, Status (Alive/Deceased), and a color-coded Relationship Bar.
+        *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats) and "Interact" buttons.
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80).
 
 ## 🗺️ Roadmap (Planned Features)
@@ -438,14 +444,7 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     *   We avoid tracking meta-data across save files to keep the architecture modular and focused on the current agent's lifecycle.
     *   *Reasoning:* This prevents "Checklist Fatigue" and encourages players to experiment with the sandbox mechanics rather than optimizing their life solely to unlock a badge.
 
-### 8. NPC Simulation: The "Truman Show" Optimization
-*   **Constraint:** We do not simulate the daily lives, careers, or finances of the thousands of NPCs (classmates, co-workers, extended family) in the world.
-*   **Abstraction:** NPCs exist in a state of **Suspended Animation** until the player interacts with them.
-    *   **Lazy Evaluation:** When the player clicks "Age Up," we do not calculate a full year for every NPC. We simply increment their Age.
-    *   **Procedural Updates:** Only when the player *checks* an NPC's profile do we run a quick RNG check to generate their recent history (e.g., "Did they get married? Did they die?").
-    *   *Reasoning:* This prevents the "Age Up" button from taking 30 seconds to process. The world revolves around the player; NPCs are just data points that update on demand.
-
-### 9. The "Faux-Conomy": Static vs. Dynamic
+### 8. The "Faux-Conomy": Static vs. Dynamic
 *   **Constraint:** No supply-and-demand logic, stock market simulation, or global trade physics.
 *   **Abstraction:** The economy is **Reference-Based**.
     *   **Base Values:** Every item (House, Car, Diamond Ring) has a static `Base_Price` in the config files.
@@ -453,7 +452,7 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     *   **Real Estate:** Housing markets do not crash or boom based on inventory. They simply follow a randomized noise curve (e.g., `Current_Value = Previous_Value * random(0.95, 1.08)`).
     *   *Reasoning:* Building a real economic engine is a separate game entirely. This system ensures prices *feel* dynamic without requiring a math degree to balance.
 
-### 10. Legal & Medical: Stat-Check Resolution
+### 9. Legal & Medical: Stat-Check Resolution
 *   **Constraint:** No mini-games for court trials, surgeries, or complex diagnosis puzzles.
 *   **Abstraction:** Complex institutional interactions are resolved via **Weighted RNG Rolls**.
     *   **Justice:** The outcome of a trial is a single calculation: `(Lawyer_Cost * Lawyer_Skill) vs. (Crime_Severity * Evidence_RNG)`.
