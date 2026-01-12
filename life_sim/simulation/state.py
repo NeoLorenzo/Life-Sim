@@ -256,7 +256,64 @@ class SimState:
         if father_id and mother_id:
             f = self.npcs[father_id]
             m = self.npcs[mother_id]
-            parents_txt = f"Born to {m.first_name} (Age {m.age}) and {f.first_name} (Age {f.age})."
+            marital_happiness = f.relationships[m.uid]['value']
+            household_wealth = m.money + f.money
+            
+            # 1. The Setting (Weather + City Vibe)
+            weather = random.choice([
+                "a torrential downpour rattling the hospital windows",
+                "a sweltering afternoon where the AC is barely working",
+                "a quiet, snowy morning",
+                "a chaotic night with sirens wailing in the distance",
+                "a crisp, golden autumn dawn"
+            ])
+            intro = f"You enter the world in {self.player.city} during {weather}."
+            
+            # 2. The Room Atmosphere (Wealth x Love Matrix)
+            if household_wealth < 1000:
+                if marital_happiness > 80:
+                    vibe = "The hospital room is cramped and shared with two other families, but your parents don't seem to notice the noise. They are huddled together over your crib, whispering promises they intend to keep."
+                else:
+                    vibe = "The fluorescent lights hum loudly in the small, shared room. Your parents are arguing in hushed, sharp tones about the cost of the parking meter outside."
+            elif household_wealth > 100000:
+                if marital_happiness > 80:
+                    vibe = "You are resting in a private suite filled with fresh orchids. Your parents are toasting with sparkling cider, looking exhausted but utterly triumphant."
+                else:
+                    vibe = "The private suite is spacious and smells of expensive lilies, but the air is frigid. Your parents sit on opposite sides of the room, scrolling through their phones in silence."
+            else:
+                # Middle Class
+                if marital_happiness < 40:
+                    vibe = "The room is standard, smelling of antiseptic and floor wax. There is a palpable tension between your parents, who are carefully avoiding eye contact."
+                else:
+                    vibe = "It's a standard hospital room, cluttered with plastic cups and blankets. The atmosphere is tired but warm, filled with the quiet relief that you arrived safely."
+
+            # 3. The Mother's Moment
+            if m.age < 20:
+                mom_txt = f"Your mother, {m.first_name} ({m.age}), looks terrified, clutching the bedsheets like she wants to run away."
+            elif m.craziness > 80:
+                mom_txt = f"Your mother, {m.first_name}, is currently screaming at a nurse for trying to vaccinate you, insisting on a 'natural immunity' ritual instead."
+            elif m.health < 40:
+                mom_txt = f"Your mother, {m.first_name}, is pale and trembling, too weak to hold you for more than a moment."
+            elif m.athleticism > 80:
+                mom_txt = f"Your mother, {m.first_name}, looks annoyingly fresh, as if she just finished a light pilates session rather than childbirth."
+            else:
+                mom_txt = f"Your mother, {m.first_name} ({m.age}), brushes a strand of hair from her face, looking at you with a mixture of exhaustion and wonder."
+
+            # 4. The Father's Action
+            if f.age > m.age + 20:
+                dad_txt = f"Your father, {f.first_name} ({f.age}), is leaning on his cane, looking proud but winded. A nurse mistakenly asks if he's the grandfather."
+            elif f.craziness > 85:
+                dad_txt = f"Your father, {f.first_name}, is inspecting your fingers and toes, muttering about government tracking chips."
+            elif f.willpower < 20:
+                dad_txt = f"Your father, {f.first_name}, is currently unconscious on the floor after fainting at the sight of the umbilical cord."
+            elif f.job and f.job['title'] == "Software Engineer":
+                dad_txt = f"Your father, {f.first_name}, is already typing your birth weight into a spreadsheet on his laptop."
+            elif f.generosity > 85:
+                dad_txt = f"Your father, {f.first_name}, has somehow managed to order pizza for the entire maternity ward."
+            else:
+                dad_txt = f"Your father, {f.first_name} ({f.age}), stands awkwardly by the bedside, afraid he might break you if he touches you."
+
+            parents_txt = f"{intro} {vibe} {mom_txt} {dad_txt}"
 
         self.current_year_data = {
             "header": ("--- Life Begins ---", constants.COLOR_LOG_HEADER),
