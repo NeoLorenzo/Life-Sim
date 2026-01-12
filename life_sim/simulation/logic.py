@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 def process_turn(sim_state: SimState):
     """
-    Advances the simulation by one year.
+    Advances the simulation by one month.
     
     1. Check if alive.
-    2. Increment Age.
-    3. Apply Stat Decay.
+    2. Increment Date & Age.
+    3. Apply Monthly Economics.
     4. Check for Death.
     5. Process NPCs (Truman Show).
     6. Log results.
@@ -26,39 +26,53 @@ def process_turn(sim_state: SimState):
     if not player.is_alive:
         return
 
-    # 1. Age Up Player
-    player.age += 1
+    # 1. Advance Time
+    sim_state.month_index += 1
+    if sim_state.month_index > 11:
+        sim_state.month_index = 0
+        sim_state.year += 1
+        # Calendar Year changed - just add a log note, don't start new block
+        sim_state.add_log(f"Happy New Year {sim_state.year}!", constants.COLOR_TEXT_DIM)
     
-    # 1a. Recalculate Health Cap (Frailty)
-    old_cap = player.max_health
-    player._recalculate_max_health()
-    if player.max_health < old_cap:
-        pass
+    # 2. Age Up Player
+    player.age_months += 1
+    
+    # Check for Birthday (Start new Log Block)
+    if sim_state.month_index == sim_state.birth_month_index:
+        sim_state.start_new_year(player.age)
+        sim_state.add_log("Happy Birthday!", constants.COLOR_ACCENT)
 
-    # 1b. Process Growth / Aging (Height)
+    # 2a. Recalculate Health Cap (Frailty) - Only check on birthday
+    if sim_state.month_index == sim_state.birth_month_index:
+        old_cap = player.max_health
+        player._recalculate_max_health()
+        if player.max_health < old_cap:
+            pass
+
+    # 2b. Process Growth / Aging (Height)
+    # Distribute growth over the year
     if player.age <= 20 and player.height_cm < player.genetic_height_potential:
         # Growth Phase: Close the gap to potential
         gap = player.genetic_height_potential - player.height_cm
-        years_left = 21 - player.age
-        growth = int(gap / years_left) + random.randint(0, 2)
-        player.height_cm = min(player.genetic_height_potential, player.height_cm + growth)
+        months_left = (21 * 12) - player.age_months
+        if months_left > 0:
+            # Small chance to grow this month
+            if random.random() < 0.2: 
+                player.height_cm = min(player.genetic_height_potential, player.height_cm + 1)
     elif player.age > 60:
-        # Seniority Phase: Shrinkage
-        if random.random() < 0.33:
+        # Seniority Phase: Shrinkage (Rarely)
+        if random.random() < 0.03: # ~36% chance per year
             player.height_cm -= 1
 
-    # 1c. Update Physique (Weight/BMI)
+    # 2c. Update Physique (Weight/BMI)
     player._recalculate_physique()
 
-    # 1d. Process Salary
+    # 2d. Process Monthly Salary
     if player.job:
-        salary = player.job['salary']
-        player.money += salary
-        sim_state.add_log(f"Earned ${salary} from {player.job['title']}.", constants.COLOR_LOG_POSITIVE)
+        monthly_salary = int(player.job['salary'] / 12)
+        player.money += monthly_salary
+        sim_state.add_log(f"Earned ${monthly_salary} from {player.job['title']}.", constants.COLOR_LOG_POSITIVE)
     
-    # 2. Generate Event Log
-    sim_state.start_new_year(player.age)
-
     # 3. Death Check (Player)
     if player.health <= 0:
         player.is_alive = False
@@ -71,15 +85,21 @@ def process_turn(sim_state: SimState):
         if not npc.is_alive:
             continue
             
-        npc.age += 1
-        npc._recalculate_max_health()
+        npc.age_months += 1
         
-        # Apply Natural Entropy (Wear & Tear)
-        # Without this, they would always live to exactly 100 (when max_health hits 0).
-        # This adds variance so they might die at 92, 95, etc.
-        if npc.age > 50:
-            damage = random.randint(0, 3)
-            npc.health -= damage
+        # Only process NPC health decay once a year (on their "birthday" equivalent)
+        # Simplified: Process when month_index matches player's birth month (Annual cycle)
+        if sim_state.month_index == sim_state.birth_month_index:
+            npc._recalculate_max_health()
+            
+            # Apply Natural Entropy (Wear & Tear)
+            if npc.age > 50:
+                damage = random.randint(0, 3)
+                npc.health -= damage
+
+            # Enforce the biological cap
+            if npc.health > npc.max_health:
+                npc.health = npc.max_health
 
         # Enforce the biological cap
         # If max_health drops below current health, current health is crushed down.

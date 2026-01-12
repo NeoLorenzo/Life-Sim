@@ -7,11 +7,13 @@
 ### Core Simulation & Architecture
 *   **Deterministic Simulation Loop:**
     *   **Master Seed:** The entire simulation (Python `random`, `numpy.random`) is initialized via a single integer seed defined in `config.json`, ensuring 100% reproducibility for debugging and sharing runs.
-    *   **Turn-Based Logic:** The simulation advances in 1-year increments (`process_turn`).
+    *   **Turn-Based Logic:** The simulation advances in **1-month increments** (`process_turn`).
+        *   **Date Tracking:** The system now tracks the specific Month and Year (starting Jan 2025), allowing for seasonal events and precise timeline management.
+        *   **Age Calculation:** Age is stored as `age_months`. The "Age X" log headers are triggered specifically on the agent's birth month, decoupling biological age from the calendar year.
     *   **Event Logging:** A dual-channel logging system writes runtime events to both the console (stdout) and rotating log files (`logs/run_YYYYMMDD_HHMMSS.log`) with the format `Time | Level | Module | Message`.
 *   **Configuration-Driven Design:**
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
-    *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) are decoupled in `constants.py`.
+    *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) and Time settings (Start Year, Month Names) are decoupled in `constants.py`.
 *   **Multi-Agent Architecture:**
     *   **Unified Entity Model:** The `Agent` class has been refactored to support both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
     *   **The "Truman Show" Optimization:** To maintain performance, the simulation uses a dual-update loop. The Player receives full simulation fidelity (events, salary, happiness), while NPCs run on a lightweight "Lazy Evaluation" loop that processes only critical biological functions (Aging, Health Decay, Death Checks) to keep the world alive without CPU overhead.
@@ -85,7 +87,7 @@
     *   **Data Structure:** Jobs are defined in `config.json` with a `title`, `salary`, and `min_smarts`.
     *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is determined strictly by `Agent.smarts >= Job.min_smarts`.
     *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
-    *   **Income:** Salaries are added to `Agent.money` automatically during the `process_turn` (Age Up) phase.
+    *   **Income:** Salaries are distributed monthly (`Salary / 12`) during the `process_turn` phase, simulating realistic cash flow.
 *   **Active Income (Overtime):**
     *   **Mechanic:** Employed agents can manually "Work Overtime."
     *   **Reward:** Immediate cash bonus equal to **1%** of the annual salary.
@@ -109,7 +111,7 @@
     *   **Framerate:** Capped at 60 FPS.
     *   **Theme:** Dark Mode (Background: RGB 20,20,20; Panels: RGB 40,40,40).
 *   **Three-Panel Layout:**
-    *   **Left Panel (300px):** Real-time dashboard showing Name, Age, Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
+    *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
         *   **Advanced Narrative Engine:** Replaced generic start messages with a **Novelistic Story Generator**. The engine synthesizes Weather, City Atmosphere, Socio-Economic Status (Wealth vs. Marital Happiness), Parental Age Gaps, and Personality Quirks to generate a unique, cohesive opening paragraph for every life (e.g., "Born during a storm to a 'Crazy' father checking for tracking chips").
         *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
@@ -121,7 +123,7 @@
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
         *   **Social Dashboard:** The Social Tab now features a **Relationship List**. It renders dynamic cards for known contacts (Parents) displaying Name, Status (Alive/Deceased), and a color-coded Relationship Bar.
         *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats) and "Interact" buttons.
-        *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80).
+        *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
 

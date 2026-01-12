@@ -14,7 +14,7 @@ class Agent:
     
     Data Contract:
         Inputs: config dictionary (agent section), **kwargs for overrides
-        State: age, health, happiness, smarts, looks, relationships, inventory
+        State: age_months, health, happiness, smarts, looks, relationships, inventory
     """
     def __init__(self, agent_config: dict, **kwargs):
         self.logger = logging.getLogger(__name__)
@@ -22,7 +22,10 @@ class Agent:
         self.is_player = kwargs.get("is_player", False)
         
         # Allow kwargs to override config defaults (for NPCs)
-        self.age = kwargs.get("age", agent_config.get("initial_age", 0))
+        # AGE CHANGE: Input is years, store as months
+        initial_age_years = kwargs.get("age", agent_config.get("initial_age", 0))
+        self.age_months = initial_age_years * 12
+        
         self.health = kwargs.get("health", agent_config.get("initial_health", 50))
         self.max_health = 100 # Capacity starts at 100
         self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))
@@ -123,6 +126,11 @@ class Agent:
 
         self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
 
+    @property
+    def age(self):
+        """Returns age in years (integer)."""
+        return self.age_months // 12
+
     def _recalculate_max_health(self):
         """
         Calculates health cap based on age using a 3-stage 'Prime of Life' curve.
@@ -138,9 +146,6 @@ class Agent:
             self.max_health = 100
         else:
             # Senescence Phase: 100 - ((age - 50)^2 / 25)
-            # At age 50: 100 - 0 = 100
-            # At age 75: 100 - 25 = 75
-            # At age 100: 100 - 100 = 0
             decay = ((self.age - 50) ** 2) / 25.0
             self.max_health = int(max(0, 100 - decay))
 
@@ -225,6 +230,12 @@ class SimState:
         self.player = Agent(config["agent"], is_player=True)
         self.npcs = {} # uid -> Agent
         
+        # Time Tracking
+        # Start at a random month in the start year
+        self.month_index = random.randint(0, 11) # 0 = Jan, 11 = Dec
+        self.birth_month_index = self.month_index # Store birth month for age calculation
+        self.year = constants.START_YEAR
+        
         # Generate Family
         self._generate_parents()
         
@@ -237,8 +248,7 @@ class SimState:
         
         # Buffer for the current year being simulated
         # Generate Narrative Birth Message
-        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        birth_month = random.choice(months)
+        birth_month_name = constants.MONTHS[self.month_index]
         birth_day = random.randint(1, 28)
         
         pronoun = "He" if self.player.gender == "Male" else "She"
@@ -353,7 +363,7 @@ class SimState:
             "header": ("--- Life Begins ---", constants.COLOR_LOG_HEADER),
             "events": [
                 (f"Name: {self.player.first_name} {self.player.last_name}", constants.COLOR_ACCENT),
-                (f"Born: {birth_month} {birth_day}, Year 0 in {self.player.city}, {self.player.country}", constants.COLOR_TEXT),
+                (f"Born: {birth_month_name} {birth_day}, {self.year} in {self.player.city}, {self.player.country}", constants.COLOR_TEXT),
                 (parents_txt, constants.COLOR_TEXT),
                 (f"Nurse: \"It's a {self.player.gender}!\"", constants.COLOR_LOG_POSITIVE),
                 (looks_txt, constants.COLOR_TEXT),

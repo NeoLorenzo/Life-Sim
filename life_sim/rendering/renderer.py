@@ -81,7 +81,7 @@ class Renderer:
         # Format: (Text, ActionID)
         categories = {
             "Main": [
-                ("Age Up (+1 Year)", "AGE_UP"),
+                ("Age Up (+1 Month)", "AGE_UP"),
                 ("Study (Smarts)", "STUDY"),
                 ("Visit Doctor ($100)", "DOCTOR"),
                 ("Find Job", "FIND_JOB"),
@@ -339,7 +339,14 @@ class Renderer:
 
         y += draw_text(f"{player.first_name} {player.last_name}", self.font_header, constants.COLOR_ACCENT)
         y += 10
-        y += draw_text(f"Age: {player.age}")
+        
+        # Date Display
+        month_name = constants.MONTHS[sim_state.month_index]
+        y += draw_text(f"{month_name} {sim_state.year}", color=constants.COLOR_TEXT_DIM)
+        
+        # Age Display
+        y += draw_text(f"Age: {player.age} ({player.age_months % 12} mos)")
+        
         y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
         y += draw_text(f"Job: {player.job['title'] if player.job else 'Unemployed'}")
         y += 20

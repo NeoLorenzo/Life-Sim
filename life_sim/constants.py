@@ -40,6 +40,11 @@ FONT_SIZE_HEADER = 24
 FONT_SIZE_LOG = 18
 LOG_LINE_HEIGHT = 24
 
+# Time Settings
+START_YEAR = 2025
+MONTHS = ["January", "February", "March", "April", "May", "June", 
+          "July", "August", "September", "October", "November", "December"]
+
 # File Paths
 LOG_DIR = "logs"
 CONFIG_FILE = "config.json"

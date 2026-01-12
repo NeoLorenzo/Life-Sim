@@ -41,6 +41,7 @@ def main():
     logger.info(f"Life-Sim started. Seed: {seed}")
     
     # 4. Initialize Systems
+    renderer = None
     try:
         sim_state = SimState(config)
         renderer = Renderer()
@@ -87,7 +88,8 @@ def main():
         logger.critical(f"Unhandled exception: {e}", exc_info=True)
         raise
     finally:
-        renderer.quit()
+        if renderer:
+            renderer.quit()
         logger.info("Simulation ended cleanly.")
 
 if __name__ == "__main__":
