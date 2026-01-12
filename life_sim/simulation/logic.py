@@ -18,92 +18,122 @@ def process_turn(sim_state: SimState):
     2. Increment Age.
     3. Apply Stat Decay.
     4. Check for Death.
-    5. Log results.
+    5. Process NPCs (Truman Show).
+    6. Log results.
     """
-    agent = sim_state.agent
+    player = sim_state.player
     
-    if not agent.is_alive:
+    if not player.is_alive:
         return
 
-    # 1. Age Up
-    agent.age += 1
+    # 1. Age Up Player
+    player.age += 1
     
     # 1a. Recalculate Health Cap (Frailty)
-    old_cap = agent.max_health
-    agent._recalculate_max_health()
-    if agent.max_health < old_cap:
+    old_cap = player.max_health
+    player._recalculate_max_health()
+    if player.max_health < old_cap:
         pass
 
     # 1b. Process Growth / Aging (Height)
-    if agent.age <= 20 and agent.height_cm < agent.genetic_height_potential:
+    if player.age <= 20 and player.height_cm < player.genetic_height_potential:
         # Growth Phase: Close the gap to potential
-        # Simple abstraction: Grow a portion of the remaining gap
-        gap = agent.genetic_height_potential - agent.height_cm
-        years_left = 21 - agent.age
+        gap = player.genetic_height_potential - player.height_cm
+        years_left = 21 - player.age
         growth = int(gap / years_left) + random.randint(0, 2)
-        agent.height_cm = min(agent.genetic_height_potential, agent.height_cm + growth)
-    elif agent.age > 60:
-        # Seniority Phase: Shrinkage (Spinal compression)
-        # ~33% chance to lose 1cm per year
+        player.height_cm = min(player.genetic_height_potential, player.height_cm + growth)
+    elif player.age > 60:
+        # Seniority Phase: Shrinkage
         if random.random() < 0.33:
-            agent.height_cm -= 1
+            player.height_cm -= 1
 
     # 1c. Update Physique (Weight/BMI)
-    agent._recalculate_physique()
+    player._recalculate_physique()
 
     # 1d. Process Salary
-    if agent.job:
-        salary = agent.job['salary']
-        agent.money += salary
-        sim_state.add_log(f"Earned ${salary} from {agent.job['title']}.", constants.COLOR_LOG_POSITIVE)
+    if player.job:
+        salary = player.job['salary']
+        player.money += salary
+        sim_state.add_log(f"Earned ${salary} from {player.job['title']}.", constants.COLOR_LOG_POSITIVE)
     
     # 2. Generate Event Log
-    # Start the new year bucket
-    sim_state.start_new_year(agent.age)
+    sim_state.start_new_year(player.age)
 
-    # 3. Death Check
-    if agent.health <= 0:
-        agent.is_alive = False
+    # 3. Death Check (Player)
+    if player.health <= 0:
+        player.is_alive = False
         sim_state.add_log("You have died.", constants.COLOR_DEATH)
-        logger.info(f"Agent died at age {agent.age}")
-    
-    logger.info(f"Turn processed: Age {agent.age}, Health {agent.health}, Alive: {agent.is_alive}")
+        logger.info(f"Player died at age {player.age}")
+        return
+
+    # 4. Process NPCs (Truman Show Optimization)
+    for uid, npc in sim_state.npcs.items():
+        if not npc.is_alive:
+            continue
+            
+        npc.age += 1
+        npc._recalculate_max_health()
+        
+        # Apply Natural Entropy (Wear & Tear)
+        # Without this, they would always live to exactly 100 (when max_health hits 0).
+        # This adds variance so they might die at 92, 95, etc.
+        if npc.age > 50:
+            damage = random.randint(0, 3)
+            npc.health -= damage
+
+        # Enforce the biological cap
+        # If max_health drops below current health, current health is crushed down.
+        if npc.health > npc.max_health:
+            npc.health = npc.max_health
+        
+        # Standard Death Check
+        if npc.health <= 0:
+            npc.is_alive = False
+            # Notify Player if related
+            if uid in player.relationships:
+                rel = player.relationships[uid]
+                rel["is_alive"] = False
+                sim_state.add_log(f"Your {rel['type']}, {npc.first_name}, died at age {npc.age}.", constants.COLOR_DEATH)
+                # Apply sadness
+                player.happiness = max(0, player.happiness - 30)
+
+    logger.info(f"Turn processed: Age {player.age}, Health {player.health}, Alive: {player.is_alive}")
 
 def work(sim_state: SimState):
     """Agent performs overtime if employed."""
-    agent = sim_state.agent
-    if not agent.is_alive:
+    player = sim_state.player
+    if not player.is_alive:
         return
 
-    if not agent.job:
+    if not player.job:
         sim_state.add_log("You are unemployed. Get a job (J) first.", constants.COLOR_LOG_NEGATIVE)
         return
 
     # Overtime bonus is 1% of salary
-    bonus = int(agent.job['salary'] * 0.01)
-    agent.money += bonus
+    bonus = int(player.job['salary'] * 0.01)
+    player.money += bonus
     sim_state.add_log(f"Worked overtime. Earned ${bonus}.", constants.COLOR_LOG_POSITIVE)
-    logger.info(f"Action: Overtime. Money: {agent.money}")
+    logger.info(f"Action: Overtime. Money: {player.money}")
 
 def study(sim_state: SimState):
     """Agent studies to increase smarts."""
-    agent = sim_state.agent
-    if not agent.is_alive:
+    player = sim_state.player
+    if not player.is_alive:
         return
         
     gain = random.randint(2, 5)
-    agent.smarts = min(100, agent.smarts + gain)
+    player.smarts = min(100, player.smarts + gain)
     
     # Studying costs a little health (stress/sedentary)
-    agent.health = max(0, agent.health - 1)
+    player.health = max(0, player.health - 1)
     
     sim_state.add_log(f"You studied hard. Smarts +{gain}.", constants.COLOR_LOG_POSITIVE)
-    logger.info(f"Action: Study. Smarts: {agent.smarts}")
+    logger.info(f"Action: Study. Smarts: {player.smarts}")
 
 def find_job(sim_state: SimState):
     """Attempts to find a job based on qualifications."""
-    agent = sim_state.agent
-    if not agent.is_alive:
+    player = sim_state.player
+    if not player.is_alive:
         return
         
     jobs = sim_state.config.get("economy", {}).get("jobs", [])
@@ -115,31 +145,31 @@ def find_job(sim_state: SimState):
     target_job = random.choice(jobs)
     required_smarts = target_job.get("min_smarts", 0)
     
-    if agent.smarts >= required_smarts:
-        agent.job = target_job
+    if player.smarts >= required_smarts:
+        player.job = target_job
         sim_state.add_log(f"Hired as {target_job['title']}!", constants.COLOR_LOG_POSITIVE)
         logger.info(f"Action: Hired. Job: {target_job['title']}")
     else:
         sim_state.add_log(f"Rejected from {target_job['title']}.", constants.COLOR_LOG_NEGATIVE)
-        sim_state.add_log(f"Need {required_smarts} Smarts (Have {agent.smarts}).")
-        logger.info(f"Action: Rejected. Job: {target_job['title']}, Req: {required_smarts}, Has: {agent.smarts}")
+        sim_state.add_log(f"Need {required_smarts} Smarts (Have {player.smarts}).")
+        logger.info(f"Action: Rejected. Job: {target_job['title']}, Req: {required_smarts}, Has: {player.smarts}")
 
 def visit_doctor(sim_state: SimState):
     """Agent visits doctor to restore health."""
-    agent = sim_state.agent
-    if not agent.is_alive:
+    player = sim_state.player
+    if not player.is_alive:
         return
 
     cost = 100
-    if agent.money < cost:
+    if player.money < cost:
         sim_state.add_log(f"You need ${cost} to visit the doctor.", constants.COLOR_LOG_NEGATIVE)
         return
 
-    agent.money -= cost
+    player.money -= cost
     recovery = random.randint(10, 20)
-    old_health = agent.health
+    old_health = player.health
     # Clamp to max_health instead of static 100
-    agent.health = min(agent.max_health, agent.health + recovery)
+    player.health = min(player.max_health, player.health + recovery)
     
-    sim_state.add_log(f"Dr. Mario treated you. Health +{agent.health - old_health}.", constants.COLOR_LOG_POSITIVE)
-    logger.info(f"Action: Doctor. Cost: {cost}, Health: {agent.health}")
+    sim_state.add_log(f"Dr. Mario treated you. Health +{player.health - old_health}.", constants.COLOR_LOG_POSITIVE)
+    logger.info(f"Action: Doctor. Cost: {cost}, Health: {player.health}")

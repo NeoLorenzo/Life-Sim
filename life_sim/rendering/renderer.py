@@ -46,10 +46,10 @@ class Renderer:
         self.tabs = []    # List[Button] (Using Button class for tabs)
         self.active_tab = "Main"
         
-        # Visibility Logic (Action ID -> Lambda accepting agent)
+        # Visibility Logic (Action ID -> Lambda accepting player)
         self.visibility_rules = {
-            "FIND_JOB": lambda agent: agent.age >= 16,
-            "WORK": lambda agent: agent.job is not None
+            "FIND_JOB": lambda player: player.age >= 16,
+            "WORK": lambda player: player.job is not None
         }
         
         self._init_ui_structure()
@@ -128,7 +128,7 @@ class Renderer:
                 # Check Visibility Rule
                 if sim_state:
                     rule = self.visibility_rules.get(btn.action_id)
-                    if rule and not rule(sim_state.agent):
+                    if rule and not rule(sim_state.player):
                         continue
 
                 action = btn.handle_event(event)
@@ -166,7 +166,7 @@ class Renderer:
         pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
-        agent = sim_state.agent
+        player = sim_state.player
         
         # Helper to draw a column
         def draw_column(title, lines, x, y):
@@ -185,47 +185,47 @@ class Renderer:
         
         # Column 1: Identity
         bio_lines = [
-            f"Gender: {agent.gender}",
-            f"Origin: {agent.city}, {agent.country}",
-            f"Height: {agent.height_cm} cm",
-            f"Height Pot: {agent.genetic_height_potential} cm",
-            f"Weight: {agent.weight_kg} kg",
-            f"BMI: {agent.bmi}",
-            f"Eyes: {agent.eye_color}",
-            f"Hair: {agent.hair_color}",
-            f"Skin: {agent.skin_tone}",
-            f"Sexuality: {agent.sexuality}"
+            f"Gender: {player.gender}",
+            f"Origin: {player.city}, {player.country}",
+            f"Height: {player.height_cm} cm",
+            f"Height Pot: {player.genetic_height_potential} cm",
+            f"Weight: {player.weight_kg} kg",
+            f"BMI: {player.bmi}",
+            f"Eyes: {player.eye_color}",
+            f"Hair: {player.hair_color}",
+            f"Skin: {player.skin_tone}",
+            f"Sexuality: {player.sexuality}"
         ]
         draw_column("Identity", bio_lines, start_x, start_y)
 
         # Column 2: Physical
         phys_lines = [
-            f"Max Health: {agent.max_health}",
-            f"Strength: {agent.strength}",
-            f"Athleticism: {agent.athleticism}",
-            f"Endurance: {agent.endurance}",
-            f"Body Fat: {agent.body_fat}%",
-            f"Lean Mass: {agent.lean_mass} kg",
-            f"Fertility: {agent.fertility}",
-            f"Libido: {agent.libido}"
+            f"Max Health: {player.max_health}",
+            f"Strength: {player.strength}",
+            f"Athleticism: {player.athleticism}",
+            f"Endurance: {player.endurance}",
+            f"Body Fat: {player.body_fat}%",
+            f"Lean Mass: {player.lean_mass} kg",
+            f"Fertility: {player.fertility}",
+            f"Libido: {player.libido}"
         ]
         draw_column("Physical", phys_lines, start_x + col_width, start_y)
 
         # Column 3: Personality
         pers_lines = [
-            f"Discipline: {agent.discipline}",
-            f"Willpower: {agent.willpower}",
-            f"Generosity: {agent.generosity}",
-            f"Religiousness: {agent.religiousness}",
-            f"Craziness: {agent.craziness}",
-            f"Karma: {agent.karma}",
-            f"Luck: {agent.luck}"
+            f"Discipline: {player.discipline}",
+            f"Willpower: {player.willpower}",
+            f"Generosity: {player.generosity}",
+            f"Religiousness: {player.religiousness}",
+            f"Craziness: {player.craziness}",
+            f"Karma: {player.karma}",
+            f"Luck: {player.luck}"
         ]
         draw_column("Personality", pers_lines, start_x + (col_width * 2), start_y)
         
         # Skills (Bottom)
-        if agent.skills:
-            skill_lines = [f"{k}: {v}" for k, v in agent.skills.items()]
+        if player.skills:
+            skill_lines = [f"{k}: {v}" for k, v in player.skills.items()]
         else:
             skill_lines = ["No skills learned yet."]
         
@@ -235,7 +235,7 @@ class Renderer:
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
         
-        agent = sim_state.agent
+        player = sim_state.player
         
         # Helper for text
         x = self.rect_left.x + 20
@@ -246,21 +246,21 @@ class Renderer:
             self.screen.blit(surf, (x, y))
             return surf.get_height() + 5
 
-        y += draw_text(f"{agent.first_name} {agent.last_name}", self.font_header, constants.COLOR_ACCENT)
+        y += draw_text(f"{player.first_name} {player.last_name}", self.font_header, constants.COLOR_ACCENT)
         y += 10
-        y += draw_text(f"Age: {agent.age}")
-        y += draw_text(f"Money: ${agent.money}", color=constants.COLOR_ACCENT)
-        y += draw_text(f"Job: {agent.job['title'] if agent.job else 'Unemployed'}")
+        y += draw_text(f"Age: {player.age}")
+        y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
+        y += draw_text(f"Job: {player.job['title'] if player.job else 'Unemployed'}")
         y += 20
         y += draw_text("--- Vitals ---", color=constants.COLOR_TEXT_DIM)
-        y += draw_text(f"Health: {agent.health}/{agent.max_health}")
-        y += draw_text(f"Happiness: {agent.happiness}")
-        y += draw_text(f"Smarts: {agent.smarts}")
-        y += draw_text(f"Looks: {agent.looks}")
+        y += draw_text(f"Health: {player.health}/{player.max_health}")
+        y += draw_text(f"Happiness: {player.happiness}")
+        y += draw_text(f"Smarts: {player.smarts}")
+        y += draw_text(f"Looks: {player.looks}")
         y += 20
         y += draw_text("--- Physical ---", color=constants.COLOR_TEXT_DIM)
-        y += draw_text(f"Energy: {agent.endurance}")
-        y += draw_text(f"Fitness: {agent.athleticism}")
+        y += draw_text(f"Energy: {player.endurance}")
+        y += draw_text(f"Fitness: {player.athleticism}")
 
     def _draw_right_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)
@@ -281,7 +281,7 @@ class Renderer:
             for btn in self.buttons[self.active_tab]:
                 # Check Visibility
                 rule = self.visibility_rules.get(btn.action_id)
-                if rule and not rule(sim_state.agent):
+                if rule and not rule(sim_state.player):
                     continue
                 
                 # Update Position (Dynamic Layout)

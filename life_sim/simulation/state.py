@@ -5,26 +5,30 @@ Holds the core data model for the simulation.
 """
 import logging
 import random
+import uuid
 from .. import constants
 
 class Agent:
     """
-    Represents the primary agent (Player).
+    Represents a human entity (Player or NPC).
     
     Data Contract:
-        Inputs: config dictionary (agent section)
-        State: age (int), health (int), happiness (int), smarts (int), looks (int)
+        Inputs: config dictionary (agent section), **kwargs for overrides
+        State: age, health, happiness, smarts, looks, relationships, inventory
     """
-    def __init__(self, agent_config: dict):
+    def __init__(self, agent_config: dict, **kwargs):
         self.logger = logging.getLogger(__name__)
+        self.uid = str(uuid.uuid4())
+        self.is_player = kwargs.get("is_player", False)
         
-        self.age = agent_config.get("initial_age", 0)
-        self.health = agent_config.get("initial_health", 50)
+        # Allow kwargs to override config defaults (for NPCs)
+        self.age = kwargs.get("age", agent_config.get("initial_age", 0))
+        self.health = kwargs.get("health", agent_config.get("initial_health", 50))
         self.max_health = 100 # Capacity starts at 100
-        self.happiness = agent_config.get("initial_happiness", 50)
-        self.smarts = agent_config.get("initial_smarts", 50)
-        self.looks = agent_config.get("initial_looks", 50)
-        self.money = agent_config.get("initial_money", 0)
+        self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))
+        self.smarts = kwargs.get("smarts", agent_config.get("initial_smarts", 50))
+        self.looks = kwargs.get("looks", agent_config.get("initial_looks", 50))
+        self.money = kwargs.get("money", agent_config.get("initial_money", 0))
         
         self._recalculate_max_health()
 
@@ -33,14 +37,22 @@ class Agent:
         
         # --- Biography ---
         bio_conf = agent_config.get("bio", {})
-        self.gender = random.choice(["Male", "Female"])
-        if self.gender == "Male":
+        
+        # Gender: Use kwarg if provided, else random
+        self.gender = kwargs.get("gender", random.choice(["Male", "Female"]))
+        
+        # First Name: Use kwarg if provided, else random based on gender
+        if "first_name" in kwargs:
+            self.first_name = kwargs["first_name"]
+        elif self.gender == "Male":
             self.first_name = random.choice(bio_conf.get("first_names_male", ["John"]))
         else:
             self.first_name = random.choice(bio_conf.get("first_names_female", ["Jane"]))
-        self.last_name = random.choice(bio_conf.get("last_names", ["Doe"]))
-        self.country = random.choice(bio_conf.get("countries", ["Unknown"]))
-        self.city = random.choice(bio_conf.get("cities", ["Unknown"]))
+            
+        # Last Name, Country, City: Use kwarg if provided (e.g. inherit from parents), else random
+        self.last_name = kwargs.get("last_name", random.choice(bio_conf.get("last_names", ["Doe"])))
+        self.country = kwargs.get("country", random.choice(bio_conf.get("countries", ["Unknown"])))
+        self.city = kwargs.get("city", random.choice(bio_conf.get("cities", ["Unknown"])))
         
         # --- Appearance ---
         app_conf = agent_config.get("appearance", {})
@@ -104,8 +116,13 @@ class Agent:
         # --- Skills ---
         # Dictionary mapping Skill Name -> Level (0-100)
         self.skills = {} 
+        
+        # --- Social & Inventory ---
+        # {uid: {"type": str, "value": int, "name": str}}
+        self.relationships = {} 
+        self.inventory = []
 
-        self.logger.info(f"Agent initialized: {self.first_name} {self.last_name} ({self.gender}) from {self.city}, {self.country}")
+        self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
 
     def _recalculate_max_health(self):
         """
@@ -172,7 +189,11 @@ class SimState:
     """
     def __init__(self, config: dict):
         self.config = config
-        self.agent = Agent(config["agent"])
+        self.player = Agent(config["agent"], is_player=True)
+        self.npcs = {} # uid -> Agent
+        
+        # Generate Family
+        self._generate_parents()
         
         # Structure: List of dictionaries
         # [
@@ -187,58 +208,136 @@ class SimState:
         birth_month = random.choice(months)
         birth_day = random.randint(1, 28)
         
-        pronoun = "He" if self.agent.gender == "Male" else "She"
-        possessive = "His" if self.agent.gender == "Male" else "Her"
-        obj_pronoun = "him" if self.agent.gender == "Male" else "her"
+        pronoun = "He" if self.player.gender == "Male" else "She"
+        possessive = "His" if self.player.gender == "Male" else "Her"
+        obj_pronoun = "him" if self.player.gender == "Male" else "her"
 
         # 1. Appearance Reaction
-        if self.agent.looks > 85:
+        if self.player.looks > 85:
             looks_txt = f"The doctor pauses. \"This might be the most beautiful baby I've ever seen.\""
-        elif self.agent.looks > 60:
-            looks_txt = f"The nurses are cooing over {possessive} {self.agent.eye_color.lower()} eyes."
-        elif self.agent.looks < 30:
+        elif self.player.looks > 60:
+            looks_txt = f"The nurses are cooing over {possessive} {self.player.eye_color.lower()} eyes."
+        elif self.player.looks < 30:
             looks_txt = f"The mother hesitates before holding {obj_pronoun}. \"{pronoun} has... character.\""
         else:
-            looks_txt = f"{pronoun} has {possessive} mother's {self.agent.eye_color.lower()} eyes and {self.agent.hair_color.lower()} hair."
+            looks_txt = f"{pronoun} has {possessive} mother's {self.player.eye_color.lower()} eyes and {self.player.hair_color.lower()} hair."
 
         # 2. Physical/Strength Reaction
-        if self.agent.strength > 80:
+        if self.player.strength > 80:
             phys_txt = f"{pronoun} is gripping the nurse's finger tightly. Surprisingly strong!"
-        elif self.agent.health < 40:
+        elif self.player.health < 40:
             phys_txt = f"{pronoun} is breathing shallowly and looks quite frail."
         else:
-            phys_txt = f"{pronoun} is a healthy size, weighing {self.agent.weight_kg}kg."
+            phys_txt = f"{pronoun} is a healthy size, weighing {self.player.weight_kg}kg."
 
         # 3. Personality/Behavior Reaction
-        if self.agent.craziness > 80:
+        if self.player.craziness > 80:
             pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
-        elif self.agent.discipline > 70:
+        elif self.player.discipline > 70:
             pers_txt = f"{pronoun} is unusually calm, observing the room silently."
-        elif self.agent.smarts > 80:
+        elif self.player.smarts > 80:
             pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
         else:
             pers_txt = f"{pronoun} is crying softly, looking for warmth."
 
         # 4. Luck/Karma Flavor
-        if self.agent.luck > 90:
+        if self.player.luck > 90:
             luck_txt = "A double rainbow appeared outside the hospital window just now."
-        elif self.agent.luck < 20:
+        elif self.player.luck < 20:
             luck_txt = "The hospital power flickered right as {pronoun} was delivered."
         else:
-            luck_txt = f"Welcome to the world, {self.agent.first_name}."
+            luck_txt = f"Welcome to the world, {self.player.first_name}."
+
+        # 5. Family Flavor
+        parents_txt = "You are an orphan."
+        father_id = next((uid for uid, rel in self.player.relationships.items() if rel["type"] == "Father"), None)
+        mother_id = next((uid for uid, rel in self.player.relationships.items() if rel["type"] == "Mother"), None)
+        
+        if father_id and mother_id:
+            f = self.npcs[father_id]
+            m = self.npcs[mother_id]
+            parents_txt = f"Born to {m.first_name} (Age {m.age}) and {f.first_name} (Age {f.age})."
 
         self.current_year_data = {
             "header": ("--- Life Begins ---", constants.COLOR_LOG_HEADER),
             "events": [
-                (f"Name: {self.agent.first_name} {self.agent.last_name}", constants.COLOR_ACCENT),
-                (f"Born: {birth_month} {birth_day}, Year 0 in {self.agent.city}, {self.agent.country}", constants.COLOR_TEXT),
-                (f"Nurse: \"It's a {self.agent.gender}!\"", constants.COLOR_LOG_POSITIVE),
+                (f"Name: {self.player.first_name} {self.player.last_name}", constants.COLOR_ACCENT),
+                (f"Born: {birth_month} {birth_day}, Year 0 in {self.player.city}, {self.player.country}", constants.COLOR_TEXT),
+                (parents_txt, constants.COLOR_TEXT),
+                (f"Nurse: \"It's a {self.player.gender}!\"", constants.COLOR_LOG_POSITIVE),
                 (looks_txt, constants.COLOR_TEXT),
                 (phys_txt, constants.COLOR_TEXT),
                 (pers_txt, constants.COLOR_TEXT),
                 (luck_txt, constants.COLOR_TEXT_DIM)
             ],
             "expanded": True
+        }
+
+    @property
+    def agent(self):
+        """Backward compatibility for logic/renderer until refactor is complete."""
+        return self.player
+
+    def _generate_parents(self):
+        """Generates Mother and Father and links them."""
+        # Father
+        f_age = self.player.age + random.randint(18, 45)
+        father = Agent(self.config["agent"], 
+                       is_player=False, 
+                       gender="Male", 
+                       age=f_age,
+                       last_name=self.player.last_name,
+                       city=self.player.city,
+                       country=self.player.country)
+        self._assign_job(father)
+        self.npcs[father.uid] = father
+        
+        # Mother
+        m_age = self.player.age + random.randint(18, 40)
+        mother = Agent(self.config["agent"], 
+                       is_player=False, 
+                       gender="Female", 
+                       age=m_age,
+                       last_name=self.player.last_name,
+                       city=self.player.city,
+                       country=self.player.country)
+        self._assign_job(mother)
+        self.npcs[mother.uid] = mother
+        
+        # Link Relationships
+        # Player <-> Father
+        self._link_agents(self.player, father, "Father", "Child", 100)
+        # Player <-> Mother
+        self._link_agents(self.player, mother, "Mother", "Child", 100)
+        # Father <-> Mother
+        self._link_agents(father, mother, "Spouse", "Spouse", random.randint(60, 100))
+
+    def _assign_job(self, npc):
+        """Assigns a random suitable job to an NPC."""
+        jobs = self.config.get("economy", {}).get("jobs", [])
+        if not jobs: return
+        
+        # Filter by smarts
+        valid_jobs = [j for j in jobs if npc.smarts >= j.get("min_smarts", 0)]
+        if valid_jobs:
+            npc.job = random.choice(valid_jobs)
+            # Give them some savings based on age/salary
+            years_worked = max(0, npc.age - 18)
+            npc.money = int(npc.job['salary'] * years_worked * 0.1) # Saved 10%
+
+    def _link_agents(self, a, b, type_a_to_b, type_b_to_a, value):
+        """Bi-directional relationship linking."""
+        a.relationships[b.uid] = {
+            "type": type_a_to_b, 
+            "value": value, 
+            "name": b.first_name,
+            "is_alive": b.is_alive
+        }
+        b.relationships[a.uid] = {
+            "type": type_b_to_a, 
+            "value": value, 
+            "name": a.first_name,
+            "is_alive": a.is_alive
         }
 
     def start_new_year(self, age):
