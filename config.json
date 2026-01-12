@@ -30,12 +30,9 @@
             "fertility_min": 50, "fertility_max": 100,
             "libido_min": 20, "libido_max": 80,
             
-            "discipline_min": 10, "discipline_max": 90,
-            "willpower_min": 10, "willpower_max": 90,
-            "generosity_min": 10, "generosity_max": 90,
-            "religiousness_min": 0, "religiousness_max": 100,
-            "craziness_min": 0, "craziness_max": 50,
+            "facet_min": 1, "facet_max": 20,
             
+            "religiousness_min": 0, "religiousness_max": 100,
             "karma_min": 40, "karma_max": 60,
             "luck_min": 0, "luck_max": 100
         }

@@ -101,12 +101,11 @@ class Agent:
         self.bmi = 0
         self._recalculate_physique()
         
-        # Personality
-        self.discipline = self._rand_attr(attr_config, "discipline")
-        self.willpower = self._rand_attr(attr_config, "willpower")
-        self.generosity = self._rand_attr(attr_config, "generosity")
+        # Personality (Big 5 Model)
+        # Structure: { "Main": { "Facet": Value, ... }, ... }
+        self.personality = self._generate_big_five(attr_config)
+        
         self.religiousness = self._rand_attr(attr_config, "religiousness")
-        self.craziness = self._rand_attr(attr_config, "craziness")
         
         # Hidden
         self.karma = self._rand_attr(attr_config, "karma")
@@ -152,6 +151,40 @@ class Agent:
     def _rand_attr(self, config, name):
         """Helper to get random attribute within config range."""
         return random.randint(config.get(f"{name}_min", 0), config.get(f"{name}_max", 100))
+
+    def _generate_big_five(self, config):
+        """Generates the 30 facets grouped by Big 5 attribute."""
+        min_v = config.get("facet_min", 1)
+        max_v = config.get("facet_max", 20)
+        
+        def r(): return random.randint(min_v, max_v)
+        
+        return {
+            "Openness": {
+                "Fantasy": r(), "Aesthetics": r(), "Feelings": r(), 
+                "Actions": r(), "Ideas": r(), "Values": r()
+            },
+            "Conscientiousness": {
+                "Competence": r(), "Order": r(), "Dutifulness": r(), 
+                "Achievement": r(), "Self-Discipline": r(), "Deliberation": r()
+            },
+            "Extraversion": {
+                "Warmth": r(), "Gregariousness": r(), "Assertiveness": r(), 
+                "Activity": r(), "Excitement": r(), "Positive Emotions": r()
+            },
+            "Agreeableness": {
+                "Trust": r(), "Straightforwardness": r(), "Altruism": r(), 
+                "Compliance": r(), "Modesty": r(), "Tender-Mindedness": r()
+            },
+            "Neuroticism": {
+                "Anxiety": r(), "Angry Hostility": r(), "Depression": r(), 
+                "Self-Consciousness": r(), "Impulsiveness": r(), "Vulnerability": r()
+            }
+        }
+
+    def get_personality_sum(self, trait):
+        """Returns the sum (0-120) of a main trait."""
+        return sum(self.personality.get(trait, {}).values())
 
     def _recalculate_physique(self):
         """
@@ -231,9 +264,10 @@ class SimState:
             phys_txt = f"{pronoun} is a healthy size, weighing {self.player.weight_kg}kg."
 
         # 3. Personality/Behavior Reaction
-        if self.player.craziness > 80:
+        # Map old attributes to new Big 5 Facets (Range 0-20)
+        if self.player.personality['Neuroticism']['Angry Hostility'] > 15:
             pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
-        elif self.player.discipline > 70:
+        elif self.player.personality['Conscientiousness']['Self-Discipline'] > 15:
             pers_txt = f"{pronoun} is unusually calm, observing the room silently."
         elif self.player.smarts > 80:
             pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
@@ -290,7 +324,7 @@ class SimState:
             # 3. The Mother's Moment
             if m.age < 20:
                 mom_txt = f"Your mother, {m.first_name} ({m.age}), looks terrified, clutching the bedsheets like she wants to run away."
-            elif m.craziness > 80:
+            elif m.personality['Openness']['Fantasy'] > 18 and m.personality['Neuroticism']['Anxiety'] > 15:
                 mom_txt = f"Your mother, {m.first_name}, is currently screaming at a nurse for trying to vaccinate you, insisting on a 'natural immunity' ritual instead."
             elif m.health < 40:
                 mom_txt = f"Your mother, {m.first_name}, is pale and trembling, too weak to hold you for more than a moment."
@@ -302,13 +336,13 @@ class SimState:
             # 4. The Father's Action
             if f.age > m.age + 20:
                 dad_txt = f"Your father, {f.first_name} ({f.age}), is leaning on his cane, looking proud but winded. A nurse mistakenly asks if he's the grandfather."
-            elif f.craziness > 85:
+            elif f.personality['Neuroticism']['Anxiety'] > 18 and f.personality['Openness']['Ideas'] > 15:
                 dad_txt = f"Your father, {f.first_name}, is inspecting your fingers and toes, muttering about government tracking chips."
-            elif f.willpower < 20:
+            elif f.personality['Neuroticism']['Vulnerability'] > 18:
                 dad_txt = f"Your father, {f.first_name}, is currently unconscious on the floor after fainting at the sight of the umbilical cord."
             elif f.job and f.job['title'] == "Software Engineer":
                 dad_txt = f"Your father, {f.first_name}, is already typing your birth weight into a spreadsheet on his laptop."
-            elif f.generosity > 85:
+            elif f.personality['Agreeableness']['Altruism'] > 18:
                 dad_txt = f"Your father, {f.first_name}, has somehow managed to order pizza for the entire maternity ward."
             else:
                 dad_txt = f"Your father, {f.first_name} ({f.age}), stands awkwardly by the bedside, afraid he might break you if he touches you."

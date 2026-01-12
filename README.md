@@ -26,7 +26,45 @@
         *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
 *   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
-    *   **Personality:** Discipline, Willpower, Generosity, Religiousness, Craziness.
+    *   **Personality (Big Five Model):** A deep psychological simulation based on the OCEAN model.
+        *   **Structure:** 5 Main Traits, each composed of 6 specific sub-facets.
+        *   **Scoring:** Facets range from 0-20; Main Traits range from 0-120.
+        *   **Visualization:** The Attribute Modal displays the full psychometric profile with color-coded values (Green for high positive traits, Red for high negative traits like Neuroticism).
+        *   **1. Openness to Experience:** Appreciation for art, emotion, adventure, and unusual ideas.
+            *   *Fantasy:* Having a vivid imagination and an active dream life.
+            *   *Aesthetics:* Deep appreciation for art, music, poetry, and beauty in nature.
+            *   *Feelings:* Receptivity to one's own inner feelings and emotions; valuing emotional depth.
+            *   *Actions:* Willingness to try different activities, go to new places, or eat unusual foods.
+            *   *Ideas:* Intellectual curiosity; an active interest in abstract concepts and philosophical debates.
+            *   *Values:* Readiness to re-examine social, political, and religious values (opposite of dogmatism).
+        *   **2. Conscientiousness:** Tendency to be self-disciplined, organized, and achievement-oriented.
+            *   *Competence:* Belief in one’s own self-efficacy; feeling capable and sensible.
+            *   *Order:* Personal organization; a preference for schedules, lists, and tidiness.
+            *   *Dutifulness:* Emphasis on ethical principles and fulfilling moral obligations.
+            *   *Achievement Striving:* The drive to hit goals, work hard, and be successful.
+            *   *Self-Discipline:* The ability to persist at difficult or boring tasks despite distractions.
+            *   *Deliberation:* Tendency to think carefully before acting; caution and impulse control.
+        *   **3. Extraversion:** Energy, positive emotions, surgency, and the tendency to seek stimulation in the company of others.
+            *   *Warmth:* Interest in and friendliness towards others; ease of forming attachments.
+            *   *Gregariousness:* Preference for the company of others; enjoying crowds and social stimulation.
+            *   *Assertiveness:* Social dominance; forcefulness of expression and leadership ability.
+            *   *Activity:* Pace of living; level of energy and busyness.
+            *   *Excitement-Seeking:* Need for environmental stimulation, thrills, and risk.
+            *   *Positive Emotions:* Tendency to experience happiness, joy, excitement, and optimism.
+        *   **4. Agreeableness:** Tendency to be compassionate and cooperative rather than suspicious and antagonistic.
+            *   *Trust:* Belief in the sincerity and good intentions of others.
+            *   *Straightforwardness:* Frankness, sincerity, and ingenuity (avoiding manipulation).
+            *   *Altruism:* Active concern for the welfare of others; generosity and willingness to help.
+            *   *Compliance:* Response to interpersonal conflict; tendency to defer to others rather than compete.
+            *   *Modesty:* Tendency to play down one's own achievements and be humble.
+            *   *Tender-Mindedness:* Attitude of sympathy and concern for others; governed by emotion rather than cold logic.
+        *   **5. Neuroticism:** Tendency to experience negative emotions like anger, anxiety, or depression.
+            *   *Anxiety:* Tendency to be apprehensive, fearful, prone to worry, and nervous.
+            *   *Angry Hostility:* Tendency to experience anger and related states like frustration and bitterness.
+            *   *Depression:* Tendency to experience feelings of guilt, sadness, despondency, and loneliness.
+            *   *Self-Consciousness:* Sensitivity to criticism and feelings of inferiority; shyness or social anxiety.
+            *   *Impulsiveness:* Inability to control cravings and urges.
+            *   *Vulnerability:* Inability to cope with stress; becoming dependent, hopeless, or panicked in difficult situations.
     *   **Hidden:** Karma, Luck, Sexuality (Hetero/Homo/Bi).
 *   **Derived Metrics (Physiology):**
     *   **Body Fat %:** Calculated dynamically based on Gender and Athleticism.

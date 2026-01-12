@@ -250,12 +250,11 @@ class Renderer:
         start_x = self.rect_center.x + 20
         start_y = 50
         
-        # Column 1: Identity
+        # --- Column 1: Identity & Physical ---
         bio_lines = [
             f"Gender: {agent.gender}",
             f"Origin: {agent.city}, {agent.country}",
             f"Height: {agent.height_cm} cm",
-            f"Height Pot: {agent.genetic_height_potential} cm",
             f"Weight: {agent.weight_kg} kg",
             f"BMI: {agent.bmi}",
             f"Eyes: {agent.eye_color}",
@@ -264,39 +263,64 @@ class Renderer:
             f"Sexuality: {agent.sexuality}"
         ]
         draw_column("Identity", bio_lines, start_x, start_y)
-
-        # Column 2: Physical
+        
         phys_lines = [
             f"Max Health: {agent.max_health}",
             f"Strength: {agent.strength}",
             f"Athleticism: {agent.athleticism}",
             f"Endurance: {agent.endurance}",
             f"Body Fat: {agent.body_fat}%",
-            f"Lean Mass: {agent.lean_mass} kg",
             f"Fertility: {agent.fertility}",
             f"Libido: {agent.libido}"
         ]
-        draw_column("Physical", phys_lines, start_x + col_width, start_y)
+        draw_column("Physical", phys_lines, start_x, start_y + 320)
 
-        # Column 3: Personality
-        pers_lines = [
-            f"Discipline: {agent.discipline}",
-            f"Willpower: {agent.willpower}",
-            f"Generosity: {agent.generosity}",
+        # --- Helper for Personality Groups ---
+        def draw_trait_group(trait, x, y):
+            total = agent.get_personality_sum(trait)
+            # Draw Header with Total
+            title_surf = self.font_header.render(f"{trait}: {total}/120", True, constants.COLOR_ACCENT)
+            self.screen.blit(title_surf, (x, y))
+            y += 30
+            # Draw Facets
+            for facet, val in agent.personality[trait].items():
+                txt = f"  {facet}: {val}"
+                col = constants.COLOR_TEXT
+                
+                if trait == "Neuroticism":
+                    # Inverted logic: High Neuroticism is "Bad" (Red), Low is "Good" (Green)
+                    if val > 15: col = constants.COLOR_LOG_NEGATIVE
+                    elif val < 5: col = constants.COLOR_LOG_POSITIVE
+                else:
+                    # Standard logic: High is "Good" (Green), Low is "Bad" (Red)
+                    if val > 15: col = constants.COLOR_LOG_POSITIVE
+                    elif val < 5: col = constants.COLOR_LOG_NEGATIVE
+                
+                surf = self.font_main.render(txt, True, col)
+                self.screen.blit(surf, (x, y))
+                y += 22
+            return y + 10
+
+        # --- Column 2: OCEAN (O, C, E) ---
+        c2_x = start_x + col_width
+        c2_y = start_y
+        c2_y = draw_trait_group("Openness", c2_x, c2_y)
+        c2_y = draw_trait_group("Conscientiousness", c2_x, c2_y)
+        c2_y = draw_trait_group("Extraversion", c2_x, c2_y)
+
+        # --- Column 3: OCEAN (A, N) + Other ---
+        c3_x = start_x + (col_width * 2)
+        c3_y = start_y
+        c3_y = draw_trait_group("Agreeableness", c3_x, c3_y)
+        c3_y = draw_trait_group("Neuroticism", c3_x, c3_y)
+        
+        # Other
+        other_lines = [
             f"Religiousness: {agent.religiousness}",
-            f"Craziness: {agent.craziness}",
             f"Karma: {agent.karma}",
             f"Luck: {agent.luck}"
         ]
-        draw_column("Personality", pers_lines, start_x + (col_width * 2), start_y)
-        
-        # Skills (Bottom)
-        if agent.skills:
-            skill_lines = [f"{k}: {v}" for k, v in agent.skills.items()]
-        else:
-            skill_lines = ["No skills learned yet."]
-        
-        draw_column("Skills", skill_lines, start_x, start_y + 400)
+        draw_column("Other", other_lines, c3_x, c3_y)
 
     def _draw_left_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
