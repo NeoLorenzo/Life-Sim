@@ -273,9 +273,9 @@ class Renderer:
             tab.draw(self.screen, active_highlight=is_active)
         
         # Draw Buttons for Active Tab with Dynamic Layout
+        current_y = self.rect_right.y + 60
+        
         if self.active_tab in self.buttons:
-            # Start Y position (below tabs)
-            current_y = self.rect_right.y + 60
             gap = 12
             
             for btn in self.buttons[self.active_tab]:
@@ -290,6 +290,59 @@ class Renderer:
                 
                 # Advance Y
                 current_y += btn.rect.height + gap
+
+        # Draw Relationship List (Only on Social Tab)
+        if self.active_tab == "Social":
+            self._draw_relationship_list(sim_state, current_y + 10)
+
+    def _draw_relationship_list(self, sim_state, start_y):
+        """Draws the list of known people in the right panel."""
+        x = self.rect_right.x + 20
+        y = start_y
+        w = self.rect_right.width - 40
+        h = 50
+        
+        # Header
+        header_surf = self.font_header.render("Relationships", True, constants.COLOR_ACCENT)
+        self.screen.blit(header_surf, (x, y))
+        y += 30
+        
+        for uid, rel in sim_state.player.relationships.items():
+            # Background Box
+            rect = pygame.Rect(x, y, w, h)
+            pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, rect, border_radius=4)
+            pygame.draw.rect(self.screen, constants.COLOR_BORDER, rect, 1, border_radius=4)
+            
+            # Name & Status
+            name_color = constants.COLOR_TEXT
+            status_text = rel['type']
+            
+            if not rel['is_alive']:
+                name_color = constants.COLOR_TEXT_DIM
+                status_text += " (Deceased)"
+            
+            name_surf = self.font_main.render(rel['name'], True, name_color)
+            type_surf = self.font_log.render(status_text, True, constants.COLOR_TEXT_DIM)
+            
+            self.screen.blit(name_surf, (x + 10, y + 5))
+            self.screen.blit(type_surf, (x + 10, y + 25))
+            
+            # Relationship Bar
+            if rel['is_alive']:
+                bar_bg = pygame.Rect(x + w - 110, y + 20, 100, 10)
+                pygame.draw.rect(self.screen, (30, 30, 30), bar_bg)
+                
+                pct = rel['value'] / 100.0
+                bar_fill = pygame.Rect(x + w - 110, y + 20, 100 * pct, 10)
+                
+                # Color based on value
+                if rel['value'] > 80: col = constants.COLOR_LOG_POSITIVE
+                elif rel['value'] < 30: col = constants.COLOR_LOG_NEGATIVE
+                else: col = constants.COLOR_ACCENT
+                
+                pygame.draw.rect(self.screen, col, bar_fill)
+            
+            y += h + 10
 
     def quit(self):
         pygame.quit()
