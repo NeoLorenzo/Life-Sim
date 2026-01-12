@@ -384,22 +384,61 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Surrender:** A menu option to end the current life immediately (Suicide), triggering the End of Life sequence without waiting for natural death.
 
 ### Psychology, Scenarios & Genetics
-*   **The Scenario Engine (Moral Dilemmas):**
-    *   **Random Pop-ups:** A system that interrupts the "Age Up" flow with multiple-choice scenarios.
-    *   **Moral Choices:** *Example:* "You find a wallet with $100." (Keep it / Return it / Leave it).
-    *   **Conflict Resolution:** *Example:* "A bully calls you a name." (Report him / Attack him / Ignore him).
-    *   **Impact:** Choices directly affect Karma, Happiness, and Health.
-*   **Genotype vs. Phenotype:**
-    *   **Genetic Potential:** Agents spawn with attribute ranges.
-    *   **Realized Attributes:** Stats grow based on environment.
-*   **Developmental Stages:**
-    *   **Infancy:** Motor skills.
-    *   **Childhood:** Language, curiosity.
-    *   **School Age:** Socialization, bullying.
-    *   **Adolescence:** Puberty, rebellion.
+*   **The "Nature vs. Nurture" Architecture:**
+    *   **Genotype (The Reaction Range):** At birth, agents are not assigned a static value for Big 5 traits. Instead, they are assigned a **Genetic Range** (e.g., Extraversion Potential: 8-16). This is heavily influenced by parental heritability (approx. 40-60% correlation).
+    *   **Phenotype (The Realized Self):** The current, visible attribute value. It starts at the midpoint of the Genetic Range and drifts based on environmental choices and "Core Memories."
+    *   **Plasticity Curve:** The ability to change stats decreases with age.
+        *   *Ages 0-6:* 100% Plasticity (Massive shifts possible).
+        *   *Ages 7-18:* 50% Plasticity (Moderate shifts).
+        *   *Ages 25+:* 10% Plasticity (Personality "crystallizes," requiring major trauma or effort to change).
+
+*   **Developmental Stages & Critical Periods:**
+    *   **Infancy (0-2) - Temperament:**
+        *   *Focus:* **Neuroticism & Extraversion**.
+        *   *Mechanic:* The "Fussiness" hidden stat. High fussiness leads to higher baseline Neuroticism (Anxiety/Vulnerability).
+        *   *Parental Impact:* "Secure Attachment" events (parents responding to crying) lower Neuroticism. "Avoidant Attachment" raises it.
+    *   **Early Childhood (3-6) - Impulse & Imagination:**
+        *   *Focus:* **Openness & Agreeableness**.
+        *   *Scenarios:* "Sharing Toys" (Altruism), "Imaginary Friend" (Fantasy), "Tantrums" (Angry Hostility).
+        *   *Outcome:* Determining if the child is "Difficult" or "Easy," affecting parental relationship stress.
+    *   **School Age (7-12) - Industry vs. Inferiority:**
+        *   *Focus:* **Conscientiousness**.
+        *   *Mechanic:* The "Homework Loop." Choices to study vs. play directly build the *Self-Discipline* and *Achievement Striving* facets.
+        *   *Socialization:* First exposure to "Peer Pressure." High Agreeableness (Compliance) makes the agent susceptible to bad influences; Low Agreeableness makes them a potential bully.
+    *   **Adolescence (13-19) - Identity vs. Confusion:**
+        *   *Focus:* **The Volatility Spike**.
+        *   *Puberty Modifier:* Between ages 13-15, a temporary "Hormonal" modifier is applied: +Impulsiveness, +Libido, +Angry Hostility, -Dutifulness.
+        *   *Risk-Taking:* The prefrontal cortex is undeveloped. Scenarios involving drugs, reckless driving, and truancy appear frequently.
+        *   *Ideological Formation:* The agent challenges parental values. High *Openness (Values)* increases the chance of rejecting the parents' Religion or Politics.
+
 *   **Emergent Identity:**
-    *   **Discovery:** Sexuality/Religiousness emerge dynamically.
-    *   **Core Memories:** Events permanently buffing/debuffing personality.
+    *   **Sexuality Spectrum (The Kinsey Scale):**
+        *   *Latent Value:* Sexuality is a hidden float (0.0 to 6.0) determined at birth but invisible.
+        *   *Discovery Phase (Ages 11-16):* Random "Crush" events reveal the value.
+        *   *Fluidity:* High *Openness* allows for slight drifting on the scale during college years (Experimentation).
+    *   **Religious Trajectory:**
+        *   *Indoctrination (0-12):* Religiousness is inherited directly from parents.
+        *   *Crisis of Faith (16-25):* High *Openness* or High *Neuroticism* (Tragedy) triggers events to question faith. Outcomes: "Devout," "Agnostic," or "Atheist."
+    *   **Political Compass:**
+        *   Derived from Big 5: High *Openness* correlates with Liberalism; High *Conscientiousness (Order)* correlates with Conservatism.
+
+*   **The Scenario Engine (Context-Aware Events):**
+    *   **Trigger Logic:** Scenarios are not random; they are pulled from a deck based on current stats.
+        *   *Example:* An agent with High *Extraversion (Excitement Seeking)* will trigger "Street Racing" or "Clubbing" scenarios. An agent with High *Neuroticism* will trigger "Existential Dread" or "Jealousy" scenarios.
+    *   **Moral Dilemmas:**
+        *   *The Heinz Dilemma:* Complex choices with no right answer (e.g., "Steal medicine to save a dying friend?").
+        *   *Impact:* These choices do not just adjust stats; they add **Flags** to the character (e.g., `Has_Criminal_Mindset`).
+    *   **Core Memories (Perks/Traumas):**
+        *   *Mechanic:* Critical successes or failures in scenarios create permanent modifiers.
+        *   *Positive:* "Won State Championship" -> Permanent +5 Confidence (Lowers Vulnerability).
+        *   *Negative:* "Caught Shoplifting" -> Permanent +5 Anxiety (Neuroticism).
+
+*   **Psychopathology (The Extremes):**
+    *   **Thresholds:** If a Big 5 trait hits 0 or 100 (sum 120), it manifests as a pathology.
+        *   *Extreme Conscientiousness:* OCD tendencies (Obsessive cleaning events).
+        *   *Extreme Neuroticism:* Clinical Depression or Panic Disorder.
+        *   *Extreme Low Agreeableness:* Anti-Social Personality Disorder (Sociopathy).
+    *   **Therapy:** Actions to mitigate these extremes, moving the stats back toward the mean.
 
 ### Special Careers & Organizations
 *   **Royalty:**
