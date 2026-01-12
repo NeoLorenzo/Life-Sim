@@ -71,7 +71,8 @@ def main():
                     elif action_id == "DOCTOR":
                         logic.visit_doctor(sim_state)
                     elif action_id == "TOGGLE_ATTR":
-                        renderer.toggle_attributes()
+                        # Default to player when clicking the main menu button
+                        renderer.toggle_attributes(target=sim_state.player)
                     else:
                         # Handle placeholders
                         sim_state.add_log(f"Feature {action_id} coming soon!", constants.COLOR_TEXT_DIM)

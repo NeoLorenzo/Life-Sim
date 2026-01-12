@@ -40,7 +40,7 @@ class Renderer:
             self.font_log
         )
         
-        self.show_attributes = False
+        self.viewing_agent = None # None, or an Agent object
         
         self.buttons = {} # Dict[str, List[Button]]
         self.tabs = []    # List[Button] (Using Button class for tabs)
@@ -111,7 +111,6 @@ class Renderer:
         Processes input events.
         """
         # Pass to LogPanel (Scrolling + Clicking headers)
-        # We need sim_state to toggle years
         if sim_state:
             self.log_panel.handle_event(event, sim_state)
         
@@ -134,7 +133,53 @@ class Renderer:
                 action = btn.handle_event(event)
                 if action:
                     return action
-                    
+
+        # 3. Check Dynamic Relationship Buttons (Social Tab)
+        if self.active_tab == "Social" and sim_state:
+            # Re-calculate layout to find clicks (Must match _draw_relationship_list)
+            current_y = self.rect_right.y + 60
+            gap = 12
+            
+            # Calculate where the static buttons ended
+            for btn in self.buttons["Social"]:
+                # Only count visible buttons
+                rule = self.visibility_rules.get(btn.action_id)
+                if not rule or rule(sim_state.player):
+                    current_y += btn.rect.height + gap
+            
+            start_y = current_y + 10
+            x = self.rect_right.x + 20
+            w = self.rect_right.width - 40
+            card_h = 90 
+            
+            # Offset for the "Relationships" header text (Matches _draw_relationship_list)
+            start_y += 30
+
+            for uid, rel in sim_state.player.relationships.items():
+                # Button Geometry (Must match _draw_relationship_list exactly)
+                btn_y = start_y + 50
+                btn_w = (w - 10) // 2
+                btn_h = 30
+                
+                # Attributes Button
+                # Draw used: x + 5
+                rect_attr = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
+                
+                # Interact Button
+                # Draw used: x + 5 + btn_w + 5
+                rect_int = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
+                
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if rect_attr.collidepoint(event.pos):
+                        # Ensure the NPC exists before trying to view
+                        if uid in sim_state.npcs:
+                            self.viewing_agent = sim_state.npcs[uid]
+                        return None
+                    elif rect_int.collidepoint(event.pos):
+                        return f"INTERACT_{uid}"
+                
+                start_y += card_h + 10
+
         return None
 
     def render(self, sim_state):
@@ -142,13 +187,12 @@ class Renderer:
         self.screen.fill(constants.COLOR_BG)
         
         # Update Log Panel Content
-        # Now we pass the structured data generator
         self.log_panel.update_logs(sim_state.get_flat_log_for_rendering())
         
         # Draw Panels
         self._draw_left_panel(sim_state)
         
-        if self.show_attributes:
+        if self.viewing_agent:
             self._draw_attributes_modal(sim_state)
         else:
             self.log_panel.draw(self.screen)
@@ -157,8 +201,17 @@ class Renderer:
         
         pygame.display.flip()
 
-    def toggle_attributes(self):
-        self.show_attributes = not self.show_attributes
+    def toggle_attributes(self, target=None):
+        if target:
+            self.viewing_agent = target
+        elif self.viewing_agent:
+            self.viewing_agent = None
+        else:
+            # Default to player if opening from main menu
+            # We need access to player, but this method is usually called from main.py
+            # We'll handle the "Default" logic in main.py or pass it here.
+            # For now, if target is None and we are closed, we assume Player is handled by caller
+            pass
 
     def _draw_attributes_modal(self, sim_state):
         """Draws the detailed attributes overlay in the center panel."""
@@ -166,7 +219,21 @@ class Renderer:
         pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
-        player = sim_state.player
+        # Close Button (Top Right of Center Panel)
+        close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect)
+        # Simple X
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
+        
+        # Check for close click (Hack: doing input in render for this modal close)
+        if pygame.mouse.get_pressed()[0]:
+            m_pos = pygame.mouse.get_pos()
+            if close_rect.collidepoint(m_pos):
+                self.viewing_agent = None
+                return
+
+        agent = self.viewing_agent
         
         # Helper to draw a column
         def draw_column(title, lines, x, y):
@@ -185,47 +252,47 @@ class Renderer:
         
         # Column 1: Identity
         bio_lines = [
-            f"Gender: {player.gender}",
-            f"Origin: {player.city}, {player.country}",
-            f"Height: {player.height_cm} cm",
-            f"Height Pot: {player.genetic_height_potential} cm",
-            f"Weight: {player.weight_kg} kg",
-            f"BMI: {player.bmi}",
-            f"Eyes: {player.eye_color}",
-            f"Hair: {player.hair_color}",
-            f"Skin: {player.skin_tone}",
-            f"Sexuality: {player.sexuality}"
+            f"Gender: {agent.gender}",
+            f"Origin: {agent.city}, {agent.country}",
+            f"Height: {agent.height_cm} cm",
+            f"Height Pot: {agent.genetic_height_potential} cm",
+            f"Weight: {agent.weight_kg} kg",
+            f"BMI: {agent.bmi}",
+            f"Eyes: {agent.eye_color}",
+            f"Hair: {agent.hair_color}",
+            f"Skin: {agent.skin_tone}",
+            f"Sexuality: {agent.sexuality}"
         ]
         draw_column("Identity", bio_lines, start_x, start_y)
 
         # Column 2: Physical
         phys_lines = [
-            f"Max Health: {player.max_health}",
-            f"Strength: {player.strength}",
-            f"Athleticism: {player.athleticism}",
-            f"Endurance: {player.endurance}",
-            f"Body Fat: {player.body_fat}%",
-            f"Lean Mass: {player.lean_mass} kg",
-            f"Fertility: {player.fertility}",
-            f"Libido: {player.libido}"
+            f"Max Health: {agent.max_health}",
+            f"Strength: {agent.strength}",
+            f"Athleticism: {agent.athleticism}",
+            f"Endurance: {agent.endurance}",
+            f"Body Fat: {agent.body_fat}%",
+            f"Lean Mass: {agent.lean_mass} kg",
+            f"Fertility: {agent.fertility}",
+            f"Libido: {agent.libido}"
         ]
         draw_column("Physical", phys_lines, start_x + col_width, start_y)
 
         # Column 3: Personality
         pers_lines = [
-            f"Discipline: {player.discipline}",
-            f"Willpower: {player.willpower}",
-            f"Generosity: {player.generosity}",
-            f"Religiousness: {player.religiousness}",
-            f"Craziness: {player.craziness}",
-            f"Karma: {player.karma}",
-            f"Luck: {player.luck}"
+            f"Discipline: {agent.discipline}",
+            f"Willpower: {agent.willpower}",
+            f"Generosity: {agent.generosity}",
+            f"Religiousness: {agent.religiousness}",
+            f"Craziness: {agent.craziness}",
+            f"Karma: {agent.karma}",
+            f"Luck: {agent.luck}"
         ]
         draw_column("Personality", pers_lines, start_x + (col_width * 2), start_y)
         
         # Skills (Bottom)
-        if player.skills:
-            skill_lines = [f"{k}: {v}" for k, v in player.skills.items()]
+        if agent.skills:
+            skill_lines = [f"{k}: {v}" for k, v in agent.skills.items()]
         else:
             skill_lines = ["No skills learned yet."]
         
@@ -300,7 +367,7 @@ class Renderer:
         x = self.rect_right.x + 20
         y = start_y
         w = self.rect_right.width - 40
-        h = 50
+        h = 90 # Increased height for buttons
         
         # Header
         header_surf = self.font_header.render("Relationships", True, constants.COLOR_ACCENT)
@@ -329,11 +396,11 @@ class Renderer:
             
             # Relationship Bar
             if rel['is_alive']:
-                bar_bg = pygame.Rect(x + w - 110, y + 20, 100, 10)
+                bar_bg = pygame.Rect(x + w - 110, y + 10, 100, 10)
                 pygame.draw.rect(self.screen, (30, 30, 30), bar_bg)
                 
                 pct = rel['value'] / 100.0
-                bar_fill = pygame.Rect(x + w - 110, y + 20, 100 * pct, 10)
+                bar_fill = pygame.Rect(x + w - 110, y + 10, 100 * pct, 10)
                 
                 # Color based on value
                 if rel['value'] > 80: col = constants.COLOR_LOG_POSITIVE
@@ -341,6 +408,27 @@ class Renderer:
                 else: col = constants.COLOR_ACCENT
                 
                 pygame.draw.rect(self.screen, col, bar_fill)
+                
+                # Buttons
+                btn_y = y + 50
+                btn_w = (w - 10) // 2
+                btn_h = 30
+                
+                # Draw "Attributes" Button
+                attr_rect = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
+                pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, attr_rect, border_radius=4)
+                pygame.draw.rect(self.screen, constants.COLOR_BORDER, attr_rect, 1, border_radius=4)
+                attr_txt = self.font_log.render("Attributes", True, constants.COLOR_TEXT)
+                attr_txt_rect = attr_txt.get_rect(center=attr_rect.center)
+                self.screen.blit(attr_txt, attr_txt_rect)
+
+                # Draw "Interact" Button
+                int_rect = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
+                pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, int_rect, border_radius=4)
+                pygame.draw.rect(self.screen, constants.COLOR_BORDER, int_rect, 1, border_radius=4)
+                int_txt = self.font_log.render("Interact", True, constants.COLOR_TEXT)
+                int_txt_rect = int_txt.get_rect(center=int_rect.center)
+                self.screen.blit(int_txt, int_txt_rect)
             
             y += h + 10
 
