@@ -374,7 +374,7 @@ class Renderer:
         
         # Column 1: Vitals, Physical, Hidden
         draw_group(0, "Vitals", ["Health", "Happiness", "Smarts", "Looks"])
-        draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Libido"])
+        draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
         draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
         
         # Column 2: Openness & Conscientiousness

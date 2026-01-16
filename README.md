@@ -27,7 +27,10 @@
         *   **Height:** Dynamic growth system. Agents start small (~50cm), grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
         *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
 *   **Universal Attribute System (0-100 Scale):**
-    *   **Physical:** Strength, Athleticism, Endurance, Fertility, Libido.
+    *   **Physical:** Strength, Athleticism, Endurance.
+    *   **Biological Curves (Genotype vs. Phenotype):** **Fertility** and **Libido** are no longer static random rolls.
+        *   **Genotype:** Agents are born with a hidden "Peak Potential."
+        *   **Phenotype:** The current value is calculated annually based on age and gender. Values start at 0 for children, spike during puberty, and decay naturally (e.g., Menopause for women, gradual senescence for men).
     *   **Personality (Big Five Model):** A deep psychological simulation based on the OCEAN model.
         *   **Structure:** 5 Main Traits, each composed of 6 specific sub-facets.
         *   **Scoring:** Facets range from 0-20; Main Traits range from 0-120.
@@ -107,7 +110,7 @@
 
 ### User Interface & Visualization
 *   **Technical Specs:**
-    *   **Resolution:** Fixed 1600x900 window.
+    *   **Resolution:** Fixed **1920x1080** window.
     *   **Framerate:** Capped at 60 FPS.
     *   **Theme:** Dark Mode (Background: RGB 20,20,20; Panels: RGB 40,40,40).
 *   **Three-Panel Layout:**
@@ -116,7 +119,7 @@
         *   **Advanced Narrative Engine:** Replaced generic start messages with a **Novelistic Story Generator**. The engine synthesizes Weather, City Atmosphere, Socio-Economic Status (Wealth vs. Marital Happiness), Parental Age Gaps, and Personality Quirks to generate a unique, cohesive opening paragraph for every life (e.g., "Born during a storm to a 'Crazy' father checking for tracking chips").
         *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
         *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
-        *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal can now inspect **any** agent (Player or NPC) to view their hidden stats.
+        *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal now explicitly displays **Genetic Potentials** alongside current values for traits like Fertility and Libido.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).

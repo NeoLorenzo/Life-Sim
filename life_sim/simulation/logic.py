@@ -46,6 +46,7 @@ def process_turn(sim_state: SimState):
     if sim_state.month_index == sim_state.birth_month_index:
         old_cap = player.max_health
         player._recalculate_max_health()
+        player._recalculate_hormones() # Update Fertility/Libido based on new age
         if player.max_health < old_cap:
             pass
 
@@ -91,6 +92,7 @@ def process_turn(sim_state: SimState):
         # Simplified: Process when month_index matches player's birth month (Annual cycle)
         if sim_state.month_index == sim_state.birth_month_index:
             npc._recalculate_max_health()
+            npc._recalculate_hormones()
             
             # Apply Natural Entropy (Wear & Tear)
             if npc.age > 50:

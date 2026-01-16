@@ -88,8 +88,14 @@ class Agent:
         self.strength = self._rand_attr(attr_config, "strength")
         self.athleticism = self._rand_attr(attr_config, "athleticism")
         self.endurance = self._rand_attr(attr_config, "endurance")
-        self.fertility = self._rand_attr(attr_config, "fertility")
-        self.libido = self._rand_attr(attr_config, "libido")
+        
+        # Genotype: The genetic peak potential (0-100)
+        self._genetic_fertility_peak = self._rand_attr(attr_config, "fertility")
+        self._genetic_libido_peak = self._rand_attr(attr_config, "libido")
+        
+        # Phenotype: Current expressed value (starts at 0 for babies)
+        self.fertility = 0
+        self.libido = 0
 
         # Derived Bio-Metrics (Simple approximation based on Athleticism)
         # Base BF: Men ~25%, Women ~35%. Athleticism reduces this.
@@ -102,6 +108,9 @@ class Agent:
         self.lean_mass = 0
         self.weight_kg = 0
         self.bmi = 0
+        
+        # Calculate initial phenotype based on age
+        self._recalculate_hormones()
         self._recalculate_physique()
         
         # Personality (Big 5 Model)
@@ -145,7 +154,9 @@ class Agent:
         if name == "Fitness": return self.athleticism
         if name == "Strength": return self.strength
         if name == "Fertility": return self.fertility
+        if name == "Genetic Fertility": return self._genetic_fertility_peak
         if name == "Libido": return self.libido
+        if name == "Genetic Libido": return self._genetic_libido_peak
         
         # Big 5 (Sums)
         if name in self.personality:
@@ -227,6 +238,66 @@ class Agent:
     def get_personality_sum(self, trait):
         """Returns the sum (0-120) of a main trait."""
         return sum(self.personality.get(trait, {}).values())
+
+    def _recalculate_hormones(self):
+        """
+        Calculates current Fertility and Libido based on Age and Gender curves.
+        Distinguishes Genotype (Peak) from Phenotype (Current).
+        """
+        age = self.age
+        
+        # --- Fertility Curve ---
+        fert_factor = 0.0
+        if self.gender == "Female":
+            if age < 12:
+                fert_factor = 0.0
+            elif age < 15:
+                # Puberty ramp (12-15)
+                fert_factor = (age - 11) / 4.0
+            elif age <= 30:
+                # Prime (15-30)
+                fert_factor = 1.0
+            elif age <= 45:
+                # Decline (30-45)
+                fert_factor = 1.0 - ((age - 30) / 20.0) # Drops to 0.25
+            elif age < 50:
+                # Menopause onset (45-50)
+                fert_factor = 0.25 - ((age - 45) / 5.0 * 0.25)
+            else:
+                # Menopause complete
+                fert_factor = 0.0
+        else: # Male
+            if age < 13:
+                fert_factor = 0.0
+            elif age < 18:
+                # Puberty ramp
+                fert_factor = (age - 12) / 6.0
+            elif age < 40:
+                # Prime
+                fert_factor = 1.0
+            else:
+                # Gradual Senescence (never fully hits 0)
+                decay = (age - 40) * 0.01
+                fert_factor = max(0.2, 1.0 - decay)
+
+        self.fertility = int(self._genetic_fertility_peak * fert_factor)
+
+        # --- Libido Curve ---
+        # Simplified: Both genders spike in teens, plateau, then decay with age/health
+        lib_factor = 0.0
+        if age < 13:
+            lib_factor = 0.0
+        elif age < 18:
+            # Hormonal Storm (13-18)
+            lib_factor = 0.5 + ((age - 13) / 5.0 * 0.5) # Ramps 0.5 -> 1.0
+        elif age < 35:
+            lib_factor = 1.0
+        else:
+            # Age decay
+            decay = (age - 35) * 0.015
+            lib_factor = max(0.1, 1.0 - decay)
+            
+        self.libido = int(self._genetic_libido_peak * lib_factor)
 
     def _recalculate_physique(self):
         """

@@ -5,8 +5,8 @@ Static values that do not change between simulation runs.
 """
 
 # Window Settings
-SCREEN_WIDTH = 1600
-SCREEN_HEIGHT = 900
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
 WINDOW_TITLE = "Life-Sim MVP 0.5"
 FPS = 60
 
