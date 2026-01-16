@@ -52,6 +52,9 @@ class Renderer:
             "WORK": lambda player: player.job is not None
         }
         
+        # Storage for interactive rects in the modal (recalculated every frame)
+        self.modal_click_zones = [] 
+        
         self._init_ui_structure()
         
         self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
@@ -110,8 +113,27 @@ class Renderer:
         """
         Processes input events.
         """
+        # 0. Check Modal Interaction (Priority)
+        if self.viewing_agent and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Check Close Button
+            close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+            if close_rect.collidepoint(event.pos):
+                self.viewing_agent = None
+                return None
+            
+            # Check Attribute Cards (Pinning)
+            # Only allow pinning if viewing the Player
+            if self.viewing_agent == sim_state.player:
+                for rect, attr_name in self.modal_click_zones:
+                    if rect.collidepoint(event.pos):
+                        if attr_name in sim_state.player.pinned_attributes:
+                            sim_state.player.pinned_attributes.remove(attr_name)
+                        else:
+                            sim_state.player.pinned_attributes.append(attr_name)
+                        return None # Consumed
+
         # Pass to LogPanel (Scrolling + Clicking headers)
-        if sim_state:
+        if sim_state and not self.viewing_agent:
             self.log_panel.handle_event(event, sim_state)
         
         # 1. Check Tabs
@@ -215,112 +237,156 @@ class Renderer:
 
     def _draw_attributes_modal(self, sim_state):
         """Draws the detailed attributes overlay in the center panel."""
+        # Reset click zones
+        self.modal_click_zones = []
+        
         # Draw Background
         pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
-        # Close Button (Top Right of Center Panel)
+        # Close Button
         close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
-        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect)
-        # Simple X
+        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
         pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
         pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
-        
-        # Check for close click (Hack: doing input in render for this modal close)
-        if pygame.mouse.get_pressed()[0]:
-            m_pos = pygame.mouse.get_pos()
-            if close_rect.collidepoint(m_pos):
-                self.viewing_agent = None
-                return
 
         agent = self.viewing_agent
+        is_player = (agent == sim_state.player)
         
-        # Helper to draw a column
-        def draw_column(title, lines, x, y):
-            title_surf = self.font_header.render(title, True, constants.COLOR_ACCENT)
-            self.screen.blit(title_surf, (x, y))
-            y += 40
-            for line in lines:
-                text_surf = self.font_main.render(line, True, constants.COLOR_TEXT)
-                self.screen.blit(text_surf, (x, y))
-                y += 30
+        # --- Header ---
+        header_text = f"{agent.first_name}'s Attributes"
+        if is_player: header_text += " (Click to Pin)"
+        header_surf = self.font_header.render(header_text, True, constants.COLOR_ACCENT)
+        self.screen.blit(header_surf, (self.rect_center.x + 20, self.rect_center.y + 15))
+        
+        # --- Static Bio Text (Top Section) ---
+        bio_x = self.rect_center.x + 20
+        bio_y = self.rect_center.y + 50
+        
+        # Line 1: Identity
+        line1 = f"{agent.gender}, {agent.age} years old. Born in {agent.city}, {agent.country}."
+        self.screen.blit(self.font_main.render(line1, True, constants.COLOR_TEXT), (bio_x, bio_y))
+        
+        # Line 2: Appearance
+        line2 = f"{agent.sexuality}. {agent.eye_color} Eyes, {agent.hair_color} Hair, {agent.skin_tone} Skin."
+        self.screen.blit(self.font_main.render(line2, True, constants.COLOR_TEXT), (bio_x, bio_y + 25))
+        
+        # Line 3: Body
+        line3 = f"Height: {agent.height_cm}cm | Weight: {agent.weight_kg}kg | BMI: {agent.bmi}"
+        self.screen.blit(self.font_main.render(line3, True, constants.COLOR_TEXT), (bio_x, bio_y + 50))
 
-        # Layout Columns within Center Panel
-        col_width = self.rect_center.width // 3
+        # --- Columnar Layout Configuration ---
         start_x = self.rect_center.x + 20
-        start_y = 50
+        start_y = bio_y + 90 
         
-        # --- Column 1: Identity & Physical ---
-        bio_lines = [
-            f"Gender: {agent.gender}",
-            f"Origin: {agent.city}, {agent.country}",
-            f"Height: {agent.height_cm} cm",
-            f"Weight: {agent.weight_kg} kg",
-            f"BMI: {agent.bmi}",
-            f"Eyes: {agent.eye_color}",
-            f"Hair: {agent.hair_color}",
-            f"Skin: {agent.skin_tone}",
-            f"Sexuality: {agent.sexuality}"
-        ]
-        draw_column("Identity", bio_lines, start_x, start_y)
+        # 4 Columns
+        col_count = 4
+        col_w = (self.rect_center.width - 40) // col_count
+        card_w = col_w - 10
+        card_h = 40 # Compact height
+        gap_y = 8
         
-        phys_lines = [
-            f"Max Health: {agent.max_health}",
-            f"Strength: {agent.strength}",
-            f"Athleticism: {agent.athleticism}",
-            f"Endurance: {agent.endurance}",
-            f"Body Fat: {agent.body_fat}%",
-            f"Fertility: {agent.fertility}",
-            f"Libido: {agent.libido}"
-        ]
-        draw_column("Physical", phys_lines, start_x, start_y + 320)
+        # Track Y position for each column
+        col_y_offsets = [start_y] * col_count
 
-        # --- Helper for Personality Groups ---
-        def draw_trait_group(trait, x, y):
-            total = agent.get_personality_sum(trait)
-            # Draw Header with Total
-            title_surf = self.font_header.render(f"{trait}: {total}/120", True, constants.COLOR_ACCENT)
-            self.screen.blit(title_surf, (x, y))
-            y += 30
-            # Draw Facets
-            for facet, val in agent.personality[trait].items():
-                txt = f"  {facet}: {val}"
-                col = constants.COLOR_TEXT
+        # Helper to draw a card at specific coordinates
+        def draw_card_at(x, y, name, value, max_val=100, is_header=False):
+            rect = pygame.Rect(x, y, card_w, card_h)
+            
+            # Background
+            bg_col = constants.COLOR_PANEL_BG
+            if is_player and name in agent.pinned_attributes:
+                bg_col = (60, 60, 70)
+            
+            if is_header:
+                pygame.draw.rect(self.screen, (30, 30, 30), rect, border_radius=5)
+                pygame.draw.rect(self.screen, constants.COLOR_ACCENT, rect, 1, border_radius=5)
+            else:
+                pygame.draw.rect(self.screen, bg_col, rect, border_radius=5)
+                pygame.draw.rect(self.screen, constants.COLOR_BORDER, rect, 1, border_radius=5)
+            
+            # Text
+            name_surf = self.font_main.render(name, True, constants.COLOR_TEXT)
+            val_surf = self.font_header.render(str(value), True, constants.COLOR_ACCENT)
+            
+            self.screen.blit(name_surf, (rect.x + 10, rect.y + 5))
+            self.screen.blit(val_surf, (rect.right - val_surf.get_width() - 10, rect.y + 5))
+            
+            # Progress Bar
+            bar_bg = pygame.Rect(rect.x + 10, rect.bottom - 8, rect.width - 20, 4)
+            pygame.draw.rect(self.screen, (10, 10, 10), bar_bg)
+            
+            pct = max(0, min(1, value / max_val))
+            bar_fill = pygame.Rect(rect.x + 10, rect.bottom - 8, (rect.width - 20) * pct, 4)
+            
+            # Color Logic
+            bar_col = constants.COLOR_ACCENT
+            # Check if this is a neuroticism-related stat
+            is_neuro = (name == "Neuroticism" or name in agent.personality.get("Neuroticism", {}))
+            
+            if is_neuro:
+                if value > (max_val * 0.75): bar_col = constants.COLOR_LOG_NEGATIVE
+                elif value < (max_val * 0.25): bar_col = constants.COLOR_LOG_POSITIVE
+            else:
+                if value < (max_val * 0.25): bar_col = constants.COLOR_LOG_NEGATIVE
+                elif value > (max_val * 0.75): bar_col = constants.COLOR_LOG_POSITIVE
                 
-                if trait == "Neuroticism":
-                    # Inverted logic: High Neuroticism is "Bad" (Red), Low is "Good" (Green)
-                    if val > 15: col = constants.COLOR_LOG_NEGATIVE
-                    elif val < 5: col = constants.COLOR_LOG_POSITIVE
+            pygame.draw.rect(self.screen, bar_col, bar_fill)
+            
+            # Pin Icon
+            if is_player and name in agent.pinned_attributes:
+                pygame.draw.circle(self.screen, constants.COLOR_TEXT, (rect.right - 8, rect.top + 8), 3)
+
+            # Register Click Zone
+            self.modal_click_zones.append((rect, name))
+
+        # Helper to draw a group in a specific column
+        def draw_group(col_idx, title, attrs, is_personality=False):
+            x = start_x + (col_idx * col_w)
+            y = col_y_offsets[col_idx]
+            
+            # Draw Header
+            if title:
+                if is_personality:
+                    # Personality Headers are clickable cards (The Main Trait)
+                    val = agent.get_personality_sum(title)
+                    draw_card_at(x, y, title, val, 120, is_header=True)
+                    y += card_h + gap_y
                 else:
-                    # Standard logic: High is "Good" (Green), Low is "Bad" (Red)
-                    if val > 15: col = constants.COLOR_LOG_POSITIVE
-                    elif val < 5: col = constants.COLOR_LOG_NEGATIVE
+                    # Standard Text Header
+                    head_surf = self.font_header.render(title, True, constants.COLOR_TEXT_DIM)
+                    self.screen.blit(head_surf, (x, y))
+                    y += 30
+            
+            # Draw Attributes
+            for attr in attrs:
+                val = agent.get_attr_value(attr)
+                max_v = 20 if is_personality else 100
+                if attr == "Health": max_v = agent.max_health
                 
-                surf = self.font_main.render(txt, True, col)
-                self.screen.blit(surf, (x, y))
-                y += 22
-            return y + 10
+                draw_card_at(x, y, attr, val, max_v)
+                y += card_h + gap_y
+            
+            y += 15 # Gap between groups
+            col_y_offsets[col_idx] = y
 
-        # --- Column 2: OCEAN (O, C, E) ---
-        c2_x = start_x + col_width
-        c2_y = start_y
-        c2_y = draw_trait_group("Openness", c2_x, c2_y)
-        c2_y = draw_trait_group("Conscientiousness", c2_x, c2_y)
-        c2_y = draw_trait_group("Extraversion", c2_x, c2_y)
-
-        # --- Column 3: OCEAN (A, N) + Other ---
-        c3_x = start_x + (col_width * 2)
-        c3_y = start_y
-        c3_y = draw_trait_group("Agreeableness", c3_x, c3_y)
-        c3_y = draw_trait_group("Neuroticism", c3_x, c3_y)
+        # --- Execute Layout ---
         
-        # Other
-        other_lines = [
-            f"Religiousness: {agent.religiousness}",
-            f"Karma: {agent.karma}",
-            f"Luck: {agent.luck}"
-        ]
-        draw_column("Other", other_lines, c3_x, c3_y)
+        # Column 1: Vitals, Physical, Hidden
+        draw_group(0, "Vitals", ["Health", "Happiness", "Smarts", "Looks"])
+        draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Libido"])
+        draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
+        
+        # Column 2: Openness & Conscientiousness
+        draw_group(1, "Openness", list(agent.personality["Openness"].keys()), is_personality=True)
+        draw_group(1, "Conscientiousness", list(agent.personality["Conscientiousness"].keys()), is_personality=True)
+        
+        # Column 3: Extraversion & Agreeableness
+        draw_group(2, "Extraversion", list(agent.personality["Extraversion"].keys()), is_personality=True)
+        draw_group(2, "Agreeableness", list(agent.personality["Agreeableness"].keys()), is_personality=True)
+        
+        # Column 4: Neuroticism
+        draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
 
     def _draw_left_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
@@ -350,15 +416,20 @@ class Renderer:
         y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
         y += draw_text(f"Job: {player.job['title'] if player.job else 'Unemployed'}")
         y += 20
-        y += draw_text("--- Vitals ---", color=constants.COLOR_TEXT_DIM)
-        y += draw_text(f"Health: {player.health}/{player.max_health}")
-        y += draw_text(f"Happiness: {player.happiness}")
-        y += draw_text(f"Smarts: {player.smarts}")
-        y += draw_text(f"Looks: {player.looks}")
-        y += 20
-        y += draw_text("--- Physical ---", color=constants.COLOR_TEXT_DIM)
-        y += draw_text(f"Energy: {player.endurance}")
-        y += draw_text(f"Fitness: {player.athleticism}")
+        
+        # Dynamic Pinned Attributes
+        y += draw_text("--- Attributes ---", color=constants.COLOR_TEXT_DIM)
+        
+        for attr in player.pinned_attributes:
+            val = player.get_attr_value(attr)
+            
+            # Special formatting for Health to show Max
+            if attr == "Health":
+                txt = f"{attr}: {val}/{player.max_health}"
+            else:
+                txt = f"{attr}: {val}"
+                
+            y += draw_text(txt)
 
     def _draw_right_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)

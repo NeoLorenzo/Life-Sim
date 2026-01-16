@@ -124,7 +124,44 @@ class Agent:
         self.relationships = {} 
         self.inventory = []
 
+        # Dashboard Customization (Default Pinned Stats)
+        self.pinned_attributes = [
+            "Health", "Happiness", "Smarts", "Looks", "Energy", "Fitness"
+        ]
+
         self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
+
+    def get_attr_value(self, name):
+        """Helper to fetch attribute values by string name."""
+        # Core
+        if name == "Health": return self.health
+        if name == "Max Health": return self.max_health
+        if name == "Happiness": return self.happiness
+        if name == "Smarts": return self.smarts
+        if name == "Looks": return self.looks
+        
+        # Physical
+        if name == "Energy": return self.endurance
+        if name == "Fitness": return self.athleticism
+        if name == "Strength": return self.strength
+        if name == "Fertility": return self.fertility
+        if name == "Libido": return self.libido
+        
+        # Big 5 (Sums)
+        if name in self.personality:
+            return self.get_personality_sum(name)
+            
+        # Big 5 (Facets) - Search inside the nested dicts
+        for trait, facets in self.personality.items():
+            if name in facets:
+                return facets[name]
+
+        # Hidden/Other
+        if name == "Karma": return self.karma
+        if name == "Luck": return self.luck
+        if name == "Religiousness": return self.religiousness
+        
+        return 0
 
     @property
     def age(self):
