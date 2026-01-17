@@ -6,6 +6,7 @@ Handles the rules for processing turns, events, and state changes.
 import logging
 import random
 from .state import SimState
+from . import school
 from .. import constants
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ def process_turn(sim_state: SimState):
     
     # 2. Age Up Player
     player.age_months += 1
+    
+    # 2x. Process Schooling
+    school.process_school_turn(sim_state)
     
     # Check for Birthday (Start new Log Block)
     if sim_state.month_index == sim_state.birth_month_index:

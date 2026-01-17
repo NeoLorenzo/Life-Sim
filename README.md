@@ -96,6 +96,18 @@
     *   **Reward:** Immediate cash bonus equal to **1%** of the annual salary.
     *   **Constraint:** Action is blocked if the agent is unemployed.
 
+### Education System
+*   **Configurable Framework:**
+    *   **Systems:** Supports defining custom school structures in `config.json`.
+    *   **Default:** Implements the **British International** system (Nursery through Year 13/IB) as the default.
+*   **Academic Calendar:**
+    *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
+    *   **Status:** Tracks "In Session" vs. "Summer Break" states.
+*   **Progression:**
+    *   **Enrollment:** Automatic placement into the correct grade based on age (e.g., Nursery at age 3).
+    *   **Performance:** Tracks academic performance (0-100) which drifts based on the agent's Smarts.
+    *   **Graduation:** Logic for completing the final year (Year 13) and exiting the system.
+
 ### Actions & Progression
 *   **Education (Study):**
     *   **Effect:** Increases Smarts by a random value of **2 to 5**.

@@ -36,6 +36,7 @@ class Agent:
         self._recalculate_max_health()
 
         self.job = None  # None or dict {"title": str, "salary": int}
+        self.school = None # None or dict { "system": str, "grade_index": int, "performance": int, "is_in_session": bool }
         self.is_alive = True
         
         # --- Biography ---

@@ -44,5 +44,31 @@
             {"title": "Teacher", "salary": 45000, "min_smarts": 60},
             {"title": "Software Engineer", "salary": 90000, "min_smarts": 85}
         ]
+    },
+    "education": {
+        "default_system": "British_International",
+        "systems": {
+            "British_International": {
+                "start_month_index": 8, 
+                "end_month_index": 5,
+                "grades": [
+                    {"name": "Nursery", "min_age": 3},
+                    {"name": "Reception", "min_age": 4},
+                    {"name": "Year 1", "min_age": 5},
+                    {"name": "Year 2", "min_age": 6},
+                    {"name": "Year 3", "min_age": 7},
+                    {"name": "Year 4", "min_age": 8},
+                    {"name": "Year 5", "min_age": 9},
+                    {"name": "Year 6", "min_age": 10},
+                    {"name": "Year 7", "min_age": 11},
+                    {"name": "Year 8", "min_age": 12},
+                    {"name": "Year 9", "min_age": 13},
+                    {"name": "Year 10", "min_age": 14},
+                    {"name": "Year 11 (IGCSE)", "min_age": 15},
+                    {"name": "Year 12 (IB1)", "min_age": 16},
+                    {"name": "Year 13 (IB2)", "min_age": 17}
+                ]
+            }
+        }
     }
 }
