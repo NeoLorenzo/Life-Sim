@@ -58,17 +58,14 @@ class Agent:
         self.country = kwargs.get("country", random.choice(bio_conf.get("countries", ["Unknown"])))
         self.city = kwargs.get("city", random.choice(bio_conf.get("cities", ["Unknown"])))
         
-        # --- Appearance ---
+        # --- Appearance & Genetics ---
+        self.parents = kwargs.get("parents", None) # Tuple (Father, Mother) or None
         app_conf = agent_config.get("appearance", {})
-        self.eye_color = random.choice(app_conf.get("eye_colors", ["Brown"]))
-        self.hair_color = random.choice(app_conf.get("hair_colors", ["Brown"]))
-        self.skin_tone = random.choice(app_conf.get("skin_tones", ["Fair"]))
         
-        # Height Genetics & Growth
-        # Potential is determined by gender ranges
-        pot_min = 150 if self.gender == "Male" else 140
-        pot_max = 200 if self.gender == "Male" else 180
-        self.genetic_height_potential = random.randint(pot_min, pot_max)
+        if self.parents:
+            self._init_descendant(app_conf)
+        else:
+            self._init_lineage_head(app_conf)
         
         # Initial Height Calculation (based on start age)
         if self.age >= 20:
@@ -80,7 +77,7 @@ class Agent:
             progress = self.age / 20.0
             self.height_cm = 50 + int((self.genetic_height_potential - 50) * progress)
 
-        self.weight_kg = random.randint(60, 100) if self.gender == "Male" else random.randint(45, 80)
+        self.weight_kg = 0 # Will be calculated by _recalculate_physique
 
         # --- Extended Attributes ---
         attr_config = agent_config.get("attributes", {})
@@ -140,6 +137,72 @@ class Agent:
         ]
 
         self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
+
+    def _init_lineage_head(self, app_conf):
+        """Generates traits stochastically (First Generation)."""
+        # 1. Pigmentation (Random from config)
+        self.eye_color = random.choice(app_conf.get("eye_colors", ["Brown"]))
+        self.hair_color = random.choice(app_conf.get("hair_colors", ["Brown"]))
+        self.skin_tone = random.choice(app_conf.get("skin_tones", ["Fair"]))
+        
+        # 2. Height (Gaussian Distribution)
+        # Male: Avg 176cm, SD 7cm | Female: Avg 163cm, SD 6cm
+        if self.gender == "Male":
+            mu, sigma = 176, 7
+        else:
+            mu, sigma = 163, 6
+            
+        self.genetic_height_potential = int(random.gauss(mu, sigma))
+        # Clamp to realistic extremes
+        self.genetic_height_potential = max(140, min(215, self.genetic_height_potential))
+
+    def _init_descendant(self, app_conf):
+        """Inherits traits from parents (Next Generation)."""
+        father, mother = self.parents
+        
+        # 1. Height (Mid-Parental Formula)
+        # Male Child = ((Mother + 13) + Father) / 2
+        # Female Child = ((Father - 13) + Mother) / 2
+        # Add random variance (+/- 10cm)
+        if self.gender == "Male":
+            base = ((mother.genetic_height_potential + 13) + father.genetic_height_potential) / 2
+        else:
+            base = ((father.genetic_height_potential - 13) + mother.genetic_height_potential) / 2
+            
+        variance = random.gauss(0, 5) # Standard deviation of 5cm from predicted
+        self.genetic_height_potential = int(base + variance)
+
+        # 2. Skin Tone (Blending)
+        # Assumes config list is ordered Light -> Dark
+        tones = app_conf.get("skin_tones", ["Pale", "Fair", "Olive", "Brown", "Dark"])
+        try:
+            f_idx = tones.index(father.skin_tone)
+            m_idx = tones.index(mother.skin_tone)
+            
+            # Average index with slight variance
+            avg_idx = (f_idx + m_idx) / 2
+            # 20% chance to drift one shade lighter or darker
+            drift = 0
+            if random.random() < 0.2:
+                drift = random.choice([-1, 1])
+            
+            final_idx = int(round(avg_idx + drift))
+            final_idx = max(0, min(len(tones) - 1, final_idx))
+            self.skin_tone = tones[final_idx]
+        except ValueError:
+            # Fallback if parents have custom skin tones not in config
+            self.skin_tone = random.choice([father.skin_tone, mother.skin_tone])
+
+        # 3. Eyes & Hair (Probabilistic Inheritance)
+        # 45% Dad, 45% Mom, 10% Mutation (Grandparents/Recessive)
+        def inherit(p_attr, m_attr, pool):
+            roll = random.random()
+            if roll < 0.45: return p_attr
+            elif roll < 0.90: return m_attr
+            else: return random.choice(pool)
+
+        self.eye_color = inherit(father.eye_color, mother.eye_color, app_conf.get("eye_colors", []))
+        self.hair_color = inherit(father.hair_color, mother.hair_color, app_conf.get("hair_colors", []))
 
     def get_attr_value(self, name):
         """Helper to fetch attribute values by string name."""
@@ -336,7 +399,6 @@ class SimState:
     """
     def __init__(self, config: dict):
         self.config = config
-        self.player = Agent(config["agent"], is_player=True)
         self.npcs = {} # uid -> Agent
         
         # Time Tracking
@@ -345,8 +407,8 @@ class SimState:
         self.birth_month_index = self.month_index # Store birth month for age calculation
         self.year = constants.START_YEAR
         
-        # Generate Family
-        self._generate_parents()
+        # Generate Family & Player (Order matters for genetics)
+        self.player = self._setup_family_and_player()
         
         # Structure: List of dictionaries
         # [
@@ -488,39 +550,60 @@ class SimState:
         """Backward compatibility for logic/renderer until refactor is complete."""
         return self.player
 
-    def _generate_parents(self):
-        """Generates Mother and Father and links them."""
-        # Father
-        f_age = self.player.age + random.randint(18, 45)
-        father = Agent(self.config["agent"], 
+    def _setup_family_and_player(self):
+        """
+        Generates Parents first (Lineage Heads), then Player (Descendant).
+        Returns the Player agent.
+        """
+        agent_conf = self.config["agent"]
+        
+        # 1. Determine Shared Bio Data
+        last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
+        country = random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
+        city = random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
+        
+        # 2. Generate Father (Lineage Head)
+        f_age = random.randint(18, 45) # Age at start of sim
+        father = Agent(agent_conf, 
                        is_player=False, 
                        gender="Male", 
                        age=f_age,
-                       last_name=self.player.last_name,
-                       city=self.player.city,
-                       country=self.player.country)
+                       last_name=last_name,
+                       city=city,
+                       country=country)
         self._assign_job(father)
         self.npcs[father.uid] = father
         
-        # Mother
-        m_age = self.player.age + random.randint(18, 40)
-        mother = Agent(self.config["agent"], 
+        # 3. Generate Mother (Lineage Head)
+        m_age = random.randint(18, 40)
+        mother = Agent(agent_conf, 
                        is_player=False, 
                        gender="Female", 
                        age=m_age,
-                       last_name=self.player.last_name,
-                       city=self.player.city,
-                       country=self.player.country)
+                       last_name=last_name,
+                       city=city,
+                       country=country)
         self._assign_job(mother)
         self.npcs[mother.uid] = mother
         
-        # Link Relationships
+        # 4. Generate Player (Descendant)
+        # Player starts at age 0 (or config default), inheriting from parents
+        player = Agent(agent_conf,
+                       is_player=True,
+                       parents=(father, mother),
+                       last_name=last_name,
+                       city=city,
+                       country=country)
+        
+        # 5. Link Relationships
         # Player <-> Father
-        self._link_agents(self.player, father, "Father", "Child", 100)
+        self._link_agents(player, father, "Father", "Child", 100)
         # Player <-> Mother
-        self._link_agents(self.player, mother, "Mother", "Child", 100)
+        self._link_agents(player, mother, "Mother", "Child", 100)
         # Father <-> Mother
         self._link_agents(father, mother, "Spouse", "Spouse", random.randint(60, 100))
+        
+        return player
 
     def _assign_job(self, npc):
         """Assigns a random suitable job to an NPC."""

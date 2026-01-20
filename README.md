@@ -19,12 +19,17 @@
     *   **The "Truman Show" Optimization:** To maintain performance, the simulation uses a dual-update loop. The Player receives full simulation fidelity (events, salary, happiness), while NPCs run on a lightweight "Lazy Evaluation" loop that processes only critical biological functions (Aging, Health Decay, Death Checks) to keep the world alive without CPU overhead.
 
 ### Identity & Biology
-*   **Procedural Generation:**
-    *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City drawn from configurable pools.
-    *   **Appearance:** Tracks Eye Color, Hair Color, Skin Tone.
-    *   **Family Generation:** The simulation automatically generates a Mother and Father at startup. Their ages, jobs, and initial wealth are procedurally generated relative to the player, creating immediate social context (e.g., "Teen Parents" vs. "Older Parents").
+*   **Procedural Generation & Genetics:**
+    *   **Lineage System:** Distinguishes between **Lineage Heads** (First Generation, procedurally generated) and **Descendants** (Next Generation, inherited traits).
+    *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City. Descendants inherit Last Name, City, and Country from parents.
+    *   **Appearance Inheritance:**
+        *   **Pigmentation:** Skin Tone is calculated by blending parental values with slight variance. Eye and Hair colors use probabilistic inheritance (45% Father, 45% Mother, 10% Mutation).
+    *   **Family Generation:** The simulation now generates Parents *first* as Lineage Heads, then generates the Player as a Descendant to ensure genetic consistency.
     *   **Anthropometry:**
-        *   **Height:** Dynamic growth system. Agents start small (~50cm), grow towards a **Genetic Potential** (Male: 150-200cm, Female: 140-180cm) until age 20, and experience spinal compression (shrinkage) after age 60.
+        *   **Height:**
+            *   *Lineage Heads:* Generated via Gaussian distribution (Male: 176cm/7SD, Female: 163cm/6SD).
+            *   *Descendants:* Calculated using the **Mid-Parental Height Formula** with random variance, ensuring tall parents likely have tall children.
+        *   **Growth:** Dynamic growth system. Agents start small (~50cm), grow towards their Genetic Potential until age 20, and experience spinal compression (shrinkage) after age 60.
         *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
 *   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance.
