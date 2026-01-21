@@ -482,6 +482,30 @@ class Renderer:
         # Column 4: Neuroticism
         draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
 
+    def _draw_dashed_rect(self, surface, color, rect, width=2, dash_len=5):
+        """Helper to draw a dashed rectangle."""
+        x, y, w, h = rect
+        
+        # Top Edge
+        for i in range(x, x + w, dash_len * 2):
+            end = min(i + dash_len, x + w)
+            pygame.draw.line(surface, color, (i, y), (end, y), width)
+            
+        # Bottom Edge
+        for i in range(x, x + w, dash_len * 2):
+            end = min(i + dash_len, x + w)
+            pygame.draw.line(surface, color, (i, y + h - 1), (end, y + h - 1), width)
+            
+        # Left Edge
+        for i in range(y, y + h, dash_len * 2):
+            end = min(i + dash_len, y + h)
+            pygame.draw.line(surface, color, (x, i), (x, end), width)
+            
+        # Right Edge
+        for i in range(y, y + h, dash_len * 2):
+            end = min(i + dash_len, y + h)
+            pygame.draw.line(surface, color, (x + w - 1, i), (x + w - 1, end), width)
+
     def _draw_family_tree_modal(self, sim_state):
         """Draws the Family Tree overlay."""
         # 1. Build Layout if needed
@@ -491,54 +515,81 @@ class Renderer:
             all_agents = {**sim_state.npcs, sim_state.player.uid: sim_state.player}
             self.ft_layout.build(agent, all_agents)
             self.ft_built_for_uid = agent.uid
-            # Reset offset on new build? Optional. Let's center it.
+            # Center the view
             self.ft_offset_x = 0
             self.ft_offset_y = 0
 
         # 2. Draw Background
         pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
         
-        # 3. Setup Clipping (Don't draw outside center panel)
+        # 3. Setup Clipping
         old_clip = self.screen.get_clip()
         self.screen.set_clip(self.rect_center)
         
-        # Center of the panel
         cx = self.rect_center.centerx
         cy = self.rect_center.centery
         
-        # 4. Draw Edges
-        for start_uid, end_uid, rel_type in self.ft_layout.edges:
-            if start_uid not in self.ft_layout.nodes or end_uid not in self.ft_layout.nodes:
-                continue
-                
-            n1 = self.ft_layout.nodes[start_uid]
-            n2 = self.ft_layout.nodes[end_uid]
+        # 4. Draw Edges (Orthogonal Routing)
+        for start_node, end_node, link_type in self.ft_layout.edges:
+            # Calculate Screen Coords
+            x1 = cx + start_node.x + self.ft_offset_x
+            y1 = cy + start_node.y + self.ft_offset_y
+            x2 = cx + end_node.x + self.ft_offset_x
+            y2 = cy + end_node.y + self.ft_offset_y
             
-            # Convert to Screen Coords
-            x1 = cx + n1['x'] + self.ft_offset_x
-            y1 = cy + n1['y'] + self.ft_offset_y
-            x2 = cx + n2['x'] + self.ft_offset_x
-            y2 = cy + n2['y'] + self.ft_offset_y
-            
-            # Line Style
             color = constants.COLOR_TEXT_DIM
             width = 2
-            if rel_type == "Spouse":
-                color = (200, 100, 100) # Reddish for marriage
             
-            pygame.draw.line(self.screen, color, (x1, y1), (x2, y2), width)
+            if link_type == "SpouseLink":
+                # Parent to Hub: Draw from bottom of Parent to Center of Hub
+                # But Hub is on same Y level usually? No, Hub is virtual.
+                # In our layout, Hub is on same Y as parents.
+                # Draw line from Parent Side to Hub Center?
+                # Actually, let's draw: Parent Bottom -> Hub Center
+                
+                # Adjust start to bottom of parent
+                start_y_edge = y1 + (start_node.height // 2)
+                
+                # Draw L-shape or straight?
+                # If Hub is strictly between parents, straight line works if Y is same.
+                # If Y is same, draw horizontal line.
+                pygame.draw.line(self.screen, (100, 100, 100), (x1, y1), (x2, y2), 1)
+                
+            elif link_type == "ChildLink":
+                # Hub to Child: Draw "Bus" style
+                # Start at Hub Center
+                # Go Down half way
+                # Go Horizontal to Child X
+                # Go Down to Child Top
+                
+                mid_y = y1 + (self.ft_layout.LAYER_HEIGHT // 2)
+                target_y = y2 - (end_node.height // 2)
+                
+                # 1. Vertical Down from Hub
+                pygame.draw.line(self.screen, color, (x1, y1), (x1, mid_y), width)
+                # 2. Horizontal to Child Column
+                pygame.draw.line(self.screen, color, (x1, mid_y), (x2, mid_y), width)
+                # 3. Vertical Down to Child
+                pygame.draw.line(self.screen, color, (x2, mid_y), (x2, target_y), width)
 
         # 5. Draw Nodes
-        for uid, node in self.ft_layout.nodes.items():
-            # Screen Coords (Center of node)
-            nx = cx + node['x'] + self.ft_offset_x
-            ny = cy + node['y'] + self.ft_offset_y
+        for node in self.ft_layout.nodes.values():
+            if node.is_hub:
+                # Optional: Draw a small dot for the marriage hub for debug/clarity
+                # nx = cx + node.x + self.ft_offset_x
+                # ny = cy + node.y + self.ft_offset_y
+                # pygame.draw.circle(self.screen, (50, 50, 50), (nx, ny), 4)
+                continue
+                
+            # Screen Coords
+            nx = cx + node.x + self.ft_offset_x
+            ny = cy + node.y + self.ft_offset_y
             
             # Rect Geometry
-            w, h = node['width'], node['height']
+            w, h = node.width, node.height
             rect = pygame.Rect(nx - w//2, ny - h//2, w, h)
             
-            # Skip if off-screen (Optimization)
+            # Skip if off-screen
             if not rect.colliderect(self.rect_center):
                 continue
             
@@ -547,7 +598,7 @@ class Renderer:
             border_col = constants.COLOR_BORDER
             text_col = constants.COLOR_TEXT
             
-            node_agent = node['agent']
+            node_agent = node.agent
             
             # Gender Border
             if node_agent.gender == "Male":
@@ -566,16 +617,21 @@ class Renderer:
                 text_col = constants.COLOR_TEXT_DIM
                 border_col = (80, 80, 80)
 
-            # Draw
+            # Draw Background
             pygame.draw.rect(self.screen, bg_col, rect, border_radius=6)
-            pygame.draw.rect(self.screen, border_col, rect, 2, border_radius=6)
+            
+            # Draw Border (Solid for Blood, Dashed for In-Laws)
+            if node.is_blood:
+                pygame.draw.rect(self.screen, border_col, rect, 2, border_radius=6)
+            else:
+                self._draw_dashed_rect(self.screen, border_col, rect, width=2, dash_len=6)
             
             # Text: Name
             name_surf = self.font_main.render(node_agent.first_name, True, text_col)
             name_rect = name_surf.get_rect(center=(nx, ny - 10))
             self.screen.blit(name_surf, name_rect)
             
-            # Text: Age / Relation
+            # Text: Age
             age_txt = f"Age: {node_agent.age}"
             if not node_agent.is_alive:
                 age_txt = "Deceased"
@@ -587,10 +643,9 @@ class Renderer:
         # 6. Restore Clip & Draw UI Overlays
         self.screen.set_clip(old_clip)
         
-        # Border
+        # ... (Rest of the UI Overlay code remains identical: Header, Instructions, Close Button)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
-        # Header Overlay (Always on top)
         header_bg = pygame.Rect(self.rect_center.x, self.rect_center.y, self.rect_center.width, 50)
         pygame.draw.rect(self.screen, constants.COLOR_BG, header_bg)
         pygame.draw.line(self.screen, constants.COLOR_BORDER, header_bg.bottomleft, header_bg.bottomright)
@@ -599,12 +654,10 @@ class Renderer:
         header_surf = self.font_header.render(header_text, True, constants.COLOR_ACCENT)
         self.screen.blit(header_surf, (self.rect_center.x + 20, self.rect_center.y + 15))
         
-        # Instructions
         instr = "Left-Drag to Pan | Click to Focus | Right-Click for Stats"
         instr_surf = self.font_log.render(instr, True, constants.COLOR_TEXT_DIM)
         self.screen.blit(instr_surf, (self.rect_center.x + 20, self.rect_center.y + 55))
 
-        # Close Button
         close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
         pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
         pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
