@@ -92,9 +92,8 @@ def process_turn(sim_state: SimState):
             
         npc.age_months += 1
         
-        # Only process NPC health decay once a year (on their "birthday" equivalent)
-        # Simplified: Process when month_index matches player's birth month (Annual cycle)
-        if sim_state.month_index == sim_state.birth_month_index:
+        # Only process NPC health decay once a year (on their specific birthday)
+        if npc.age_months % 12 == 0:
             npc._recalculate_max_health()
             npc._recalculate_hormones()
             

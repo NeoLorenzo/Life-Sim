@@ -26,6 +26,10 @@ class Agent:
         initial_age_years = kwargs.get("age", agent_config.get("initial_age", 0))
         self.age_months = initial_age_years * 12
         
+        # Randomize birth month for NPCs so they don't all share the player's birthday
+        if not self.is_player:
+            self.age_months += random.randint(0, 11)
+        
         self.health = kwargs.get("health", agent_config.get("initial_health", 50))
         self.max_health = 100 # Capacity starts at 100
         self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))

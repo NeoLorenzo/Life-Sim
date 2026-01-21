@@ -7,6 +7,7 @@ import pygame
 import logging
 from .. import constants
 from .ui import Button, LogPanel
+from .family_tree import FamilyTreeLayout
 
 class Renderer:
     """
@@ -41,6 +42,17 @@ class Renderer:
         )
         
         self.viewing_agent = None # None, or an Agent object
+        
+        # Family Tree State
+        self.viewing_family_tree_agent = None 
+        self.ft_layout = FamilyTreeLayout()
+        self.ft_built_for_uid = None # Cache key to avoid rebuilding every frame
+        self.ft_offset_x = 0
+        self.ft_offset_y = 0
+        self.ft_is_dragging = False
+        self.ft_last_mouse_pos = (0, 0)
+        
+        self.ft_buttons = [] # List of (Rect, Agent) for the current frame
         
         self.buttons = {} # Dict[str, List[Button]]
         self.tabs = []    # List[Button] (Using Button class for tabs)
@@ -113,8 +125,68 @@ class Renderer:
         """
         Processes input events.
         """
-        # 0. Check Modal Interaction (Priority)
-        if self.viewing_agent and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        # 0a. Check Family Tree Modal (Top Priority)
+        if self.viewing_family_tree_agent:
+            # Close Button Logic
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+                if close_rect.collidepoint(event.pos):
+                    self.viewing_family_tree_agent = None
+                    self.ft_built_for_uid = None # Reset cache
+                    return None
+
+            # Interaction Logic (Pan & Click)
+            if self.rect_center.collidepoint(pygame.mouse.get_pos()):
+                # Calculate relative mouse position in the "Tree World"
+                # Center of panel is (0,0) in Tree World + Offset
+                center_x = self.rect_center.centerx
+                center_y = self.rect_center.centery
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                
+                # Rel X = (Mouse - ScreenCenter) - Offset
+                rel_x = (mouse_x - center_x) - self.ft_offset_x
+                rel_y = (mouse_y - center_y) - self.ft_offset_y
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1: # Left Click
+                        clicked_agent = self.ft_layout.get_node_at(rel_x, rel_y)
+                        if clicked_agent:
+                            # Select new focus
+                            self.viewing_family_tree_agent = clicked_agent
+                            # Don't reset offset, keeps context
+                        else:
+                            # Start Drag
+                            self.ft_is_dragging = True
+                            self.ft_last_mouse_pos = (mouse_x, mouse_y)
+                    elif event.button == 3: # Right Click
+                        clicked_agent = self.ft_layout.get_node_at(rel_x, rel_y)
+                        if clicked_agent:
+                            # Open Attributes
+                            self.viewing_agent = clicked_agent
+                            # Close FT? Or keep it open? 
+                            # For now, let's close FT to show attributes, 
+                            # or we could overlay. Let's close FT for simplicity.
+                            self.viewing_family_tree_agent = None
+                            self.ft_built_for_uid = None
+
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        self.ft_is_dragging = False
+
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.ft_is_dragging:
+                        dx = mouse_x - self.ft_last_mouse_pos[0]
+                        dy = mouse_y - self.ft_last_mouse_pos[1]
+                        self.ft_offset_x += dx
+                        self.ft_offset_y += dy
+                        self.ft_last_mouse_pos = (mouse_x, mouse_y)
+                
+                # Consume all events inside the modal rect
+                if self.rect_center.collidepoint(pygame.mouse.get_pos()):
+                    return None
+
+        # 0b. Check Attributes Modal Interaction
+        if self.viewing_agent and not self.viewing_family_tree_agent and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Check Close Button
             close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
             if close_rect.collidepoint(event.pos):
@@ -131,6 +203,13 @@ class Renderer:
                         else:
                             sim_state.player.pinned_attributes.append(attr_name)
                         return None # Consumed
+
+        # 0c. Check Family Tree Buttons (Global)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for rect, agent in self.ft_buttons:
+                if rect.collidepoint(event.pos):
+                    self.viewing_family_tree_agent = agent
+                    return None
 
         # Pass to LogPanel (Scrolling + Clicking headers)
         if sim_state and not self.viewing_agent:
@@ -206,6 +285,8 @@ class Renderer:
 
     def render(self, sim_state):
         """Draws the full UI."""
+        self.ft_buttons = [] # Reset interactive buttons for this frame
+        
         self.screen.fill(constants.COLOR_BG)
         
         # Update Log Panel Content
@@ -214,7 +295,10 @@ class Renderer:
         # Draw Panels
         self._draw_left_panel(sim_state)
         
-        if self.viewing_agent:
+        # Center Panel Logic
+        if self.viewing_family_tree_agent:
+            self._draw_family_tree_modal(sim_state)
+        elif self.viewing_agent:
             self._draw_attributes_modal(sim_state)
         else:
             self.log_panel.draw(self.screen)
@@ -258,6 +342,16 @@ class Renderer:
         if is_player: header_text += " (Click to Pin)"
         header_surf = self.font_header.render(header_text, True, constants.COLOR_ACCENT)
         self.screen.blit(header_surf, (self.rect_center.x + 20, self.rect_center.y + 15))
+        
+        # FT Button in Modal
+        ft_rect = pygame.Rect(self.rect_center.x + 20 + header_surf.get_width() + 15, self.rect_center.y + 15, 30, header_surf.get_height())
+        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=4)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=4)
+        ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
+        ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
+        self.screen.blit(ft_txt, ft_txt_rect)
+        
+        self.ft_buttons.append((ft_rect, agent))
         
         # --- Static Bio Text (Top Section) ---
         bio_x = self.rect_center.x + 20
@@ -388,6 +482,134 @@ class Renderer:
         # Column 4: Neuroticism
         draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
 
+    def _draw_family_tree_modal(self, sim_state):
+        """Draws the Family Tree overlay."""
+        # 1. Build Layout if needed
+        agent = self.viewing_family_tree_agent
+        if self.ft_built_for_uid != agent.uid:
+            # Construct lookup of all agents
+            all_agents = {**sim_state.npcs, sim_state.player.uid: sim_state.player}
+            self.ft_layout.build(agent, all_agents)
+            self.ft_built_for_uid = agent.uid
+            # Reset offset on new build? Optional. Let's center it.
+            self.ft_offset_x = 0
+            self.ft_offset_y = 0
+
+        # 2. Draw Background
+        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        
+        # 3. Setup Clipping (Don't draw outside center panel)
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(self.rect_center)
+        
+        # Center of the panel
+        cx = self.rect_center.centerx
+        cy = self.rect_center.centery
+        
+        # 4. Draw Edges
+        for start_uid, end_uid, rel_type in self.ft_layout.edges:
+            if start_uid not in self.ft_layout.nodes or end_uid not in self.ft_layout.nodes:
+                continue
+                
+            n1 = self.ft_layout.nodes[start_uid]
+            n2 = self.ft_layout.nodes[end_uid]
+            
+            # Convert to Screen Coords
+            x1 = cx + n1['x'] + self.ft_offset_x
+            y1 = cy + n1['y'] + self.ft_offset_y
+            x2 = cx + n2['x'] + self.ft_offset_x
+            y2 = cy + n2['y'] + self.ft_offset_y
+            
+            # Line Style
+            color = constants.COLOR_TEXT_DIM
+            width = 2
+            if rel_type == "Spouse":
+                color = (200, 100, 100) # Reddish for marriage
+            
+            pygame.draw.line(self.screen, color, (x1, y1), (x2, y2), width)
+
+        # 5. Draw Nodes
+        for uid, node in self.ft_layout.nodes.items():
+            # Screen Coords (Center of node)
+            nx = cx + node['x'] + self.ft_offset_x
+            ny = cy + node['y'] + self.ft_offset_y
+            
+            # Rect Geometry
+            w, h = node['width'], node['height']
+            rect = pygame.Rect(nx - w//2, ny - h//2, w, h)
+            
+            # Skip if off-screen (Optimization)
+            if not rect.colliderect(self.rect_center):
+                continue
+            
+            # Colors
+            bg_col = constants.COLOR_PANEL_BG
+            border_col = constants.COLOR_BORDER
+            text_col = constants.COLOR_TEXT
+            
+            node_agent = node['agent']
+            
+            # Gender Border
+            if node_agent.gender == "Male":
+                border_col = (100, 150, 255)
+            else:
+                border_col = (255, 150, 150)
+                
+            # Highlight Focus Agent
+            if node_agent == agent:
+                border_col = (255, 215, 0) # Gold
+                bg_col = (60, 60, 50)
+                
+            # Dead State
+            if not node_agent.is_alive:
+                bg_col = (30, 30, 30)
+                text_col = constants.COLOR_TEXT_DIM
+                border_col = (80, 80, 80)
+
+            # Draw
+            pygame.draw.rect(self.screen, bg_col, rect, border_radius=6)
+            pygame.draw.rect(self.screen, border_col, rect, 2, border_radius=6)
+            
+            # Text: Name
+            name_surf = self.font_main.render(node_agent.first_name, True, text_col)
+            name_rect = name_surf.get_rect(center=(nx, ny - 10))
+            self.screen.blit(name_surf, name_rect)
+            
+            # Text: Age / Relation
+            age_txt = f"Age: {node_agent.age}"
+            if not node_agent.is_alive:
+                age_txt = "Deceased"
+            
+            sub_surf = self.font_log.render(age_txt, True, constants.COLOR_TEXT_DIM)
+            sub_rect = sub_surf.get_rect(center=(nx, ny + 10))
+            self.screen.blit(sub_surf, sub_rect)
+
+        # 6. Restore Clip & Draw UI Overlays
+        self.screen.set_clip(old_clip)
+        
+        # Border
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
+        
+        # Header Overlay (Always on top)
+        header_bg = pygame.Rect(self.rect_center.x, self.rect_center.y, self.rect_center.width, 50)
+        pygame.draw.rect(self.screen, constants.COLOR_BG, header_bg)
+        pygame.draw.line(self.screen, constants.COLOR_BORDER, header_bg.bottomleft, header_bg.bottomright)
+        
+        header_text = f"{agent.first_name}'s Family Tree"
+        header_surf = self.font_header.render(header_text, True, constants.COLOR_ACCENT)
+        self.screen.blit(header_surf, (self.rect_center.x + 20, self.rect_center.y + 15))
+        
+        # Instructions
+        instr = "Left-Drag to Pan | Click to Focus | Right-Click for Stats"
+        instr_surf = self.font_log.render(instr, True, constants.COLOR_TEXT_DIM)
+        self.screen.blit(instr_surf, (self.rect_center.x + 20, self.rect_center.y + 55))
+
+        # Close Button
+        close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
+
     def _draw_left_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
@@ -403,8 +625,22 @@ class Renderer:
             self.screen.blit(surf, (x, y))
             return surf.get_height() + 5
 
-        y += draw_text(f"{player.first_name} {player.last_name}", self.font_header, constants.COLOR_ACCENT)
-        y += 10
+        # Name & FT Button
+        name_text = f"{player.first_name} {player.last_name}"
+        name_surf = self.font_header.render(name_text, True, constants.COLOR_ACCENT)
+        self.screen.blit(name_surf, (x, y))
+        
+        # FT Button
+        ft_rect = pygame.Rect(x + name_surf.get_width() + 10, y, 30, name_surf.get_height())
+        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=4)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=4)
+        ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
+        ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
+        self.screen.blit(ft_txt, ft_txt_rect)
+        
+        self.ft_buttons.append((ft_rect, player))
+        
+        y += name_surf.get_height() + 5 + 10
         
         # Date Display
         month_name = constants.MONTHS[sim_state.month_index]
@@ -512,6 +748,19 @@ class Renderer:
             type_surf = self.font_log.render(status_text, True, constants.COLOR_TEXT_DIM)
             
             self.screen.blit(name_surf, (x + 10, y + 5))
+            
+            # FT Button for NPC
+            if uid in sim_state.npcs:
+                npc_agent = sim_state.npcs[uid]
+                ft_rect = pygame.Rect(x + 10 + name_surf.get_width() + 10, y + 5, 25, 20)
+                pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=3)
+                pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=3)
+                ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
+                ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
+                self.screen.blit(ft_txt, ft_txt_rect)
+                
+                self.ft_buttons.append((ft_rect, npc_agent))
+
             self.screen.blit(type_surf, (x + 10, y + 25))
             
             # Relationship Bar

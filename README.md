@@ -17,6 +17,7 @@
 *   **Multi-Agent Architecture:**
     *   **Unified Entity Model:** The `Agent` class has been refactored to support both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
     *   **The "Truman Show" Optimization:** To maintain performance, the simulation uses a dual-update loop. The Player receives full simulation fidelity (events, salary, happiness), while NPCs run on a lightweight "Lazy Evaluation" loop that processes only critical biological functions (Aging, Health Decay, Death Checks) to keep the world alive without CPU overhead.
+    *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
 
 ### Identity & Biology
 *   **Procedural Generation & Genetics:**
@@ -137,12 +138,16 @@
         *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
         *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
         *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal now explicitly displays **Genetic Potentials** alongside current values for traits like Fertility and Libido.
+        *   **Interactive Family Tree:** A dynamic, graph-based visualization of the agent's lineage.
+            *   **Algorithm:** Uses Breadth-First Search (BFS) and a layered layout engine to construct the family graph in real-time.
+            *   **Navigation:** Supports click-and-drag panning to navigate large families.
+            *   **Interactivity:** Clicking a node refocuses the tree on that relative; right-clicking opens their Attribute Modal.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
         *   **Social Dashboard:** The Social Tab now features a **Relationship List**. It renders dynamic cards for known contacts (Parents) displaying Name, Status (Alive/Deceased), and a color-coded Relationship Bar.
-        *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats) and "Interact" buttons.
+        *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats), "FT" (Family Tree), and "Interact" buttons.
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
