@@ -139,8 +139,10 @@
         *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
         *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal now explicitly displays **Genetic Potentials** alongside current values for traits like Fertility and Libido.
         *   **Interactive Family Tree:** A dynamic, graph-based visualization of the agent's lineage.
-            *   **Algorithm:** Uses Breadth-First Search (BFS) and a layered layout engine to construct the family graph in real-time.
-            *   **Navigation:** Supports click-and-drag panning to navigate large families.
+            *   **Algorithm:** Advanced **Layered Graph Drawing** (Sugiyama-style) with **Virtual Marriage Hubs** to cleanly render complex topologies (divorces, half-siblings, in-laws).
+            *   **Layout Engine:** Implements **Ancestry-Based Sorting** to group sub-families vertically under their specific grandparents, and **Iterative Collision Resolution** to prevent node overlap.
+            *   **Visuals:** Features **Orthogonal Edge Routing** (Manhattan lines) for professional "T-bar" connections and **Bloodline Tagging** (Solid borders for blood relatives, Dashed borders for in-laws).
+            *   **Navigation:** Supports click-and-drag panning to navigate large, multi-generational trees.
             *   **Interactivity:** Clicking a node refocuses the tree on that relative; right-clicking opens their Attribute Modal.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
