@@ -45,17 +45,25 @@
     *   **Appearance Inheritance:**
         *   **Pigmentation:** Skin Tone is calculated by blending parental values with slight variance. Eye and Hair colors use probabilistic inheritance (45% Father, 45% Mother, 10% Mutation).
     *   **Family Generation:** The simulation now generates Parents *first* as Lineage Heads, then generates the Player as a Descendant to ensure genetic consistency.
-    *   **Anthropometry:**
-        *   **Height:**
+    *   **Anthropometry & Growth:**
+        *   **Height Inheritance:**
             *   *Lineage Heads:* Generated via Gaussian distribution (Male: 176cm/7SD, Female: 163cm/6SD).
-            *   *Descendants:* Calculated using the **Mid-Parental Height Formula** with random variance, ensuring tall parents likely have tall children.
-        *   **Growth:** Dynamic growth system. Agents start small (~50cm), grow towards their Genetic Potential until age 20, and experience spinal compression (shrinkage) after age 60.
-        *   **Physique:** Weight is no longer static. It is derived from Height, Gender, and Athleticism using a **Lean Body Mass Index (LBMI)** model.
+            *   *Descendants:* Implements the **Mid-Parental Height Formula**: `(Father + Mother +/- 13) / 2`. A Gaussian variance (SD 5cm) is applied to simulate regression to the mean.
+        *   **Dynamic Growth:** Agents are born at ~50cm. Growth is simulated linearly towards their `genetic_height_potential` until **Age 20**.
+        *   **Senescence Shrinkage:** After **Age 60**, agents have a 3% annual chance to lose 1cm of height due to spinal compression.
+        *   **Physique (LBMI Model):** Weight is strictly derived, not random.
+            *   **Lean Body Mass Index (LBMI):** Calculated as `Base_LBMI (M:18/F:15) + (Athleticism * 0.06)`.
+            *   **Body Fat %:** Calculated as `Base_BF (M:25/F:35) - (Athleticism * 0.18) + Variance`.
+            *   **Mass Calculation:** `Total Weight = (LBMI * Height²) / (1 - BodyFat%)`. This ensures high-athleticism agents are heavier due to muscle, not fat.
 *   **Universal Attribute System (0-100 Scale):**
     *   **Physical:** Strength, Athleticism, Endurance.
-    *   **Biological Curves (Genotype vs. Phenotype):** **Fertility** and **Libido** are no longer static random rolls.
-        *   **Genotype:** Agents are born with a hidden "Peak Potential."
-        *   **Phenotype:** The current value is calculated annually based on age and gender. Values start at 0 for children, spike during puberty, and decay naturally (e.g., Menopause for women, gradual senescence for men).
+    *   **Hormonal Curves (Genotype vs. Phenotype):**
+        *   **Genotype:** Agents are born with a hidden `_genetic_peak` (0-100) for Fertility and Libido.
+        *   **Phenotype:** The expressed value is recalculated annually via `_recalculate_hormones()`:
+            *   *Puberty (12-18):* Linear ramp-up from 0% to 100% of genetic peak.
+            *   *Female Fertility:* Prime (15-30), Decline (30-45), Menopause (45-50), Sterile (50+).
+            *   *Male Fertility:* Prime (18-40), followed by slow linear decay (never reaching 0).
+            *   *Libido:* Spikes during "Hormonal Storm" (13-18), plateaus until 35, then decays by 1.5% annually.
     *   **Personality (Big Five Model):** A deep psychological simulation based on the OCEAN model.
         *   **Structure:** 5 Main Traits, each composed of 6 specific sub-facets.
         *   **Scoring:** Facets range from 0-20; Main Traits range from 0-120.
@@ -130,8 +138,11 @@
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
 *   **Progression:**
     *   **Enrollment:** Automatic placement into the correct grade based on age (e.g., Nursery at age 3).
-    *   **Performance:** Tracks academic performance (0-100) which drifts based on the agent's Smarts.
-    *   **Graduation:** Logic for completing the final year (Year 13) and exiting the system.
+    *   **Performance (Convergence Model):** Academic performance (0-100) is not random. It uses a **Drift Algorithm** that moves the grade +1 or -1 per month towards the agent's current **Smarts** attribute. This simulates the lag between raw intelligence and academic results.
+    *   **Pass/Fail Logic:**
+        *   *Threshold:* Performance must be **> 20** to pass a grade.
+        *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
+        *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
 
 ### Actions & Progression
 *   **Education (Study):**
@@ -153,16 +164,26 @@
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
-        *   **Advanced Narrative Engine:** Replaced generic start messages with a **Novelistic Story Generator**. The engine synthesizes Weather, City Atmosphere, Socio-Economic Status (Wealth vs. Marital Happiness), Parental Age Gaps, and Personality Quirks to generate a unique, cohesive opening paragraph for every life (e.g., "Born during a storm to a 'Crazy' father checking for tracking chips").
-        *   **Smart Text Rendering:** Implemented word-wrapping to ensure long narrative events fit cleanly within the panel without cutoff.
-        *   **Interactive History:** The log is structured hierarchically by Year/Age. Users can click year headers (e.g., `[-] Age 5`) to expand or collapse historical details.
-        *   **Universal Attribute Modal:** An overlay rendering detailed columns for Identity, Physical Stats, and Personality. This modal now explicitly displays **Genetic Potentials** alongside current values for traits like Fertility and Libido.
-        *   **Interactive Family Tree:** A dynamic, graph-based visualization of the agent's lineage.
-            *   **Algorithm:** Advanced **Layered Graph Drawing** (Sugiyama-style) with **Virtual Marriage Hubs** to cleanly render complex topologies (divorces, half-siblings, in-laws).
-            *   **Layout Engine:** Implements **Ancestry-Based Sorting** to group sub-families vertically under their specific grandparents, and **Iterative Collision Resolution** to prevent node overlap.
-            *   **Visuals:** Features **Orthogonal Edge Routing** (Manhattan lines) for professional "T-bar" connections and **Bloodline Tagging** (Solid borders for blood relatives, Dashed borders for in-laws).
-            *   **Navigation:** Supports click-and-drag panning to navigate large, multi-generational trees.
-            *   **Interactivity:** Clicking a node refocuses the tree on that relative; right-clicking opens their Attribute Modal.
+        *   **Advanced Narrative Engine:** The `SimState` initialization logic synthesizes Weather, City Atmosphere, Household Wealth, and Parental Personality (Big 5) to generate a unique, cohesive opening paragraph. It accounts for specific scenarios like "Teen Mom," "Old Father," or "Neurotic Parents."
+        *   **LogPanel Widget:**
+            *   **Smart Wrapping:** Text is dynamically wrapped based on font size and panel width.
+            *   **Collapsible History:** The log is structured hierarchically. Clicking year headers (e.g., `[-] Age 5`) toggles the `expanded` state in the history buffer, hiding/showing events for that year.
+        *   **Attribute Modal:**
+            *   **Detailed Columns:** Renders 4 columns: Vitals/Physical, Openness/Conscientiousness, Extraversion/Agreeableness, and Neuroticism.
+            *   **Pinning System:** Clicking any attribute card toggles it into the **Pinned Attributes** list on the Left Panel (Dashboard), allowing players to track specific stats (e.g., "Fitness") without reopening the modal.
+            *   **Visual Feedback:** Neuroticism traits use inverted color logic (High = Red, Low = Green), while positive traits use standard logic.
+        *   **Interactive Family Tree (Modal):**
+            *   **Topology:** Uses a **Layered Graph** approach with **Virtual Marriage Hubs** to handle complex relations (half-siblings, in-laws).
+            *   **Layout Algorithm:**
+                1.  **Harvest:** BFS traversal from the focus agent to find all relatives.
+                2.  **Rank:** Assigns generations relative to the focus (Parents = +1, Children = -1).
+                3.  **Ordering:** Uses **Ancestry-Based Sorting** to keep family units (spouses and children) vertically aligned under their grandparents.
+                4.  **Relaxation:** Runs 5 iterations of a force-directed sweep (Down/Up) to center parents over children and resolve collisions.
+            *   **Rendering:** Draws **Orthogonal Edges** (Manhattan geometry). Spousal links connect bottom-to-center; Parent-Child links use a "Bus" style routing.
+            *   **Controls:**
+                *   **Left-Drag:** Pan the view (infinite canvas).
+                *   **Left-Click:** Refocus the tree on the clicked relative.
+                *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
