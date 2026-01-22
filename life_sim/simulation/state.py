@@ -226,6 +226,7 @@ class Agent:
         if name == "Happiness": return self.happiness
         if name == "Smarts": return self.smarts
         if name == "Looks": return self.looks
+        if name == "Money": return self.money
         
         # Physical
         if name == "Energy": return self.endurance
@@ -694,6 +695,10 @@ class SimState:
         # Link Siblings to each other
         self._link_agents(sib1, sib2, "Sibling", "Sibling", 85)
 
+        # Initialize Schooling for Siblings
+        self._assign_initial_schooling(sib1)
+        self._assign_initial_schooling(sib2)
+
         # --- TEMP: PATERNAL UNCLE FAMILY ---
         uncle_pat = Agent(agent_conf, is_player=False, parents=(p_gpa, p_gma),
                           age=f_age - 2, first_name="Uncle Bob", gender="Male",
@@ -709,6 +714,8 @@ class SimState:
         self.npcs[aunt_pat_inlaw.uid] = aunt_pat_inlaw
         self.npcs[cousin_pat.uid] = cousin_pat
         
+        self._assign_initial_schooling(cousin_pat)
+
         # Link Uncle to Grandparents
         self._link_agents(uncle_pat, p_gpa, "Father", "Child", 80)
         self._link_agents(uncle_pat, p_gma, "Mother", "Child", 80)
@@ -733,6 +740,8 @@ class SimState:
         self.npcs[aunt_mat.uid] = aunt_mat
         self.npcs[uncle_mat_inlaw.uid] = uncle_mat_inlaw
         self.npcs[cousin_mat.uid] = cousin_mat
+
+        self._assign_initial_schooling(cousin_mat)
 
         # Link Aunt to Grandparents
         self._link_agents(aunt_mat, m_gpa, "Father", "Child", 80)
@@ -759,6 +768,35 @@ class SimState:
             # Give them some savings based on age/salary
             years_worked = max(0, npc.age - 18)
             npc.money = int(npc.job['salary'] * years_worked * 0.1) # Saved 10%
+
+    def _assign_initial_schooling(self, agent):
+        """
+        Checks if the agent should be in school based on age and enrolls them.
+        This prevents 'Late Enrollment' logs when the first September hits.
+        """
+        edu_conf = self.config.get("education", {})
+        sys_name = edu_conf.get("default_system", "British_International")
+        system = edu_conf.get("systems", {}).get(sys_name)
+        
+        if not system: return
+
+        # Find the correct grade for their current age
+        grades = system["grades"]
+        eligible_grade_idx = -1
+        
+        for i, grade in enumerate(grades):
+            if agent.age == grade["min_age"]:
+                eligible_grade_idx = i
+                break
+        
+        # If they match a grade, enroll them silently
+        if eligible_grade_idx != -1:
+            agent.school = {
+                "system": sys_name,
+                "grade_index": eligible_grade_idx,
+                "performance": agent.smarts, # Start with performance matching their smarts
+                "is_in_session": True # Assume school is active
+            }
 
     def _link_agents(self, a, b, type_a_to_b, type_b_to_a, value):
         """Bi-directional relationship linking."""

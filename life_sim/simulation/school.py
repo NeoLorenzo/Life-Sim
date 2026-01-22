@@ -10,12 +10,8 @@ logger = logging.getLogger(__name__)
 
 def process_school_turn(sim_state):
     """
-    Called every month to handle school logic.
+    Called every month to handle school logic for ALL agents.
     """
-    player = sim_state.player
-    if not player.is_alive:
-        return
-
     edu_config = sim_state.config.get("education", {})
     sys_name = edu_config.get("default_system", "British_International")
     system = edu_config.get("systems", {}).get(sys_name)
@@ -23,27 +19,37 @@ def process_school_turn(sim_state):
     if not system:
         return
 
+    # Process Player
+    if sim_state.player.is_alive:
+        _process_single_agent_school(sim_state, sim_state.player, system, sys_name)
+        
+    # Process NPCs
+    for npc in sim_state.npcs.values():
+        if npc.is_alive:
+            _process_single_agent_school(sim_state, npc, system, sys_name)
+
+def _process_single_agent_school(sim_state, agent, system, sys_name):
     current_month = sim_state.month_index
     start_month = system["start_month_index"] # 8 = Sept
     end_month = system["end_month_index"]     # 5 = June
 
     # 1. Start of School Year (Enrollment / Advancement)
     if current_month == start_month:
-        _handle_school_start(sim_state, player, system, sys_name)
+        _handle_school_start(sim_state, agent, system, sys_name)
 
     # 2. End of School Year (Results / Graduation)
     elif current_month == end_month:
-        _handle_school_end(sim_state, player, system)
+        _handle_school_end(sim_state, agent, system)
 
     # 3. Monthly Update (if in session)
-    if player.school and player.school["is_in_session"]:
+    if agent.school and agent.school["is_in_session"]:
         # Simple performance drift based on Smarts
         # If smarts > performance, performance drifts up, else down
-        target = player.smarts
-        drift = 1 if target > player.school["performance"] else -1
-        player.school["performance"] += drift
+        target = agent.smarts
+        drift = 1 if target > agent.school["performance"] else -1
+        agent.school["performance"] += drift
         # Clamp
-        player.school["performance"] = max(0, min(100, player.school["performance"]))
+        agent.school["performance"] = max(0, min(100, agent.school["performance"]))
 
 def _handle_school_start(sim_state, agent, system, sys_name):
     """Starts the school year, enrolling or advancing grades."""

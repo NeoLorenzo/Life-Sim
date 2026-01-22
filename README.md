@@ -34,8 +34,10 @@
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
     *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) and Time settings (Start Year, Month Names) are decoupled in `constants.py`.
 *   **Multi-Agent Architecture:**
-    *   **Unified Entity Model:** The `Agent` class has been refactored to support both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
-    *   **The "Truman Show" Optimization:** To maintain performance, the simulation uses a dual-update loop. The Player receives full simulation fidelity (events, salary, happiness), while NPCs run on a lightweight "Lazy Evaluation" loop that processes only critical biological functions (Aging, Health Decay, Death Checks) to keep the world alive without CPU overhead.
+    *   **Unified Entity Model:** The `Agent` class supports both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
+    *   **Full Fidelity Simulation (Unified Loop):** The "Truman Show" optimization has been removed in favor of total simulation parity. NPCs now process the exact same biological, economic, and time-management logic as the Player every month.
+        *   **Shared Economy:** NPCs earn monthly salaries, accumulate wealth, and pay costs exactly like the player.
+        *   **Automated Routine:** NPCs possess a simulated Action Point (AP) budget. A passive routine automatically "spends" their AP on mandatory obligations (Work, School, Sleep) to maintain a valid state for future AI decision-making.
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
 
 ### Identity & Biology
@@ -137,7 +139,7 @@
     *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
 *   **Progression:**
-    *   **Enrollment:** Automatic placement into the correct grade based on age (e.g., Nursery at age 3).
+    *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation. This prevents "Late Enrollment" artifacts and ensures siblings/cousins exist in the school system from the very first tick of the simulation.
     *   **Performance (Convergence Model):** Academic performance (0-100) is not random. It uses a **Drift Algorithm** that moves the grade +1 or -1 per month towards the agent's current **Smarts** attribute. This simulates the lag between raw intelligence and academic results.
     *   **Pass/Fail Logic:**
         *   *Threshold:* Performance must be **> 20** to pass a grade.
@@ -170,6 +172,7 @@
             *   **Collapsible History:** The log is structured hierarchically. Clicking year headers (e.g., `[-] Age 5`) toggles the `expanded` state in the history buffer, hiding/showing events for that year.
         *   **Attribute Modal:**
             *   **Detailed Columns:** Renders 4 columns: Vitals/Physical, Openness/Conscientiousness, Extraversion/Agreeableness, and Neuroticism.
+            *   **Economic Visibility:** The **Vitals** column now includes **Money** for all agents, allowing the player to verify the economic progress of NPCs (parents saving money, siblings earning wages).
             *   **Pinning System:** Clicking any attribute card toggles it into the **Pinned Attributes** list on the Left Panel (Dashboard), allowing players to track specific stats (e.g., "Fitness") without reopening the modal.
             *   **Visual Feedback:** Neuroticism traits use inverted color logic (High = Red, Low = Green), while positive traits use standard logic.
         *   **Interactive Family Tree (Modal):**

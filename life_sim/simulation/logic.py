@@ -14,120 +14,129 @@ logger = logging.getLogger(__name__)
 def process_turn(sim_state: SimState):
     """
     Advances the simulation by one month.
-    
-    1. Check if alive.
-    2. Increment Date & Age.
-    3. Apply Monthly Economics.
-    4. Check for Death.
-    5. Process NPCs (Truman Show).
-    6. Log results.
+    Unified loop: Player and NPCs share the same biological/economic rules.
     """
     player = sim_state.player
     
     if not player.is_alive:
         return
 
-    # 1. Advance Time
+    # 1. Advance Global Time
     sim_state.month_index += 1
     if sim_state.month_index > 11:
         sim_state.month_index = 0
         sim_state.year += 1
-        # Calendar Year changed - just add a log note, don't start new block
         sim_state.add_log(f"Happy New Year {sim_state.year}!", constants.COLOR_TEXT_DIM)
     
-    # 2. Age Up Player
-    player.age_months += 1
+    # 2. Process Player (The Hero)
+    _process_agent_monthly(sim_state, player)
     
-    # 2a. Reset AP for the new month
-    player.ap_used = 0
-    time_conf = sim_state.config.get("time_management", {})
-    player._recalculate_ap_needs(time_conf)
-    
-    # 2x. Process Schooling
-    school.process_school_turn(sim_state)
-    
-    # Check for Birthday (Start new Log Block)
-    if sim_state.month_index == sim_state.birth_month_index:
-        sim_state.start_new_year(player.age)
-        sim_state.add_log("Happy Birthday!", constants.COLOR_ACCENT)
-
-    # 2a. Recalculate Health Cap (Frailty) - Only check on birthday
-    if sim_state.month_index == sim_state.birth_month_index:
-        old_cap = player.max_health
-        player._recalculate_max_health()
-        player._recalculate_hormones() # Update Fertility/Libido based on new age
-        if player.max_health < old_cap:
-            pass
-
-    # 2b. Process Growth / Aging (Height)
-    # Distribute growth over the year
-    if player.age <= 20 and player.height_cm < player.genetic_height_potential:
-        # Growth Phase: Close the gap to potential
-        gap = player.genetic_height_potential - player.height_cm
-        months_left = (21 * 12) - player.age_months
-        if months_left > 0:
-            # Small chance to grow this month
-            if random.random() < 0.2: 
-                player.height_cm = min(player.genetic_height_potential, player.height_cm + 1)
-    elif player.age > 60:
-        # Seniority Phase: Shrinkage (Rarely)
-        if random.random() < 0.03: # ~36% chance per year
-            player.height_cm -= 1
-
-    # 2c. Update Physique (Weight/BMI)
-    player._recalculate_physique()
-
-    # 2d. Process Monthly Salary
-    if player.job:
-        monthly_salary = int(player.job['salary'] / 12)
-        player.money += monthly_salary
-        sim_state.add_log(f"Earned ${monthly_salary} from {player.job['title']}.", constants.COLOR_LOG_POSITIVE)
-    
-    # 3. Death Check (Player)
-    if player.health <= 0:
-        player.is_alive = False
-        sim_state.add_log("You have died.", constants.COLOR_DEATH)
-        logger.info(f"Player died at age {player.age}")
-        return
-
-    # 4. Process NPCs (Truman Show Optimization)
+    # 3. Process NPCs (The Population)
     for uid, npc in sim_state.npcs.items():
         if not npc.is_alive:
             continue
-            
-        npc.age_months += 1
         
-        # Only process NPC health decay once a year (on their specific birthday)
-        if npc.age_months % 12 == 0:
-            npc._recalculate_max_health()
-            npc._recalculate_hormones()
-            
-            # Apply Natural Entropy (Wear & Tear)
-            if npc.age > 50:
-                damage = random.randint(0, 3)
-                npc.health -= damage
-
-            # Enforce the biological cap
-            if npc.health > npc.max_health:
-                npc.health = npc.max_health
-
-        # Enforce the biological cap
-        # If max_health drops below current health, current health is crushed down.
-        if npc.health > npc.max_health:
-            npc.health = npc.max_health
+        _process_agent_monthly(sim_state, npc)
+        _simulate_npc_routine(npc) # Auto-spend AP for mandatory tasks
         
-        # Standard Death Check
-        if npc.health <= 0:
-            npc.is_alive = False
-            # Notify Player if related
+        # NPC Death Notification
+        if not npc.is_alive:
             if uid in player.relationships:
                 rel = player.relationships[uid]
                 rel["is_alive"] = False
                 sim_state.add_log(f"Your {rel['type']}, {npc.first_name}, died at age {npc.age}.", constants.COLOR_DEATH)
-                # Apply sadness
                 player.happiness = max(0, player.happiness - 30)
 
-    logger.info(f"Turn processed: Age {player.age}, Health {player.health}, Alive: {player.is_alive}")
+    # 4. Global Systems
+    school.process_school_turn(sim_state)
+    
+    logger.info(f"Turn processed: {sim_state.month_index}/{sim_state.year}. Player Age: {player.age}")
+
+def _process_agent_monthly(sim_state, agent):
+    """Applies biological and economic updates to a single agent."""
+    
+    # A. Aging
+    agent.age_months += 1
+    
+    # Birthday Check
+    is_birthday = (agent.age_months % 12 == 0)
+    if is_birthday:
+        if agent.is_player:
+            sim_state.start_new_year(agent.age)
+            sim_state.add_log("Happy Birthday!", constants.COLOR_ACCENT)
+        
+        # Annual Biological Updates
+        old_cap = agent.max_health
+        agent._recalculate_max_health()
+        agent._recalculate_hormones()
+        
+        # Natural Entropy (Wear & Tear for Seniors)
+        if agent.age > 50:
+            damage = random.randint(0, 3)
+            agent.health -= damage
+
+    # B. Monthly Growth (Height)
+    if agent.age <= 20 and agent.height_cm < agent.genetic_height_potential:
+        # Growth Phase
+        if random.random() < 0.2: 
+            agent.height_cm = min(agent.genetic_height_potential, agent.height_cm + 1)
+    elif agent.age > 60:
+        # Shrinkage Phase
+        if random.random() < 0.03:
+            agent.height_cm -= 1
+            
+    # C. Physique Update
+    agent._recalculate_physique()
+    
+    # D. Time Management (AP Reset)
+    agent.ap_used = 0
+    time_conf = sim_state.config.get("time_management", {})
+    agent._recalculate_ap_needs(time_conf)
+    
+    # E. Economics (Salary)
+    if agent.job:
+        monthly_salary = int(agent.job['salary'] / 12)
+        agent.money += monthly_salary
+        
+        if agent.is_player:
+            sim_state.add_log(f"Earned ${monthly_salary} from {agent.job['title']}.", constants.COLOR_LOG_POSITIVE)
+        else:
+            # Log to debug only to avoid spam
+            logger.debug(f"NPC {agent.first_name} earned ${monthly_salary}")
+
+    # F. Mortality Check
+    # Enforce biological cap
+    if agent.health > agent.max_health:
+        agent.health = agent.max_health
+        
+    if agent.health <= 0:
+        agent.is_alive = False
+        if agent.is_player:
+            sim_state.add_log("You have died.", constants.COLOR_DEATH)
+            logger.info(f"Player died at age {agent.age}")
+
+def _simulate_npc_routine(npc):
+    """
+    Simulates the NPC spending AP on mandatory tasks.
+    This ensures their state (AP Used) is valid for future AI logic.
+    """
+    # 1. Sleep (Maintenance)
+    npc.ap_used += npc.ap_sleep
+    
+    # 2. Work / School (Locked)
+    # Future: Calculate actual commute/hours. For now, assume standard 8h if employed.
+    if npc.job:
+        npc.ap_locked = 8.0
+    elif npc.school and npc.school["is_in_session"]:
+        npc.ap_locked = 7.0
+    else:
+        npc.ap_locked = 0.0
+        
+    npc.ap_used += npc.ap_locked
+    
+    # 3. Free Time (Abstracted)
+    # In the future, AI will spend 'npc.free_ap'.
+    # For now, we leave it as 'Free' or assume they spent it on leisure.
 
 def work(sim_state: SimState):
     """Agent performs overtime if employed."""
