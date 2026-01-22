@@ -6,7 +6,7 @@ Handles Pygame initialization and drawing.
 import pygame
 import logging
 from .. import constants
-from .ui import Button, LogPanel
+from .ui import Button, LogPanel, APBar
 from .family_tree import FamilyTreeLayout
 
 class Renderer:
@@ -701,6 +701,12 @@ class Renderer:
         
         # Age Display
         y += draw_text(f"Age: {player.age} ({player.age_months % 12} mos)")
+        
+        # AP Bar
+        y += 5
+        ap_bar = APBar(x, y + 15, self.rect_left.width - 40, 20)
+        ap_bar.draw(self.screen, player)
+        y += 45 # Bar height + padding + text offset
         
         y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
         

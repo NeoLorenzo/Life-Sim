@@ -135,6 +135,16 @@ class Agent:
         self.relationships = {} 
         self.inventory = []
 
+        # --- Time Management (AP) ---
+        self.ap_max = 24.0
+        self.ap_used = 0.0
+        self.ap_locked = 0.0 # School/Work
+        self.ap_sleep = 8.0  # Default
+        
+        # Calculate initial sleep needs if config provided
+        time_config = kwargs.get("time_config", {})
+        self._recalculate_ap_needs(time_config)
+
         # Dashboard Customization (Default Pinned Stats)
         self.pinned_attributes = [
             "Health", "Happiness", "Smarts", "Looks", "Energy", "Fitness"
@@ -397,6 +407,29 @@ class Agent:
         else:
             self.bmi = 0
 
+    def _recalculate_ap_needs(self, time_config):
+        """Calculates sleep requirements based on age."""
+        if not time_config: 
+            return
+        
+        reqs = time_config.get("sleep_requirements", {})
+        # Sort by max_age to find the correct bracket
+        sorted_reqs = sorted(reqs.values(), key=lambda x: x["max_age"])
+        
+        for r in sorted_reqs:
+            if self.age <= r["max_age"]:
+                self.ap_sleep = r["hours"]
+                return
+        
+        # Fallback for oldest age
+        if sorted_reqs:
+            self.ap_sleep = sorted_reqs[-1]["hours"]
+
+    @property
+    def free_ap(self):
+        """Returns available AP."""
+        return max(0.0, self.ap_max - self.ap_locked - self.ap_sleep - self.ap_used)
+
 class SimState:
     """
     Container for the entire simulation world.
@@ -560,6 +593,7 @@ class SimState:
         Returns the Player agent.
         """
         agent_conf = self.config["agent"]
+        time_conf = self.config.get("time_management", {})
         
         # 1. Determine Shared Bio Data
         last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
@@ -568,9 +602,11 @@ class SimState:
         
         # --- TEMP: GRANDPARENTS (Paternal) ---
         p_gpa = Agent(agent_conf, is_player=False, gender="Male", age=random.randint(65, 80),
-                      last_name=last_name, city=city, country=country, first_name="Grandpa Pat")
+                      last_name=last_name, city=city, country=country, first_name="Grandpa Pat",
+                      time_config=time_conf)
         p_gma = Agent(agent_conf, is_player=False, gender="Female", age=random.randint(60, 75),
-                      last_name=last_name, city=city, country=country, first_name="Grandma Pat")
+                      last_name=last_name, city=city, country=country, first_name="Grandma Pat",
+                      time_config=time_conf)
         self.npcs[p_gpa.uid] = p_gpa
         self.npcs[p_gma.uid] = p_gma
         self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", 80)
@@ -625,7 +661,8 @@ class SimState:
                        parents=(father, mother),
                        last_name=last_name,
                        city=city,
-                       country=country)
+                       country=country,
+                       time_config=time_conf)
         
         # 5. Link Relationships
         # Player <-> Father

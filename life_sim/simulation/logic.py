@@ -38,6 +38,11 @@ def process_turn(sim_state: SimState):
     # 2. Age Up Player
     player.age_months += 1
     
+    # 2a. Reset AP for the new month
+    player.ap_used = 0
+    time_conf = sim_state.config.get("time_management", {})
+    player._recalculate_ap_needs(time_conf)
+    
     # 2x. Process Schooling
     school.process_school_turn(sim_state)
     

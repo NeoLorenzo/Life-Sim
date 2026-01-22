@@ -150,3 +150,57 @@ class LogPanel:
             
         screen.set_clip(old_clip)
         pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
+
+class APBar:
+    """
+    Visualizes the 24-hour Action Point budget.
+    Segments: Locked (Red) -> Used (Gray) -> Free (Green) <- Sleep (Blue)
+    """
+    def __init__(self, x, y, w, h):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.segments = 24
+        self.seg_w = w / self.segments
+
+    def draw(self, screen, agent):
+        # Background
+        pygame.draw.rect(screen, (20, 20, 20), self.rect)
+        
+        # Calculate segment counts (rounded to nearest segment for visualization)
+        # Note: We use ceil/floor logic or simple rounding. 
+        # For visual clarity, we map float AP to integer segments.
+        
+        locked_segs = int(round(agent.ap_locked))
+        used_segs = int(round(agent.ap_used))
+        sleep_segs = int(round(agent.ap_sleep))
+        
+        # Draw Segments
+        for i in range(self.segments):
+            seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
+            
+            color = constants.COLOR_LOG_POSITIVE # Default Green (Free)
+            
+            # Logic for coloring
+            # 1. Locked (Left aligned)
+            if i < locked_segs:
+                color = constants.COLOR_DEATH # Red
+            # 2. Used (After Locked)
+            elif i < locked_segs + used_segs:
+                color = constants.COLOR_BTN_IDLE # Gray
+            # 3. Sleep (Right aligned)
+            elif i >= self.segments - sleep_segs:
+                color = (100, 150, 255) # Blue
+            
+            # Draw fill
+            pygame.draw.rect(screen, color, seg_rect)
+            
+            # Draw grid line
+            pygame.draw.line(screen, (0, 0, 0), seg_rect.topright, seg_rect.bottomright)
+
+        # Border
+        pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
+        
+        # Text Label
+        font = pygame.font.SysFont("Arial", 14)
+        txt = f"Time: {agent.free_ap:.1f}h Free / {agent.ap_sleep:.1f}h Sleep"
+        txt_surf = font.render(txt, True, constants.COLOR_TEXT_DIM)
+        screen.blit(txt_surf, (self.rect.x, self.rect.y - 18))

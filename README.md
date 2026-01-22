@@ -11,6 +11,25 @@
         *   **Date Tracking:** The system now tracks the specific Month and Year (starting Jan 2025), allowing for seasonal events and precise timeline management.
         *   **Age Calculation:** Age is stored as `age_months`. The "Age X" log headers are triggered specifically on the agent's birth month, decoupling biological age from the calendar year.
     *   **Event Logging:** A dual-channel logging system writes runtime events to both the console (stdout) and rotating log files (`logs/run_YYYYMMDD_HHMMSS.log`) with the format `Time | Level | Module | Message`.
+*   **Dynamic Action Point (AP) System:**
+    *   **The "Typical Day" Abstraction:**
+        *   **Resource Model:** Time is modeled as a finite resource of **24.0 Action Points (AP)** per turn, representing the agent's "Average Daily Routine" for that month. 1.0 AP equates to 1 hour of daily activity.
+        *   **Turn Reset:** At the start of every month (`process_turn`), the AP budget is fully reset, allowing for fresh allocation based on the agent's current life stage.
+    *   **Configuration-Driven Biology:**
+        *   **`time_management` Config:** Sleep requirements are not hardcoded. They are defined in `config.json` via age brackets (e.g., `Infant: 14h`, `Child: 10h`, `Teen: 9h`, `Adult: 8h`).
+        *   **Dynamic Recalculation:** Upon every birthday, the agent's `_recalculate_ap_needs()` method queries the config to adjust their **Maintenance AP** (Sleep), automatically unlocking more "Free Time" as they grow from infancy to adulthood.
+    *   **State Management:**
+        *   **Locked AP:** Reserved for mandatory obligations (School, Work).
+        *   **Maintenance AP:** Reserved for biological needs (Sleep).
+        *   **Free AP:** The calculated remainder (`24.0 - Locked - Maintenance - Used`) available for player agency.
+    *   **Visual Dashboard (`APBar` Widget):**
+        *   **24-Segment Grid:** A dedicated UI element in the Left Panel visualizes the 24-hour day as distinct blocks.
+        *   **Color-Coded Allocation:**
+            *   **Blue (Right-Aligned):** Sleep/Maintenance hours.
+            *   **Red (Left-Aligned):** Locked obligations (School/Work).
+            *   **Gray:** Time already spent on voluntary actions.
+            *   **Green:** The remaining "Free" budget available for gameplay.
+        *   **Feedback:** A text label dynamically updates to show exact availability (e.g., *"Time: 7.0h Free / 9.0h Sleep"*).
 *   **Configuration-Driven Design:**
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
     *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) and Time settings (Start Year, Month Names) are decoupled in `constants.py`.
@@ -155,6 +174,28 @@
 ## 🗺️ Roadmap (Planned Features)
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
+
+### Core Mechanics: Dynamic Action Point (AP) System
+*   **Concept: "The Typical Day":**
+    *   **Resource:** A budget of **24.0 Action Points (AP)** per turn, representing the "Average Daily Routine" for that month.
+    *   **Granularity:** Supports fractional costs (e.g., 0.5 AP) for micro-tasks.
+*   **The Three Buckets:**
+    *   **Locked AP (Obligations):** Automatically deducted for School (e.g., 7 AP), Job (8 AP), and Commute.
+    *   **Maintenance AP (Biology):** Reserved for Sleep (e.g., 8-14 AP depending on age).
+    *   **Free AP:** The remaining balance available for player actions (`24 - Locked - Maintenance`).
+*   **"Rule Breaking" (Reclaiming AP):**
+    *   **Truancy:** Option to "Skip School/Work" to refund Locked AP into Free AP. *Risk:* Truancy events, grade drops, firing.
+    *   **Sleep Deprivation:** Option to "Stay Up Late" (reduce Maintenance AP). *Consequence:* Cumulative Health/Stress penalties if below required sleep threshold.
+*   **Spending Logic:**
+    *   **Standard Actions:** Study, Gym, Date (~1.0 - 2.0 AP).
+    *   **Micro Actions:** Quick Chat, Snack, Social Media (~0.5 AP).
+    *   **Constraint:** Actions are disabled if `Cost > Free AP`.
+*   **Min-Maxing:**
+    *   **Auto-Rest:** Unspent AP converts to extra Sleep/Recovery at the end of the turn.
+    *   **Crunch:** Players can sacrifice health (Sleep) for productivity (AP).
+*   **Visualization:**
+    *   **The Day Bar:** A horizontal UI element showing Red (Locked), Blue (Sleep), and Green (Free) sections.
+    *   **Dynamic Updates:** Clicking "Skip School" visually transforms Red segments into Green.
 
 ### UX Polish & Advanced UI
 *   **Advanced Visualization:**
@@ -503,54 +544,47 @@ The following features are planned to expand the simulation depth into a compreh
 
 To maintain playability and focus on emergent storytelling, **Life-Sim** deliberately abstracts specific real-world complexities. We prioritize *decision-making* over *micromanagement*.
 
-### 1. Time Management: The "Macro-Schedule"
-*   **Constraint:** Players do **not** play through individual days, hours, or minutes. There is no "eat, sleep, pee" loop.
-*   **Abstraction:** Time is managed via a **Weekly Schedule**.
-    *   The player allocates their 168 weekly hours into buckets (e.g., 40h Work, 56h Sleep, 14h Skill Practice, 58h Leisure).
-    *   The simulation calculates the *net effect* of this schedule annually (or monthly).
-    *   *Example:* Allocating only 30h to Sleep results in a massive annual Health penalty, without requiring the player to manually click "Sleep" every night.
-
-### 2. Biological Needs: Auto-Regulation
+### 1. Biological Needs: Auto-Regulation
 *   **Constraint:** We do not simulate hunger, thirst, bladder, or hygiene meters.
 *   **Abstraction:** These are bundled into **Cost of Living** and **Health Decay**.
     *   If a player has money, "Food" is automatically purchased and consumed.
     *   If a player is broke, Health decays rapidly due to "Malnutrition."
     *   Hygiene is a modifier on the "Looks" stat, maintained by a "Grooming" time allocation in the schedule.
 
-### 3. Economy: Aggregated Cash Flow
+### 2. Economy: Aggregated Cash Flow
 *   **Constraint:** No manual grocery shopping, utility bill payments, or tax filing.
 *   **Abstraction:** Expenses are aggregated into a single **Monthly Outflow**.
     *   **Cost of Living:** Derived from location + house quality + family size.
     *   **Taxes:** Automatically deducted from salary before it hits the player's balance.
     *   **Inflation:** Applied globally to prices each year.
 
-### 4. Social Interaction: Intent vs. Dialogue
+### 3. Social Interaction: Intent vs. Dialogue
 *   **Constraint:** No branching dialogue trees for every conversation.
 *   **Abstraction:** Interactions are **Intent-Based**.
     *   Player chooses an intent: *Compliment, Insult, Ask for Money, Flirt*.
     *   The engine calculates the outcome based on Stats (Smarts/Looks), Relationship Score, and RNG.
     *   We simulate the *result* of the conversation, not the conversation itself.
 
-### 5. Geography: Node-Based Movement
+### 4. Geography: Node-Based Movement
 *   **Constraint:** No open-world walking or driving physics.
 *   **Abstraction:** The world is a collection of **Nodes** (Home, Work, Gym, Park).
     *   Travel is instant but incurs a "Commute Time" penalty in the Weekly Schedule based on the distance between nodes (e.g., moving to a suburb increases Commute hours, reducing Leisure hours).
 
-### 6. Scope of Reality: Strictly Material
+### 5. Scope of Reality: Strictly Material
 *   **Constraint:** No supernatural, paranormal, or sci-fi elements (e.g., Ghosts, Aliens, Cryptids, Hauntings).
 *   **Abstraction:** The simulation is grounded in **Deterministic Realism**.
     *   Events are strictly biological, sociological, or statistical.
     *   "Luck" is a mathematical probability modifier, not a magical force.
     *   *Reasoning:* Excluding paranormal logic reduces code complexity (no need for "Exorcism" mechanics or "Ghost Encounter" RNG) and maintains a consistent, grounded tone focused on real-life simulation.
 
-### 7. Progression: Sandbox over Gamification
+### 6. Progression: Sandbox over Gamification
 *   **Constraint:** No "Achievements," "Ribbons," "Badges," or global leaderboards.
 *   **Abstraction:** The focus is on **Intrinsic Motivation**.
     *   The "Goal" is defined by the player (e.g., "I want to be a billionaire" or "I want to have 10 kids"), not by a checklist provided by the engine.
     *   We avoid tracking meta-data across save files to keep the architecture modular and focused on the current agent's lifecycle.
     *   *Reasoning:* This prevents "Checklist Fatigue" and encourages players to experiment with the sandbox mechanics rather than optimizing their life solely to unlock a badge.
 
-### 8. The "Faux-Conomy": Static vs. Dynamic
+### 7. The "Faux-Conomy": Static vs. Dynamic
 *   **Constraint:** No supply-and-demand logic, stock market simulation, or global trade physics.
 *   **Abstraction:** The economy is **Reference-Based**.
     *   **Base Values:** Every item (House, Car, Diamond Ring) has a static `Base_Price` in the config files.
@@ -558,7 +592,7 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     *   **Real Estate:** Housing markets do not crash or boom based on inventory. They simply follow a randomized noise curve (e.g., `Current_Value = Previous_Value * random(0.95, 1.08)`).
     *   *Reasoning:* Building a real economic engine is a separate game entirely. This system ensures prices *feel* dynamic without requiring a math degree to balance.
 
-### 9. Legal & Medical: Stat-Check Resolution
+### 8. Legal & Medical: Stat-Check Resolution
 *   **Constraint:** No mini-games for court trials, surgeries, or complex diagnosis puzzles.
 *   **Abstraction:** Complex institutional interactions are resolved via **Weighted RNG Rolls**.
     *   **Justice:** The outcome of a trial is a single calculation: `(Lawyer_Cost * Lawyer_Skill) vs. (Crime_Severity * Evidence_RNG)`.
