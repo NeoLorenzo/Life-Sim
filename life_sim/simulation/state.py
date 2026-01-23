@@ -455,10 +455,7 @@ class SimState:
         self.player = self._setup_family_and_player()
         
         # Structure: List of dictionaries
-        # [
-        #   {"header": ("--- Age 0 ---", COLOR), "events": [("Born", COLOR), ...], "expanded": False},
-        #   ...
-        # ]
+        # ... (Rest of __init__ remains the same until self.current_year_data generation)
         self.history = []
         
         # Buffer for the current year being simulated
@@ -594,176 +591,191 @@ class SimState:
         """Backward compatibility for logic/renderer until refactor is complete."""
         return self.player
 
+    def _get_reproductive_gap(self, repro_conf):
+        """Calculates a realistic generation gap using Gaussian distribution."""
+        min_rep = repro_conf.get("min_reproductive_age", 16)
+        max_rep = repro_conf.get("max_reproductive_age", 45)
+        mu = repro_conf.get("avg_reproductive_age", 28)
+        sigma = repro_conf.get("reproductive_age_sd", 6)
+        
+        gap = int(random.gauss(mu, sigma))
+        return max(min_rep, min(max_rep, gap))
+
     def _setup_family_and_player(self):
         """
-        Generates Grandparents, Parents, then Player (Descendant).
-        Returns the Player agent.
+        Procedurally generates the family tree.
+        Algorithm: Backwards Age Calculation -> Forwards Entity Generation.
         """
         agent_conf = self.config["agent"]
-        time_conf = self.config.get("time_management", {})
+        repro_conf = self.config.get("reproduction", {})
         
-        # 1. Determine Shared Bio Data
+        # 1. Determine Ages (Backwards from Player)
+        player_age = agent_conf.get("initial_age", 0)
+        
+        # Parents
+        father_age = player_age + self._get_reproductive_gap(repro_conf)
+        mother_age = player_age + self._get_reproductive_gap(repro_conf)
+        
+        # Grandparents
+        p_gpa_age = father_age + self._get_reproductive_gap(repro_conf)
+        p_gma_age = father_age + self._get_reproductive_gap(repro_conf)
+        m_gpa_age = mother_age + self._get_reproductive_gap(repro_conf)
+        m_gma_age = mother_age + self._get_reproductive_gap(repro_conf)
+        
+        # Shared Bio Data
         last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
         country = random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
         city = random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
         
-        # --- TEMP: GRANDPARENTS (Paternal) ---
-        p_gpa = Agent(agent_conf, is_player=False, gender="Male", age=random.randint(65, 80),
-                      last_name=last_name, city=city, country=country, first_name="Grandpa Pat",
-                      time_config=time_conf)
-        p_gma = Agent(agent_conf, is_player=False, gender="Female", age=random.randint(60, 75),
-                      last_name=last_name, city=city, country=country, first_name="Grandma Pat",
-                      time_config=time_conf)
-        self.npcs[p_gpa.uid] = p_gpa
-        self.npcs[p_gma.uid] = p_gma
-        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", 80)
-
-        # --- TEMP: GRANDPARENTS (Maternal) ---
-        m_gpa = Agent(agent_conf, is_player=False, gender="Male", age=random.randint(65, 80),
-                      last_name=last_name, city=city, country=country, first_name="Grandpa Mat")
-        m_gma = Agent(agent_conf, is_player=False, gender="Female", age=random.randint(60, 75),
-                      last_name=last_name, city=city, country=country, first_name="Grandma Mat")
-        self.npcs[m_gpa.uid] = m_gpa
-        self.npcs[m_gma.uid] = m_gma
-        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", 80)
-
-        # 2. Generate Father (Child of Paternal GPs)
-        f_age = random.randint(25, 45)
-        father = Agent(agent_conf, 
-                       is_player=False, 
-                       gender="Male", 
-                       age=f_age,
-                       parents=(p_gpa, p_gma), # Inherit genetics
-                       last_name=last_name,
-                       city=city,
-                       country=country)
+        # --- Generation 2: Grandparents (Lineage Heads) ---
+        # Paternal
+        p_gpa = self._create_npc(age=p_gpa_age, gender="Male", last_name=last_name, city=city, country=country)
+        p_gma = self._create_npc(age=p_gma_age, gender="Female", last_name=last_name, city=city, country=country)
+        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", random.randint(60, 100))
+        
+        # Maternal
+        # Maternal side often has different last name (Grandfather's name)
+        mat_last_name = random.choice(agent_conf["bio"].get("last_names", ["Smith"]))
+        m_gpa = self._create_npc(age=m_gpa_age, gender="Male", last_name=mat_last_name, city=city, country=country)
+        m_gma = self._create_npc(age=m_gma_age, gender="Female", last_name=mat_last_name, city=city, country=country)
+        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", random.randint(60, 100))
+        
+        # --- Generation 1: Parents & Aunts/Uncles ---
+        
+        # 1. Father (Guaranteed Child of Paternal GPs)
+        father = self._create_npc(age=father_age, gender="Male", parents=(p_gpa, p_gma), 
+                                  last_name=last_name, city=city, country=country)
         self._assign_job(father)
-        self.npcs[father.uid] = father
+        self._link_parent_child(p_gpa, p_gma, father)
         
-        # Link Father to Paternal GPs
-        self._link_agents(father, p_gpa, "Father", "Child", 90)
-        self._link_agents(father, p_gma, "Mother", "Child", 90)
-        
-        # 3. Generate Mother (Child of Maternal GPs)
-        m_age = random.randint(25, 40)
-        mother = Agent(agent_conf, 
-                       is_player=False, 
-                       gender="Female", 
-                       age=m_age,
-                       parents=(m_gpa, m_gma), # Inherit genetics
-                       last_name=last_name,
-                       city=city,
-                       country=country)
+        # 2. Paternal Aunts/Uncles (Siblings of Father)
+        self._generate_siblings_for(father, p_gpa, p_gma, repro_conf, city, country, last_name)
+
+        # 3. Mother (Guaranteed Child of Maternal GPs)
+        mother = self._create_npc(age=mother_age, gender="Female", parents=(m_gpa, m_gma),
+                                  last_name=mat_last_name, city=city, country=country)
         self._assign_job(mother)
-        self.npcs[mother.uid] = mother
+        self._link_parent_child(m_gpa, m_gma, mother)
+        
+        # 4. Maternal Aunts/Uncles (Siblings of Mother)
+        self._generate_siblings_for(mother, m_gpa, m_gma, repro_conf, city, country, mat_last_name)
 
-        # Link Mother to Maternal GPs
-        self._link_agents(mother, m_gpa, "Father", "Child", 90)
-        self._link_agents(mother, m_gma, "Mother", "Child", 90)
-        
-        # 4. Generate Player (Descendant)
-        # Player starts at age 0 (or config default), inheriting from parents
-        player = Agent(agent_conf,
-                       is_player=True,
-                       parents=(father, mother),
-                       last_name=last_name,
-                       city=city,
-                       country=country,
-                       time_config=time_conf)
-        
-        # 5. Link Relationships
-        # Player <-> Father
-        self._link_agents(player, father, "Father", "Child", 100)
-        # Player <-> Mother
-        self._link_agents(player, mother, "Mother", "Child", 100)
-        # Father <-> Mother
+        # Link Parents
         self._link_agents(father, mother, "Spouse", "Spouse", random.randint(60, 100))
+
+        # --- Generation 0: Player & Siblings ---
         
-        # --- TEMP: TEST SIBLINGS ---
-        # Sibling 1: Older Brother
-        sib1 = Agent(agent_conf, is_player=False, parents=(father, mother), 
-                     age=player.age + 5, first_name="TestBro", gender="Male",
-                     last_name=last_name, city=city, country=country)
-        self.npcs[sib1.uid] = sib1
-        self._link_agents(sib1, father, "Father", "Child", 90)
-        self._link_agents(sib1, mother, "Mother", "Child", 90)
-        self._link_agents(sib1, player, "Sibling", "Sibling", 80)
-
-        # Sibling 2: Younger Sister
-        sib2 = Agent(agent_conf, is_player=False, parents=(father, mother), 
-                     age=max(0, player.age - 2), first_name="TestSis", gender="Female",
-                     last_name=last_name, city=city, country=country)
-        self.npcs[sib2.uid] = sib2
-        self._link_agents(sib2, father, "Father", "Child", 90)
-        self._link_agents(sib2, mother, "Mother", "Child", 90)
-        self._link_agents(sib2, player, "Sibling", "Sibling", 80)
+        # 1. Player (Guaranteed Child)
+        player = Agent(agent_conf, is_player=True, parents=(father, mother),
+                       age=player_age, last_name=last_name, city=city, country=country,
+                       time_config=self.config.get("time_management", {}))
+        self._link_parent_child(father, mother, player)
         
-        # Link Siblings to each other
-        self._link_agents(sib1, sib2, "Sibling", "Sibling", 85)
-
-        # Initialize Schooling for Siblings
-        self._assign_initial_schooling(sib1)
-        self._assign_initial_schooling(sib2)
-
-        # --- TEMP: PATERNAL UNCLE FAMILY ---
-        uncle_pat = Agent(agent_conf, is_player=False, parents=(p_gpa, p_gma),
-                          age=f_age - 2, first_name="Uncle Bob", gender="Male",
-                          last_name=last_name, city=city, country=country)
-        aunt_pat_inlaw = Agent(agent_conf, is_player=False, age=f_age - 3,
-                               first_name="Aunt Sarah", gender="Female",
-                               last_name="Smith", city=city, country=country)
-        cousin_pat = Agent(agent_conf, is_player=False, parents=(uncle_pat, aunt_pat_inlaw),
-                           age=5, first_name="Cousin Tim", gender="Male",
-                           last_name=last_name, city=city, country=country)
-        
-        self.npcs[uncle_pat.uid] = uncle_pat
-        self.npcs[aunt_pat_inlaw.uid] = aunt_pat_inlaw
-        self.npcs[cousin_pat.uid] = cousin_pat
-        
-        self._assign_initial_schooling(cousin_pat)
-
-        # Link Uncle to Grandparents
-        self._link_agents(uncle_pat, p_gpa, "Father", "Child", 80)
-        self._link_agents(uncle_pat, p_gma, "Mother", "Child", 80)
-        # Link Uncle to Father (Sibling)
-        self._link_agents(uncle_pat, father, "Sibling", "Sibling", 80)
-        # Link Uncle Family
-        self._link_agents(uncle_pat, aunt_pat_inlaw, "Spouse", "Spouse", 90)
-        self._link_agents(cousin_pat, uncle_pat, "Father", "Child", 90)
-        self._link_agents(cousin_pat, aunt_pat_inlaw, "Mother", "Child", 90)
-
-        # --- TEMP: MATERNAL AUNT FAMILY ---
-        aunt_mat = Agent(agent_conf, is_player=False, parents=(m_gpa, m_gma),
-                         age=m_age + 2, first_name="Aunt Mary", gender="Female",
-                         last_name=last_name, city=city, country=country)
-        uncle_mat_inlaw = Agent(agent_conf, is_player=False, age=m_age + 4,
-                                first_name="Uncle Mike", gender="Male",
-                                last_name="Jones", city=city, country=country)
-        cousin_mat = Agent(agent_conf, is_player=False, parents=(uncle_mat_inlaw, aunt_mat),
-                           age=6, first_name="Cousin Sue", gender="Female",
-                           last_name="Jones", city=city, country=country)
-
-        self.npcs[aunt_mat.uid] = aunt_mat
-        self.npcs[uncle_mat_inlaw.uid] = uncle_mat_inlaw
-        self.npcs[cousin_mat.uid] = cousin_mat
-
-        self._assign_initial_schooling(cousin_mat)
-
-        # Link Aunt to Grandparents
-        self._link_agents(aunt_mat, m_gpa, "Father", "Child", 80)
-        self._link_agents(aunt_mat, m_gma, "Mother", "Child", 80)
-        # Link Aunt to Mother (Sibling)
-        self._link_agents(aunt_mat, mother, "Sibling", "Sibling", 80)
-        # Link Aunt Family
-        self._link_agents(aunt_mat, uncle_mat_inlaw, "Spouse", "Spouse", 90)
-        self._link_agents(cousin_mat, aunt_mat, "Mother", "Child", 90)
-        self._link_agents(cousin_mat, uncle_mat_inlaw, "Father", "Child", 90)
-        # ---------------------------
+        # 2. Player Siblings
+        # Note: Player takes the "Guaranteed" slot. Extra siblings start at base probability.
+        self._generate_siblings_for(player, father, mother, repro_conf, city, country, last_name, is_player_gen=True)
         
         return player
 
+    def _create_npc(self, **kwargs):
+        """Helper to instantiate, register, and return an NPC."""
+        agent = Agent(self.config["agent"], is_player=False, **kwargs)
+        self.npcs[agent.uid] = agent
+        return agent
+
+    def _link_parent_child(self, father, mother, child):
+        """Links a child to both parents."""
+        self._link_agents(child, father, "Father", "Child", 100)
+        self._link_agents(child, mother, "Mother", "Child", 100)
+
+    def _generate_siblings_for(self, focal_child, father, mother, repro_conf, city, country, last_name, is_player_gen=False):
+        """
+        Generates siblings for the focal_child based on probability decay.
+        Also handles Cousin generation if the sibling is an adult (Aunt/Uncle).
+        """
+        prob = repro_conf.get("sibling_prob_base", 0.25)
+        decay = repro_conf.get("sibling_prob_decay", 0.5)
+        min_rep = repro_conf.get("min_reproductive_age", 16)
+        
+        # We are generating the "Next" sibling, so we loop until RNG fails
+        while random.random() < prob:
+            # Determine Age
+            # Sibling must be a valid child of the parents.
+            # Parent Age is fixed. Sibling Age = Parent Age - Gap.
+            # We use the mother's age as the constraint.
+            gap = self._get_reproductive_gap(repro_conf)
+            sib_age = mother.age - gap
+            
+            # Sanity check: Age must be >= 0
+            if sib_age < 0:
+                prob *= decay
+                continue
+                
+            # Create Sibling
+            sib = self._create_npc(age=sib_age, parents=(father, mother),
+                                   last_name=last_name, city=city, country=country)
+            self._link_parent_child(father, mother, sib)
+            
+            # Link to Focal Child (Sibling <-> Sibling)
+            self._link_agents(focal_child, sib, "Sibling", "Sibling", random.randint(60, 90))
+            
+            # Link to existing siblings of focal child? 
+            # Ideally yes, but for MVP we just link to focal. 
+            # (The Family Tree layout handles implicit sibling relationships visually via shared parents).
+            
+            self._assign_initial_schooling(sib)
+            self._assign_job(sib)
+            
+            # --- Cousin Generation (If this sibling is an Aunt/Uncle) ---
+            if not is_player_gen and sib.age >= min_rep:
+                self._generate_cousins_for(sib, repro_conf, city, country)
+
+            # Decay probability for next sibling
+            prob *= decay
+
+    def _generate_cousins_for(self, aunt_uncle, repro_conf, city, country):
+        """
+        Decides if an Aunt/Uncle has a family (Spouse + Kids).
+        """
+        # 50% chance to have a family (First kid)
+        cousin_prob = repro_conf.get("cousin_prob_base", 0.5)
+        
+        if random.random() < cousin_prob:
+            # 1. Generate Spouse (In-Law)
+            # Spouse needs to be roughly same age
+            spouse_age = aunt_uncle.age + random.randint(-5, 5)
+            spouse_last = random.choice(self.config["agent"]["bio"].get("last_names", ["Jones"]))
+            
+            spouse = self._create_npc(age=spouse_age, gender="Female" if aunt_uncle.gender == "Male" else "Male",
+                                      last_name=spouse_last, city=city, country=country)
+            self._assign_job(spouse)
+            self._link_agents(aunt_uncle, spouse, "Spouse", "Spouse", random.randint(60, 100))
+            
+            # 2. Generate First Cousin (Guaranteed since we passed the 50% check)
+            # Determine parents for the cousin
+            father = aunt_uncle if aunt_uncle.gender == "Male" else spouse
+            mother = aunt_uncle if aunt_uncle.gender == "Female" else spouse
+            
+            gap = self._get_reproductive_gap(repro_conf)
+            c1_age = mother.age - gap
+            
+            if c1_age >= 0:
+                c1 = self._create_npc(age=c1_age, parents=(father, mother),
+                                      last_name=father.last_name, city=city, country=country)
+                self._link_parent_child(father, mother, c1)
+                self._assign_initial_schooling(c1)
+                self._assign_job(c1)
+                
+                # 3. Generate Additional Cousins (Decaying Probability)
+                # Pass c1 as focal to link siblings
+                self._generate_siblings_for(c1, father, mother, repro_conf, city, country, father.last_name, is_player_gen=True) 
+                # Note: is_player_gen=True prevents infinite recursion of cousins-of-cousins
+
     def _assign_job(self, npc):
         """Assigns a random suitable job to an NPC."""
+        # Only assign if age >= 16
+        if npc.age < 16: return
+        
         jobs = self.config.get("economy", {}).get("jobs", [])
         if not jobs: return
         

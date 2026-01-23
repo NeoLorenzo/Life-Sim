@@ -46,13 +46,20 @@
     *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City. Descendants inherit Last Name, City, and Country from parents.
     *   **Appearance Inheritance:**
         *   **Pigmentation:** Skin Tone is calculated by blending parental values with slight variance. Eye and Hair colors use probabilistic inheritance (45% Father, 45% Mother, 10% Mutation).
-    *   **Family Generation:** The simulation now generates Parents *first* as Lineage Heads, then generates the Player as a Descendant to ensure genetic consistency.
+    *   **Procedural Family Generation:**
+        *   **Algorithm:** Implements a "Backwards Age, Forwards Genetics" approach.
+            *   *Age Calculation:* Ages are determined top-down starting from the Player (Age 0) -> Parents -> Grandparents using a **Gaussian Distribution** (Mean 28, SD 6) clamped to reproductive limits (16-45). This ensures realistic generational gaps.
+            *   *Entity Instantiation:* Agents are created bottom-up (Grandparents -> Parents -> Player) to ensure valid genetic inheritance references exist at instantiation.
+        *   **Extended Family:** Automatically generates Aunts, Uncles, and Cousins.
+        *   **Probabilistic Sizing:**
+            *   *Siblings:* Uses a decaying probability model (Base 25%, decay 0.5) for infinite potential siblings (e.g., 25% chance for 1st, 12.5% for 2nd).
+            *   *Cousins:* Aunts/Uncles have a 50% base chance to marry and start their own lineage, recursively applying the sibling logic to generate Cousins.
     *   **Anthropometry & Growth:**
         *   **Height Inheritance:**
             *   *Lineage Heads:* Generated via Gaussian distribution (Male: 176cm/7SD, Female: 163cm/6SD).
             *   *Descendants:* Implements the **Mid-Parental Height Formula**: `(Father + Mother +/- 13) / 2`. A Gaussian variance (SD 5cm) is applied to simulate regression to the mean.
-        *   **Dynamic Growth:** Agents are born at ~50cm. Growth is simulated linearly towards their `genetic_height_potential` until **Age 20**.
-        *   **Senescence Shrinkage:** After **Age 60**, agents have a 3% annual chance to lose 1cm of height due to spinal compression.
+        *   **Dynamic Growth:** Agents are born at ~50cm. Growth is simulated stochastically (20% chance per month to gain 1cm) towards their `genetic_height_potential` until **Age 20**.
+        *   **Senescence Shrinkage:** After **Age 60**, agents have a 3% monthly chance to lose 1cm of height due to spinal compression.
         *   **Physique (LBMI Model):** Weight is strictly derived, not random.
             *   **Lean Body Mass Index (LBMI):** Calculated as `Base_LBMI (M:18/F:15) + (Athleticism * 0.06)`.
             *   **Body Fat %:** Calculated as `Base_BF (M:25/F:35) - (Athleticism * 0.18) + Variance`.
@@ -128,6 +135,7 @@
     *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is currently guaranteed (requirements removed for IQ refactor).
     *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
     *   **Income:** Salaries are distributed monthly (`Salary / 12`) during the `process_turn` phase, simulating realistic cash flow.
+    *   **NPC Savings Initialization:** Upon generation, adult NPCs are assigned a starting cash balance calculated as `10% of Salary * Years Worked (Age - 18)`, simulating prior life savings.
 *   **Active Income (Overtime):**
     *   **Mechanic:** Employed agents can manually "Work Overtime."
     *   **Reward:** Immediate cash bonus equal to **1%** of the annual salary.
@@ -181,6 +189,7 @@
                 3.  **Ordering:** Uses **Ancestry-Based Sorting** to keep family units (spouses and children) vertically aligned under their grandparents.
                 4.  **Relaxation:** Runs 5 iterations of a force-directed sweep (Down/Up) to center parents over children and resolve collisions.
             *   **Rendering:** Draws **Orthogonal Edges** (Manhattan geometry). Spousal links connect bottom-to-center; Parent-Child links use a "Bus" style routing.
+            *   **Visual Distinction:** Nodes feature dynamic borders to distinguish relationships: **Solid Borders** indicate blood relatives (sharing a common ancestor), while **Dashed Borders** indicate in-laws or spouses.
             *   **Controls:**
                 *   **Left-Drag:** Pan the view (infinite canvas).
                 *   **Left-Click:** Refocus the tree on the clicked relative.
