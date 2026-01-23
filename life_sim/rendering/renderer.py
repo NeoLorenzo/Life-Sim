@@ -5,6 +5,7 @@ Handles Pygame initialization and drawing.
 """
 import pygame
 import logging
+import os
 from .. import constants
 from .ui import Button, LogPanel, APBar
 from .family_tree import FamilyTreeLayout
@@ -67,6 +68,19 @@ class Renderer:
         # Storage for interactive rects in the modal (recalculated every frame)
         self.modal_click_zones = [] 
         
+        # Load Assets
+        self.icon_ft = None
+        try:
+            path = os.path.join(constants.ASSETS_DIR, constants.ICON_FT_FILENAME)
+            if os.path.exists(path):
+                img = pygame.image.load(path).convert_alpha()
+                # Scale to fit inside a small button (e.g., 16x16 or 20x20)
+                self.icon_ft = pygame.transform.smoothscale(img, (20, 20))
+            else:
+                self.logger.warning(f"Icon not found at {path}. Using text fallback.")
+        except Exception as e:
+            self.logger.error(f"Failed to load icon: {e}")
+
         self._init_ui_structure()
         
         self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
@@ -344,13 +358,7 @@ class Renderer:
         
         # FT Button in Modal
         ft_rect = pygame.Rect(self.rect_center.x + 20 + header_surf.get_width() + 15, self.rect_center.y + 15, 30, header_surf.get_height())
-        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=4)
-        pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=4)
-        ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
-        ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
-        self.screen.blit(ft_txt, ft_txt_rect)
-        
-        self.ft_buttons.append((ft_rect, agent))
+        self._draw_ft_button(ft_rect, agent)
         
         # --- Static Bio Text (Top Section) ---
         bio_x = self.rect_center.x + 20
@@ -664,6 +672,25 @@ class Renderer:
         pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
         pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
 
+    def _draw_ft_button(self, rect, agent):
+        """Helper to draw the Family Tree button (Icon or Text)."""
+        # Draw Button Background
+        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, rect, border_radius=4)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, rect, 1, border_radius=4)
+        
+        if self.icon_ft:
+            # Center Icon
+            icon_rect = self.icon_ft.get_rect(center=rect.center)
+            self.screen.blit(self.icon_ft, icon_rect)
+        else:
+            # Fallback Text
+            ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
+            ft_txt_rect = ft_txt.get_rect(center=rect.center)
+            self.screen.blit(ft_txt, ft_txt_rect)
+            
+        # Register Interaction
+        self.ft_buttons.append((rect, agent))
+
     def _draw_left_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
@@ -686,13 +713,7 @@ class Renderer:
         
         # FT Button
         ft_rect = pygame.Rect(x + name_surf.get_width() + 10, y, 30, name_surf.get_height())
-        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=4)
-        pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=4)
-        ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
-        ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
-        self.screen.blit(ft_txt, ft_txt_rect)
-        
-        self.ft_buttons.append((ft_rect, player))
+        self._draw_ft_button(ft_rect, player)
         
         y += name_surf.get_height() + 5 + 10
         
@@ -812,14 +833,8 @@ class Renderer:
             # FT Button for NPC
             if uid in sim_state.npcs:
                 npc_agent = sim_state.npcs[uid]
-                ft_rect = pygame.Rect(x + 10 + name_surf.get_width() + 10, y + 5, 25, 20)
-                pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, ft_rect, border_radius=3)
-                pygame.draw.rect(self.screen, constants.COLOR_BORDER, ft_rect, 1, border_radius=3)
-                ft_txt = self.font_log.render("FT", True, constants.COLOR_TEXT)
-                ft_txt_rect = ft_txt.get_rect(center=ft_rect.center)
-                self.screen.blit(ft_txt, ft_txt_rect)
-                
-                self.ft_buttons.append((ft_rect, npc_agent))
+                ft_rect = pygame.Rect(x + 10 + name_surf.get_width() + 10, y + 5, 30, 20) # Slightly wider for icon
+                self._draw_ft_button(ft_rect, npc_agent)
 
             self.screen.blit(type_surf, (x + 10, y + 25))
             

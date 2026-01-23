@@ -48,3 +48,5 @@ MONTHS = ["January", "February", "March", "April", "May", "June",
 # File Paths
 LOG_DIR = "logs"
 CONFIG_FILE = "config.json"
+ASSETS_DIR = "assets"
+ICON_FT_FILENAME = "icon_ft.png"

@@ -199,7 +199,7 @@
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
         *   **Social Dashboard:** The Social Tab now features a **Relationship List**. It renders dynamic cards for known contacts (Parents) displaying Name, Status (Alive/Deceased), and a color-coded Relationship Bar.
-        *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats), "FT" (Family Tree), and "Interact" buttons.
+        *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats), a **Family Tree Icon** (graphical button), and "Interact" buttons.
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
@@ -641,3 +641,8 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     ```bash
     python main.py
     ```
+
+## 🎨 Credits & Assets
+
+*   **Icons:**
+    *   Family Tree icon by [Delapouite](https://delapouite.com/) under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) via [Game-Icons.net](https://game-icons.net/1x1/delapouite/family-tree.html#download).
