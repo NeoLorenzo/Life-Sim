@@ -65,8 +65,6 @@ def main():
                         logic.process_turn(sim_state)
                     elif action_id == "FIND_JOB":
                         logic.find_job(sim_state)
-                    elif action_id == "STUDY":
-                        logic.study(sim_state)
                     elif action_id == "WORK":
                         logic.work(sim_state)
                     elif action_id == "DOCTOR":

@@ -5,6 +5,7 @@ Handles enrollment, academic years, and graduation.
 """
 import logging
 from .. import constants
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,8 @@ def _process_single_agent_school(sim_state, agent, system, sys_name):
 
     # 3. Monthly Update (if in session)
     if agent.school and agent.school["is_in_session"]:
-        # Simple performance drift based on Smarts
-        # If smarts > performance, performance drifts up, else down
-        target = agent.smarts
-        drift = 1 if target > agent.school["performance"] else -1
+        # Random performance drift
+        drift = random.randint(-2, 2)
         agent.school["performance"] += drift
         # Clamp
         agent.school["performance"] = max(0, min(100, agent.school["performance"]))

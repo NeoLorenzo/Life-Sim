@@ -8,7 +8,8 @@
         "initial_age": 0,
         "initial_health": 100,
         "initial_happiness": 100,
-        "initial_smarts": 50,
+        "iq_mean": 100,
+        "iq_sd": 15,
         "initial_looks": 50,
         "initial_money": 0,
         "bio": {
@@ -48,10 +49,10 @@
     },
     "economy": {
         "jobs": [
-            {"title": "Dishwasher", "salary": 15000, "min_smarts": 0},
-            {"title": "Barista", "salary": 22000, "min_smarts": 20},
-            {"title": "Teacher", "salary": 45000, "min_smarts": 60},
-            {"title": "Software Engineer", "salary": 90000, "min_smarts": 85}
+            {"title": "Dishwasher", "salary": 15000},
+            {"title": "Barista", "salary": 22000},
+            {"title": "Teacher", "salary": 45000},
+            {"title": "Software Engineer", "salary": 90000}
         ]
     },
     "education": {

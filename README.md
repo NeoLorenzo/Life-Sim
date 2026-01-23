@@ -57,8 +57,10 @@
             *   **Lean Body Mass Index (LBMI):** Calculated as `Base_LBMI (M:18/F:15) + (Athleticism * 0.06)`.
             *   **Body Fat %:** Calculated as `Base_BF (M:25/F:35) - (Athleticism * 0.18) + Variance`.
             *   **Mass Calculation:** `Total Weight = (LBMI * Height²) / (1 - BodyFat%)`. This ensures high-athleticism agents are heavier due to muscle, not fat.
-*   **Universal Attribute System (0-100 Scale):**
-    *   **Physical:** Strength, Athleticism, Endurance.
+*   **Universal Attribute System:**
+    *   **IQ:** Replaces "Smarts" with a Gaussian distribution (Mean 100, SD 15).
+    *   **Attributes (0-100 Scale):**
+        *   **Physical:** Strength, Athleticism, Endurance.
     *   **Hormonal Curves (Genotype vs. Phenotype):**
         *   **Genotype:** Agents are born with a hidden `_genetic_peak` (0-100) for Fertility and Libido.
         *   **Phenotype:** The expressed value is recalculated annually via `_recalculate_hormones()`:
@@ -122,8 +124,8 @@
 
 ### Economy & Career
 *   **Job Market:**
-    *   **Data Structure:** Jobs are defined in `config.json` with a `title`, `salary`, and `min_smarts`.
-    *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is determined strictly by `Agent.smarts >= Job.min_smarts`.
+    *   **Data Structure:** Jobs are defined in `config.json` with a `title` and `salary`.
+    *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is currently guaranteed (requirements removed for IQ refactor).
     *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
     *   **Income:** Salaries are distributed monthly (`Salary / 12`) during the `process_turn` phase, simulating realistic cash flow.
 *   **Active Income (Overtime):**
@@ -140,17 +142,13 @@
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
 *   **Progression:**
     *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation. This prevents "Late Enrollment" artifacts and ensures siblings/cousins exist in the school system from the very first tick of the simulation.
-    *   **Performance (Convergence Model):** Academic performance (0-100) is not random. It uses a **Drift Algorithm** that moves the grade +1 or -1 per month towards the agent's current **Smarts** attribute. This simulates the lag between raw intelligence and academic results.
+    *   **Performance (Random Walk):** Academic performance (0-100) currently uses a random drift algorithm (+/- 2 per month) and is temporarily decoupled from IQ.
     *   **Pass/Fail Logic:**
         *   *Threshold:* Performance must be **> 20** to pass a grade.
         *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
         *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
 
 ### Actions & Progression
-*   **Education (Study):**
-    *   **Effect:** Increases Smarts by a random value of **2 to 5**.
-    *   **Cost:** Decreases Health by **1** (simulating stress/sedentary lifestyle).
-    *   **Cap:** Smarts is clamped at 100.
 *   **Healthcare (Doctor):**
     *   **Cost:** Flat fee of **$100**.
     *   **Effect:** Restores Health by a random value of **10 to 20** (clamped to the current `max_health`).
@@ -164,7 +162,7 @@
     *   **Framerate:** Capped at 60 FPS.
     *   **Theme:** Dark Mode (Background: RGB 20,20,20; Panels: RGB 40,40,40).
 *   **Three-Panel Layout:**
-    *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/Smarts/Looks), and Physical Energy.
+    *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/IQ/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
         *   **Advanced Narrative Engine:** The `SimState` initialization logic synthesizes Weather, City Atmosphere, Household Wealth, and Parental Personality (Big 5) to generate a unique, cohesive opening paragraph. It accounts for specific scenarios like "Teen Mom," "Old Father," or "Neurotic Parents."
         *   **LogPanel Widget:**

@@ -33,7 +33,13 @@ class Agent:
         self.health = kwargs.get("health", agent_config.get("initial_health", 50))
         self.max_health = 100 # Capacity starts at 100
         self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))
-        self.smarts = kwargs.get("smarts", agent_config.get("initial_smarts", 50))
+        
+        # IQ Initialization (Gaussian)
+        mean = agent_config.get("iq_mean", 100)
+        sd = agent_config.get("iq_sd", 15)
+        val = int(random.gauss(mean, sd))
+        self.iq = max(50, min(180, val)) # Clamp to realistic bounds
+        
         self.looks = kwargs.get("looks", agent_config.get("initial_looks", 50))
         self.money = kwargs.get("money", agent_config.get("initial_money", 0))
         
@@ -147,7 +153,7 @@ class Agent:
 
         # Dashboard Customization (Default Pinned Stats)
         self.pinned_attributes = [
-            "Health", "Happiness", "Smarts", "Looks", "Energy", "Fitness"
+            "Health", "Happiness", "IQ", "Looks", "Energy", "Fitness"
         ]
 
         self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
@@ -224,7 +230,7 @@ class Agent:
         if name == "Health": return self.health
         if name == "Max Health": return self.max_health
         if name == "Happiness": return self.happiness
-        if name == "Smarts": return self.smarts
+        if name == "IQ": return self.iq
         if name == "Looks": return self.looks
         if name == "Money": return self.money
         
@@ -488,7 +494,7 @@ class SimState:
             pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
         elif self.player.personality['Conscientiousness']['Self-Discipline'] > 15:
             pers_txt = f"{pronoun} is unusually calm, observing the room silently."
-        elif self.player.smarts > 80:
+        elif self.player.iq > 120:
             pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
         else:
             pers_txt = f"{pronoun} is crying softly, looking for warmth."
@@ -761,13 +767,11 @@ class SimState:
         jobs = self.config.get("economy", {}).get("jobs", [])
         if not jobs: return
         
-        # Filter by smarts
-        valid_jobs = [j for j in jobs if npc.smarts >= j.get("min_smarts", 0)]
-        if valid_jobs:
-            npc.job = random.choice(valid_jobs)
-            # Give them some savings based on age/salary
-            years_worked = max(0, npc.age - 18)
-            npc.money = int(npc.job['salary'] * years_worked * 0.1) # Saved 10%
+        # No smarts filter anymore
+        npc.job = random.choice(jobs)
+        # Give them some savings based on age/salary
+        years_worked = max(0, npc.age - 18)
+        npc.money = int(npc.job['salary'] * years_worked * 0.1) # Saved 10%
 
     def _assign_initial_schooling(self, agent):
         """
@@ -794,7 +798,7 @@ class SimState:
             agent.school = {
                 "system": sys_name,
                 "grade_index": eligible_grade_idx,
-                "performance": agent.smarts, # Start with performance matching their smarts
+                "performance": 50, # Start average
                 "is_in_session": True # Assume school is active
             }
 

@@ -97,7 +97,6 @@ class Renderer:
         categories = {
             "Main": [
                 ("Age Up (+1 Month)", "AGE_UP"),
-                ("Study (Smarts)", "STUDY"),
                 ("Visit Doctor ($100)", "DOCTOR"),
                 ("Find Job", "FIND_JOB"),
                 ("Work Overtime", "WORK"),
@@ -406,26 +405,27 @@ class Renderer:
             self.screen.blit(name_surf, (rect.x + 10, rect.y + 5))
             self.screen.blit(val_surf, (rect.right - val_surf.get_width() - 10, rect.y + 5))
             
-            # Progress Bar
-            bar_bg = pygame.Rect(rect.x + 10, rect.bottom - 8, rect.width - 20, 4)
-            pygame.draw.rect(self.screen, (10, 10, 10), bar_bg)
-            
-            pct = max(0, min(1, value / max_val))
-            bar_fill = pygame.Rect(rect.x + 10, rect.bottom - 8, (rect.width - 20) * pct, 4)
-            
-            # Color Logic
-            bar_col = constants.COLOR_ACCENT
-            # Check if this is a neuroticism-related stat
-            is_neuro = (name == "Neuroticism" or name in agent.personality.get("Neuroticism", {}))
-            
-            if is_neuro:
-                if value > (max_val * 0.75): bar_col = constants.COLOR_LOG_NEGATIVE
-                elif value < (max_val * 0.25): bar_col = constants.COLOR_LOG_POSITIVE
-            else:
-                if value < (max_val * 0.25): bar_col = constants.COLOR_LOG_NEGATIVE
-                elif value > (max_val * 0.75): bar_col = constants.COLOR_LOG_POSITIVE
+            # Progress Bar (Skip for IQ)
+            if name != "IQ":
+                bar_bg = pygame.Rect(rect.x + 10, rect.bottom - 8, rect.width - 20, 4)
+                pygame.draw.rect(self.screen, (10, 10, 10), bar_bg)
                 
-            pygame.draw.rect(self.screen, bar_col, bar_fill)
+                pct = max(0, min(1, value / max_val))
+                bar_fill = pygame.Rect(rect.x + 10, rect.bottom - 8, (rect.width - 20) * pct, 4)
+                
+                # Color Logic
+                bar_col = constants.COLOR_ACCENT
+                # Check if this is a neuroticism-related stat
+                is_neuro = (name == "Neuroticism" or name in agent.personality.get("Neuroticism", {}))
+                
+                if is_neuro:
+                    if value > (max_val * 0.75): bar_col = constants.COLOR_LOG_NEGATIVE
+                    elif value < (max_val * 0.25): bar_col = constants.COLOR_LOG_POSITIVE
+                else:
+                    if value < (max_val * 0.25): bar_col = constants.COLOR_LOG_NEGATIVE
+                    elif value > (max_val * 0.75): bar_col = constants.COLOR_LOG_POSITIVE
+                    
+                pygame.draw.rect(self.screen, bar_col, bar_fill)
             
             # Pin Icon
             if is_player and name in agent.pinned_attributes:
@@ -468,7 +468,7 @@ class Renderer:
         
         # Column 1: Vitals, Physical, Hidden
         # Added "Money" to Vitals for verification
-        draw_group(0, "Vitals", ["Health", "Happiness", "Smarts", "Looks", "Money"])
+        draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
         draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
         draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
         
