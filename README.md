@@ -194,6 +194,18 @@
                 *   **Left-Drag:** Pan the view (infinite canvas).
                 *   **Left-Click:** Refocus the tree on the clicked relative.
                 *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
+        *   **Interactive Social Map (Modal):**
+            *   **Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy. Nodes repel each other (Coulomb's Law) while relationship ties act as springs (Hooke's Law), naturally clustering social circles together while isolating strangers.
+            *   **Network Visualization:**
+                *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
+                *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (0-100), and **Color** indicates sentiment (Green/Red).
+            *   **Filters & Controls:**
+                *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
+                *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
+            *   **Interactivity:**
+                *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
+                *   **Navigation:** Infinite canvas panning via background drag.
+                *   **Rich Tooltips:** Hovering over a node displays a detailed overlay with Name, Age, Job, and precise Relationship stats.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).

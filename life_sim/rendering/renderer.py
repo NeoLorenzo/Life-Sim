@@ -9,6 +9,7 @@ import os
 from .. import constants
 from .ui import Button, LogPanel, APBar
 from .family_tree import FamilyTreeLayout
+from .social_graph import SocialGraphLayout
 
 class Renderer:
     """
@@ -48,6 +49,10 @@ class Renderer:
         self.viewing_family_tree_agent = None 
         self.ft_layout = FamilyTreeLayout()
         self.ft_built_for_uid = None # Cache key to avoid rebuilding every frame
+        
+        # Social Graph State
+        self.viewing_social_graph = False
+        self.social_graph = SocialGraphLayout()
         self.ft_offset_x = 0
         self.ft_offset_y = 0
         self.ft_is_dragging = False
@@ -117,6 +122,7 @@ class Renderer:
                 ("View Attributes", "TOGGLE_ATTR")
             ],
             "Social": [
+                ("Social Map", "SOCIAL_MAP"),       # New Feature
                 ("Call Parents", "SOCIAL_PARENTS"), # Placeholder
                 ("Go Clubbing", "SOCIAL_CLUB")      # Placeholder
             ],
@@ -138,6 +144,52 @@ class Renderer:
         """
         Processes input events.
         """
+        # 0. Check Social Graph Modal (Top Priority)
+        if self.viewing_social_graph:
+            # 1. Toggle Buttons
+            # Button A: Show All/Known
+            btn_a_rect = pygame.Rect(self.rect_center.x + 10, self.rect_center.y + 45, 120, 25)
+            # Button B: Network On/Off
+            btn_b_rect = pygame.Rect(self.rect_center.x + 140, self.rect_center.y + 45, 120, 25)
+            
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_a_rect.collidepoint(event.pos):
+                    self.social_graph.show_all = not self.social_graph.show_all
+                    self.social_graph.build(sim_state, self.rect_center)
+                    return None
+                elif btn_b_rect.collidepoint(event.pos):
+                    self.social_graph.show_network = not self.social_graph.show_network
+                    self.social_graph.build(sim_state, self.rect_center)
+                    return None
+
+            # 2. Close Button
+            close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if close_rect.collidepoint(event.pos):
+                    self.viewing_social_graph = False
+                    return None
+            
+            # 3. Graph Interaction (Pan/Drag/Hover)
+            # Calculate relative mouse pos
+            mx, my = pygame.mouse.get_pos()
+            rel_x = mx # We pass absolute X/Y because graph handles pan offset internally? 
+            # Actually, graph expects relative to panel for logic? 
+            # Let's pass absolute mouse pos, but graph needs to know panel offset?
+            # In Stage 4 code, I wrote: "rel_mouse_pos: (x, y) relative to the center panel top-left."
+            # So we must subtract panel X/Y.
+            
+            rel_mx = mx - self.rect_center.x
+            rel_my = my - self.rect_center.y
+            
+            # Wait, the graph draws using absolute coordinates in Stage 1/2/3?
+            # In Stage 2: "self.center = np.array([bounds.centerx, bounds.centery])"
+            # So the graph uses SCREEN coordinates.
+            # So we should pass SCREEN coordinates to handle_event.
+            
+            if self.rect_center.collidepoint((mx, my)):
+                self.social_graph.handle_event(event, (mx, my))
+                return None # Consume event
+
         # 0a. Check Family Tree Modal (Top Priority)
         if self.viewing_family_tree_agent:
             # Close Button Logic
@@ -246,6 +298,10 @@ class Renderer:
 
                 action = btn.handle_event(event)
                 if action:
+                    if action == "SOCIAL_MAP":
+                        self.viewing_social_graph = True
+                        self.social_graph.build(sim_state, self.rect_center)
+                        return None
                     return action
 
         # 3. Check Dynamic Relationship Buttons (Social Tab)
@@ -300,6 +356,10 @@ class Renderer:
         """Draws the full UI."""
         self.ft_buttons = [] # Reset interactive buttons for this frame
         
+        # Physics Step
+        if self.viewing_social_graph:
+            self.social_graph.update_physics()
+        
         self.screen.fill(constants.COLOR_BG)
         
         # Update Log Panel Content
@@ -309,7 +369,9 @@ class Renderer:
         self._draw_left_panel(sim_state)
         
         # Center Panel Logic
-        if self.viewing_family_tree_agent:
+        if self.viewing_social_graph:
+            self._draw_social_graph_modal(sim_state)
+        elif self.viewing_family_tree_agent:
             self._draw_family_tree_modal(sim_state)
         elif self.viewing_agent:
             self._draw_attributes_modal(sim_state)
@@ -331,6 +393,105 @@ class Renderer:
             # We'll handle the "Default" logic in main.py or pass it here.
             # For now, if target is None and we are closed, we assume Player is handled by caller
             pass
+
+    def _draw_social_graph_modal(self, sim_state):
+        """Draws the Social Map overlay."""
+        # Background
+        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        
+        # Clip to center panel
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(self.rect_center)
+        
+        # Draw Graph
+        self.social_graph.draw(self.screen, self.font_log)
+        
+        self.screen.set_clip(old_clip)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
+        
+        # --- Overlays (Drawn on top) ---
+        
+        # Header Background
+        header_bg = pygame.Rect(self.rect_center.x, self.rect_center.y, self.rect_center.width, 80) # Taller for toggle
+        # Actually, let's keep header small and put toggle below it floating?
+        # Or just make a standard toolbar.
+        
+        # Let's stick to the previous header style but add the toggle button.
+        pygame.draw.rect(self.screen, (30, 30, 30), (self.rect_center.x, self.rect_center.y, self.rect_center.width, 40))
+        pygame.draw.line(self.screen, constants.COLOR_BORDER, (self.rect_center.x, self.rect_center.y + 40), (self.rect_center.right, self.rect_center.y + 40))
+        
+        title = self.font_header.render("Social Map", True, constants.COLOR_ACCENT)
+        self.screen.blit(title, (self.rect_center.x + 15, self.rect_center.y + 8))
+
+        # Toggle Button A (Filter)
+        btn_a_rect = pygame.Rect(self.rect_center.x + 10, self.rect_center.y + 45, 120, 25)
+        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, btn_a_rect, border_radius=4)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, btn_a_rect, 1, border_radius=4)
+        
+        txt_str = "Show: All" if self.social_graph.show_all else "Show: Known"
+        toggle_txt = self.font_log.render(txt_str, True, constants.COLOR_TEXT)
+        self.screen.blit(toggle_txt, (btn_a_rect.x + 10, btn_a_rect.y + 4))
+
+        # Toggle Button B (Network)
+        btn_b_rect = pygame.Rect(self.rect_center.x + 140, self.rect_center.y + 45, 120, 25)
+        pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, btn_b_rect, border_radius=4)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, btn_b_rect, 1, border_radius=4)
+        
+        net_str = "Links: All" if self.social_graph.show_network else "Links: Direct"
+        net_txt = self.font_log.render(net_str, True, constants.COLOR_TEXT)
+        self.screen.blit(net_txt, (btn_b_rect.x + 10, btn_b_rect.y + 4))
+
+        # Close Button
+        close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
+
+        # Tooltip
+        info = self.social_graph.get_hover_info(sim_state)
+        if info:
+            lines = []
+            # Line 1: Name + Age
+            lines.append((f"{info['name']} ({info['age']})", constants.COLOR_ACCENT))
+            # Line 2: Job
+            lines.append((info['job'], constants.COLOR_TEXT_DIM))
+            # Line 3: Relationship
+            if info['rel_type'] != "Self":
+                rel_txt = f"{info['rel_type']}: {info['rel_val']}/100"
+                col = constants.COLOR_LOG_POSITIVE if info['rel_val'] > 50 else constants.COLOR_LOG_NEGATIVE
+                lines.append((rel_txt, col))
+            
+            # Calculate Box Size
+            mx, my = pygame.mouse.get_pos()
+            line_height = 20
+            box_w = 0
+            box_h = len(lines) * line_height + 10
+            
+            surfaces = []
+            for text, color in lines:
+                s = self.font_log.render(text, True, color)
+                box_w = max(box_w, s.get_width())
+                surfaces.append(s)
+            
+            box_w += 20 # Padding
+            
+            # Draw Box
+            bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
+            
+            # Keep tooltip on screen
+            if bg_rect.right > constants.SCREEN_WIDTH:
+                bg_rect.x -= box_w + 30
+            if bg_rect.bottom > constants.SCREEN_HEIGHT:
+                bg_rect.y -= box_h + 30
+                
+            pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
+            pygame.draw.rect(self.screen, constants.COLOR_BORDER, bg_rect, 1)
+            
+            # Draw Text
+            curr_y = bg_rect.y + 5
+            for s in surfaces:
+                self.screen.blit(s, (bg_rect.x + 10, curr_y))
+                curr_y += line_height
 
     def _draw_attributes_modal(self, sim_state):
         """Draws the detailed attributes overlay in the center panel."""
