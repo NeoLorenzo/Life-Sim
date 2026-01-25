@@ -50,10 +50,24 @@
         *   **Algorithm:** Implements a "Backwards Age, Forwards Genetics" approach.
             *   *Age Calculation:* Ages are determined top-down starting from the Player (Age 0) -> Parents -> Grandparents using a **Gaussian Distribution** (Mean 28, SD 6) clamped to reproductive limits (16-45). This ensures realistic generational gaps.
             *   *Entity Instantiation:* Agents are created bottom-up (Grandparents -> Parents -> Player) to ensure valid genetic inheritance references exist at instantiation.
-        *   **Extended Family:** Automatically generates Aunts, Uncles, and Cousins.
-        *   **Probabilistic Sizing:**
-            *   *Siblings:* Uses a decaying probability model (Base 25%, decay 0.5) for infinite potential siblings (e.g., 25% chance for 1st, 12.5% for 2nd).
-            *   *Cousins:* Aunts/Uncles have a 50% base chance to marry and start their own lineage, recursively applying the sibling logic to generate Cousins.
+        *   **Psychometric Natural Affinity System:** Initial relationships are no longer randomized. They are calculated using a scientifically-grounded **Actor-Partner Interdependence Model (APIM)** that derives compatibility from Big 5 personality traits.
+            *   **Actor Effects (Individual Impact):**
+                *   *Neuroticism (The Poison):* High Neuroticism (score > 60) applies a weighted penalty to *all* of an agent's relationships, simulating the social friction caused by anxiety and volatility.
+                *   *Agreeableness (The Buffer):* High Agreeableness (score > 60) provides a weighted bonus, simulating the ease of bonding with cooperative, empathetic individuals.
+            *   **Dyadic Effects (Homophily/Clash):**
+                *   *Openness (Value Alignment):* The engine calculates the absolute delta between two agents' Openness scores. Large differences result in a "Value Clash" penalty, representing the difficulty of bonding between highly traditional and highly adventurous individuals.
+                *   *Conscientiousness (Lifestyle Alignment):* Large deltas in Conscientiousness result in a "Lifestyle Clash" penalty, simulating the friction between highly organized and highly disorganized individuals.
+        *   **Expanded Relationship Range:** The social data model now supports a range of **`-100` to `+100`**.
+            *   *Positive (0 to 100):* Acquaintances, Friends, and Loved Ones.
+            *   *Negative (-100 to 0):* Rivals, Enemies, and Nemeses.
+        *   **Generational Relationship Formulas:**
+            *   **Spousal (Parents/Grandparents):** `Base_Marriage (+40) + Affinity + Random_History (+/- 20)`. This allows for emergent "Unhappy Marriages" if personalities clash significantly.
+            *   **Parent-Child:** `Biological_Bias (+50) + Affinity`. This creates "Favorite Children" or "Black Sheep" scenarios based on psychological compatibility.
+            *   **Sibling:** `Sibling_Base (+20) + Affinity`.
+        *   **Extended Family & In-Law Topology:**
+            *   **The Grandparent Bridge:** Paternal and Maternal sides of the family are now linked. Grandparents have "In-Law" relationships with their counterparts.
+            *   **Marriage-Driven Sentiment:** The starting score for Grandparent-In-Laws is calculated as `Civil_Base (+10) + (Parent_Marriage_Score * 0.5)`. If the parents have a toxic marriage, the extended family network naturally fractures as grandparents "take sides."
+            *   **Siblings-in-Law:** Aunts and Uncles are automatically linked to their siblings' spouses (In-Laws) using the affinity engine.
     *   **Anthropometry & Growth:**
         *   **Height Inheritance:**
             *   *Lineage Heads:* Generated via Gaussian distribution (Male: 176cm/7SD, Female: 163cm/6SD).
@@ -195,10 +209,12 @@
                 *   **Left-Click:** Refocus the tree on the clicked relative.
                 *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
         *   **Interactive Social Map (Modal):**
-            *   **Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy. Nodes repel each other (Coulomb's Law) while relationship ties act as springs (Hooke's Law), naturally clustering social circles together while isolating strangers.
+            *   **Advanced Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
+                *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength. A relationship of 100 exerts **2x the attraction force** of a neutral (0) relationship, causing close-knit families and spouses to snap together into tight clusters.
+                *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
             *   **Network Visualization:**
                 *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
-                *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (0-100), and **Color** indicates sentiment (Green/Red).
+                *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (magnitude of the score), and **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
             *   **Filters & Controls:**
                 *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
                 *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
@@ -210,11 +226,21 @@
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
-        *   **Social Dashboard:** The Social Tab now features a **Relationship List**. It renders dynamic cards for known contacts (Parents) displaying Name, Status (Alive/Deceased), and a color-coded Relationship Bar.
+        *   **Social Dashboard:** The Social Tab now features a **Relationship List**.
+        *   **Bi-directional Relationship Bars:** UI cards now feature a center-aligned bar.
+            *   **Positive:** Fills **Green to the right** (0 to 100).
+            *   **Negative:** Fills **Red to the left** (0 to -100).
+            *   **Visual Feedback:** This provides immediate visual identification of social standing, distinguishing between a "strained" relationship (short red bar) and a "nemesis" (full red bar).
         *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats), a **Family Tree Icon** (graphical button), and "Interact" buttons.
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
+
+The following features should be implimented ASAP:
+
+*   Add more flavor in birth, specifically whether the GPs are present based on their relationships.
+*   Give player ability to also highlight the connection between two agents and see tooltip showing information related to whats affecting the relationship between the two agents.
+*   Do a check to see if there is anything in the README which doesnt reflect the current codebase, or if there is anything in the codebase which isnt reflected in the readme.
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 

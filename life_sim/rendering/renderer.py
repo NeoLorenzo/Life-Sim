@@ -1001,19 +1001,47 @@ class Renderer:
             
             # Relationship Bar
             if rel['is_alive']:
-                bar_bg = pygame.Rect(x + w - 110, y + 10, 100, 10)
+                # Define Bar Area
+                bar_w = 100
+                bar_h = 10
+                bar_x = x + w - bar_w - 10
+                bar_y = y + 10
+                
+                bar_bg = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
                 pygame.draw.rect(self.screen, (30, 30, 30), bar_bg)
                 
-                pct = rel['value'] / 100.0
-                bar_fill = pygame.Rect(x + w - 110, y + 10, 100 * pct, 10)
+                # Draw Center Line
+                center_x = bar_bg.centerx
+                pygame.draw.line(self.screen, (80, 80, 80), (center_x, bar_y), (center_x, bar_y + bar_h))
                 
-                # Color based on value
-                if rel['value'] > 80: col = constants.COLOR_LOG_POSITIVE
-                elif rel['value'] < 30: col = constants.COLOR_LOG_NEGATIVE
-                else: col = constants.COLOR_ACCENT
+                val = rel['value']
+                # Clamp for rendering safety
+                val = max(constants.RELATIONSHIP_MIN, min(constants.RELATIONSHIP_MAX, val))
                 
-                pygame.draw.rect(self.screen, col, bar_fill)
-                
+                if val > 0:
+                    # Draw Green to Right
+                    pct = val / 100.0
+                    fill_w = (bar_w / 2) * pct
+                    fill_rect = pygame.Rect(center_x, bar_y, fill_w, bar_h)
+                    
+                    # Color Intensity
+                    if val > 80: col = constants.COLOR_REL_BEST
+                    else: col = constants.COLOR_REL_FRIEND
+                    
+                    pygame.draw.rect(self.screen, col, fill_rect)
+                    
+                elif val < 0:
+                    # Draw Red to Left
+                    pct = abs(val) / 100.0
+                    fill_w = (bar_w / 2) * pct
+                    fill_rect = pygame.Rect(center_x - fill_w, bar_y, fill_w, bar_h)
+                    
+                    # Color Intensity
+                    if val < -50: col = constants.COLOR_REL_ENEMY
+                    else: col = constants.COLOR_REL_DISLIKE
+                    
+                    pygame.draw.rect(self.screen, col, fill_rect)
+
                 # Buttons
                 btn_y = y + 50
                 btn_w = (w - 10) // 2

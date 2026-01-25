@@ -260,11 +260,6 @@ class SocialGraphLayout:
         dist_sq = np.maximum(dist_sq, 1.0)
         force_mag = constants.GRAPH_REPULSION / dist_sq
         
-        # Force vector: F_vec = F_mag * (diff / dist)
-        # Simplified: F_vec = (k / d^2) * (diff / d) = k * diff / d^3
-        # But standard inverse-square often works well enough as k * diff / d^2 for visualization
-        # Let's stick to: Force = diff * (Strength / dist^2)
-        
         forces = diff * force_mag[:, :, np.newaxis]
         
         # Sum forces acting on each node i (sum over j)
@@ -280,11 +275,17 @@ class SocialGraphLayout:
             delta = self.pos[u] - self.pos[v]
             
             # Strength factor
-            factor = (rel_val / 100.0) * 2.0 
+            # Base attraction for any link is 1.0.
+            # A relationship of 100 adds 1.0 (Total 2.0, which is 2x of 0).
+            # A relationship of -100 adds -2.0 (Total -1.0, which is repulsion).
+            if rel_val >= 0:
+                factor = 1.0 + (rel_val / 100.0)
+            else:
+                factor = -2.0 + (rel_val / 100.0)
             
             force = delta * constants.GRAPH_ATTRACTION * factor
             
-            # Pull V towards U
+            # Pull V towards U (or push away if factor is negative)
             total_force[v] += force
             # Pull U towards V
             total_force[u] -= force
@@ -312,27 +313,32 @@ class SocialGraphLayout:
             p1 = draw_pos[u]
             p2 = draw_pos[v]
             
-            # Color Logic (Green for positive, Red for negative)
-            if rel_val >= 50:
-                t = (rel_val - 50) / 50.0
-                r = int(255 * (1-t) + 100 * t)
-                g = 255
-                b = int(255 * (1-t) + 100 * t)
+            # Color Logic
+            if rel_val >= 0:
+                # Green Interpolation (0 -> Gray, 100 -> Bright Green)
+                t = rel_val / 100.0
+                # Gray (150,150,150) to Green (50, 255, 50)
+                r = int(150 * (1-t) + 50 * t)
+                g = int(150 * (1-t) + 255 * t)
+                b = int(150 * (1-t) + 50 * t)
             else:
-                t = (50 - rel_val) / 50.0
-                r = 255
-                g = int(255 * (1-t) + 100 * t)
-                b = int(255 * (1-t) + 100 * t)
+                # Red Interpolation (0 -> Gray, -100 -> Deep Red)
+                t = abs(rel_val) / 100.0
+                # Gray (150,150,150) to Red (220, 20, 20)
+                r = int(150 * (1-t) + 220 * t)
+                g = int(150 * (1-t) + 20 * t)
+                b = int(150 * (1-t) + 20 * t)
             
             color = (r, g, b)
             
-            # Thickness Logic (Based purely on relationship intensity)
+            # Thickness Logic (Based purely on intensity)
             # 0-100 maps to 1px-4px width
-            width = max(1, int((rel_val / 100.0) * 4))
+            width = max(1, int((abs(rel_val) / 100.0) * 4))
                 
             pygame.draw.line(screen, color, p1, p2, width)
 
         # 2. Draw Nodes & Labels
+        # ... (Rest of draw method remains identical)
         for i in range(self.count):
             x, y = draw_pos[i]
             color = self.colors[i]

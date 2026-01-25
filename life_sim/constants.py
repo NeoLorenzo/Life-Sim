@@ -52,8 +52,25 @@ ASSETS_DIR = "assets"
 ICON_FT_FILENAME = "icon_ft.png"
 
 # Social Graph Physics
-GRAPH_REPULSION = 5000.0  # Strength of nodes pushing apart
-GRAPH_CENTER_GRAVITY = 1.00 # Pull towards screen center
+GRAPH_REPULSION = 10000.0  # Strength of nodes pushing apart
+GRAPH_CENTER_GRAVITY = 0.90 # Pull towards screen center
 GRAPH_FRICTION = 0.91     # Velocity damping (0.0 - 1.0)
 GRAPH_SPEED = 1.0         # Global speed multiplier
-GRAPH_ATTRACTION = 0.02   # Spring strength for connected nodes
+GRAPH_ATTRACTION = 0.01   # Spring strength for connected nodes
+
+# Relationship Settings
+RELATIONSHIP_MIN = -100
+RELATIONSHIP_MAX = 100
+
+# Relationship Colors
+COLOR_REL_ENEMY = (220, 20, 20)     # Deep Red
+COLOR_REL_DISLIKE = (200, 100, 50)  # Orange
+COLOR_REL_NEUTRAL = (150, 150, 150) # Gray
+COLOR_REL_FRIEND = (100, 200, 100)  # Green
+COLOR_REL_BEST = (50, 255, 50)      # Bright Green
+
+# Affinity Weights (Psychometrics)
+AFFINITY_WEIGHT_ACTOR_N = 0.5   # Neuroticism penalty (Actor)
+AFFINITY_WEIGHT_ACTOR_A = 0.5   # Agreeableness bonus (Actor)
+AFFINITY_WEIGHT_DYADIC_O = 0.25 # Openness difference penalty (Dyadic)
+AFFINITY_WEIGHT_DYADIC_C = 0.25 # Conscientiousness difference penalty (Dyadic)

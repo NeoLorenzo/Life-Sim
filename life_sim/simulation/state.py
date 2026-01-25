@@ -7,6 +7,7 @@ import logging
 import random
 import uuid
 from .. import constants
+from . import affinity # Import affinity module
 
 class Agent:
     """
@@ -631,14 +632,22 @@ class SimState:
         # Paternal
         p_gpa = self._create_npc(age=p_gpa_age, gender="Male", last_name=last_name, city=city, country=country)
         p_gma = self._create_npc(age=p_gma_age, gender="Female", last_name=last_name, city=city, country=country)
-        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", random.randint(60, 100))
+        
+        # Affinity Calculation
+        aff_p = affinity.calculate_affinity(p_gpa, p_gma)
+        # Base Marriage (+40) + Affinity + History Variance (+/- 20)
+        score_p = 40 + aff_p + random.randint(-20, 20)
+        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", score_p)
         
         # Maternal
         # Maternal side often has different last name (Grandfather's name)
         mat_last_name = random.choice(agent_conf["bio"].get("last_names", ["Smith"]))
         m_gpa = self._create_npc(age=m_gpa_age, gender="Male", last_name=mat_last_name, city=city, country=country)
         m_gma = self._create_npc(age=m_gma_age, gender="Female", last_name=mat_last_name, city=city, country=country)
-        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", random.randint(60, 100))
+        
+        aff_m = affinity.calculate_affinity(m_gpa, m_gma)
+        score_m = 40 + aff_m + random.randint(-20, 20)
+        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", score_m)
         
         # --- Generation 1: Parents & Aunts/Uncles ---
         
@@ -647,21 +656,36 @@ class SimState:
                                   last_name=last_name, city=city, country=country)
         self._assign_job(father)
         self._link_parent_child(p_gpa, p_gma, father)
-        
-        # 2. Paternal Aunts/Uncles (Siblings of Father)
-        self._generate_siblings_for(father, p_gpa, p_gma, repro_conf, city, country, last_name)
 
-        # 3. Mother (Guaranteed Child of Maternal GPs)
+        # 2. Mother (Guaranteed Child of Maternal GPs)
         mother = self._create_npc(age=mother_age, gender="Female", parents=(m_gpa, m_gma),
                                   last_name=mat_last_name, city=city, country=country)
         self._assign_job(mother)
         self._link_parent_child(m_gpa, m_gma, mother)
-        
-        # 4. Maternal Aunts/Uncles (Siblings of Mother)
-        self._generate_siblings_for(mother, m_gpa, m_gma, repro_conf, city, country, mat_last_name)
 
-        # Link Parents
-        self._link_agents(father, mother, "Spouse", "Spouse", random.randint(60, 100))
+        # 3. Link Parents
+        aff_parents = affinity.calculate_affinity(father, mother)
+        score_parents = 40 + aff_parents + random.randint(-20, 20)
+        self._link_agents(father, mother, "Spouse", "Spouse", score_parents)
+
+        # 4. Paternal Aunts/Uncles (Siblings of Father)
+        # Link them to Mother as In-Laws
+        self._generate_siblings_for(father, p_gpa, p_gma, repro_conf, city, country, last_name, in_law=mother)
+        
+        # 5. Maternal Aunts/Uncles (Siblings of Mother)
+        # Link them to Father as In-Laws
+        self._generate_siblings_for(mother, m_gpa, m_gma, repro_conf, city, country, mat_last_name, in_law=father)
+
+        # --- Bridge Grandparents ---
+        # Formula: Civil_Base (+10) + (Parent_Marriage_Score * 0.5)
+        gp_bridge_score = 10 + (score_parents * 0.5)
+        
+        # Paternal GPA <-> Maternal GPA/GMA
+        self._link_agents(p_gpa, m_gpa, "In-Law", "In-Law", gp_bridge_score)
+        self._link_agents(p_gpa, m_gma, "In-Law", "In-Law", gp_bridge_score)
+        # Paternal GMA <-> Maternal GPA/GMA
+        self._link_agents(p_gma, m_gpa, "In-Law", "In-Law", gp_bridge_score)
+        self._link_agents(p_gma, m_gma, "In-Law", "In-Law", gp_bridge_score)
 
         # --- Generation 0: Player & Siblings ---
         
@@ -685,10 +709,19 @@ class SimState:
 
     def _link_parent_child(self, father, mother, child):
         """Links a child to both parents."""
-        self._link_agents(child, father, "Father", "Child", 100)
-        self._link_agents(child, mother, "Mother", "Child", 100)
+        # Biological Imperative (+50) + Affinity
+        # Note: We calculate affinity separately for Father and Mother
+        
+        aff_f = affinity.calculate_affinity(father, child)
+        score_f = 50 + aff_f
+        
+        aff_m = affinity.calculate_affinity(mother, child)
+        score_m = 50 + aff_m
+        
+        self._link_agents(child, father, "Father", "Child", score_f)
+        self._link_agents(child, mother, "Mother", "Child", score_m)
 
-    def _generate_siblings_for(self, focal_child, father, mother, repro_conf, city, country, last_name, is_player_gen=False):
+    def _generate_siblings_for(self, focal_child, father, mother, repro_conf, city, country, last_name, is_player_gen=False, in_law=None):
         """
         Generates siblings for the focal_child based on probability decay.
         Also handles Cousin generation if the sibling is an adult (Aunt/Uncle).
@@ -717,7 +750,18 @@ class SimState:
             self._link_parent_child(father, mother, sib)
             
             # Link to Focal Child (Sibling <-> Sibling)
-            self._link_agents(focal_child, sib, "Sibling", "Sibling", random.randint(60, 90))
+            aff_sib = affinity.calculate_affinity(focal_child, sib)
+            # Sibling Base (+20) + Affinity
+            score_sib = 20 + aff_sib
+            self._link_agents(focal_child, sib, "Sibling", "Sibling", score_sib)
+
+            # Link to In-Law (Sibling-in-Law)
+            if in_law:
+                aff_il = affinity.calculate_affinity(sib, in_law)
+                # In-Law Base (0) + Affinity
+                type_sib = "Brother-in-Law" if sib.gender == "Male" else "Sister-in-Law"
+                type_il = "Brother-in-Law" if in_law.gender == "Male" else "Sister-in-Law"
+                self._link_agents(sib, in_law, type_il, type_sib, aff_il)
             
             # Link to existing siblings of focal child? 
             # Ideally yes, but for MVP we just link to focal. 
@@ -749,7 +793,10 @@ class SimState:
             spouse = self._create_npc(age=spouse_age, gender="Female" if aunt_uncle.gender == "Male" else "Male",
                                       last_name=spouse_last, city=city, country=country)
             self._assign_job(spouse)
-            self._link_agents(aunt_uncle, spouse, "Spouse", "Spouse", random.randint(60, 100))
+            
+            aff_c = affinity.calculate_affinity(aunt_uncle, spouse)
+            score_c = 40 + aff_c + random.randint(-20, 20)
+            self._link_agents(aunt_uncle, spouse, "Spouse", "Spouse", score_c)
             
             # 2. Generate First Cousin (Guaranteed since we passed the 50% check)
             # Determine parents for the cousin
@@ -816,6 +863,9 @@ class SimState:
 
     def _link_agents(self, a, b, type_a_to_b, type_b_to_a, value):
         """Bi-directional relationship linking."""
+        # Clamp value to valid range
+        value = max(constants.RELATIONSHIP_MIN, min(constants.RELATIONSHIP_MAX, int(value)))
+        
         a.relationships[b.uid] = {
             "type": type_a_to_b, 
             "value": value, 

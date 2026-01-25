@@ -6,7 +6,7 @@ Handles the rules for processing turns, events, and state changes.
 import logging
 import random
 from .state import SimState
-from . import school
+from . import school, affinity # Import affinity module
 from .. import constants
 
 logger = logging.getLogger(__name__)
