@@ -50,20 +50,21 @@
         *   **Algorithm:** Implements a "Backwards Age, Forwards Genetics" approach.
             *   *Age Calculation:* Ages are determined top-down starting from the Player (Age 0) -> Parents -> Grandparents using a **Gaussian Distribution** (Mean 28, SD 6) clamped to reproductive limits (16-45). This ensures realistic generational gaps.
             *   *Entity Instantiation:* Agents are created bottom-up (Grandparents -> Parents -> Player) to ensure valid genetic inheritance references exist at instantiation.
-        *   **Psychometric Natural Affinity System:** Initial relationships are no longer randomized. They are calculated using a scientifically-grounded **Actor-Partner Interdependence Model (APIM)** that derives compatibility from Big 5 personality traits.
-            *   **Actor Effects (Individual Impact):**
-                *   *Neuroticism (The Poison):* High Neuroticism (score > 60) applies a weighted penalty to *all* of an agent's relationships, simulating the social friction caused by anxiety and volatility.
-                *   *Agreeableness (The Buffer):* High Agreeableness (score > 60) provides a weighted bonus, simulating the ease of bonding with cooperative, empathetic individuals.
-            *   **Dyadic Effects (Homophily/Clash):**
-                *   *Openness (Value Alignment):* The engine calculates the absolute delta between two agents' Openness scores. Large differences result in a "Value Clash" penalty, representing the difficulty of bonding between highly traditional and highly adventurous individuals.
-                *   *Conscientiousness (Lifestyle Alignment):* Large deltas in Conscientiousness result in a "Lifestyle Clash" penalty, simulating the friction between highly organized and highly disorganized individuals.
-        *   **Expanded Relationship Range:** The social data model now supports a range of **`-100` to `+100`**.
-            *   *Positive (0 to 100):* Acquaintances, Friends, and Loved Ones.
-            *   *Negative (-100 to 0):* Rivals, Enemies, and Nemeses.
-        *   **Generational Relationship Formulas:**
-            *   **Spousal (Parents/Grandparents):** `Base_Marriage (+40) + Affinity + Random_History (+/- 20)`. This allows for emergent "Unhappy Marriages" if personalities clash significantly.
-            *   **Parent-Child:** `Biological_Bias (+50) + Affinity`. This creates "Favorite Children" or "Black Sheep" scenarios based on psychological compatibility.
-            *   **Sibling:** `Sibling_Base (+20) + Affinity`.
+        *   **Psychometric Natural Affinity System ("Affinity as Gravity"):**
+            *   **Deterministic Architecture:** Randomness (RNG) has been completely removed from relationship generation. Relationships are now strictly deterministic based on Seed and Personality.
+            *   **The Gravity Model:** Relationships are modeled as `Total_Score = Base_Affinity + Sum(Active_Modifiers)`.
+                *   **Base Affinity:** The permanent, immutable "pull" between two personalities. If two agents are incompatible, their relationship will naturally drift toward hatred unless maintained by active modifiers.
+                *   **Active Modifiers:** Contextual buffs/debuffs that temporarily or permanently alter the score.
+            *   **Doubled Psychometric Weights:** The impact of personality has been doubled to ensure character traits matter more than generic family roles.
+                *   **Actor Effects:** Neuroticism and Agreeableness now apply a **1.0x** weighted penalty/bonus (previously 0.5x). A highly neurotic parent is now a significant source of family stress.
+                *   **Dyadic Effects:** Value Clashes (Openness) and Lifestyle Clashes (Conscientiousness) now apply a **0.5x** weighted penalty (previously 0.25x).
+        *   **Expanded Relationship Range:** The social data model supports a range of **`-100` to `+100`**.
+        *   **Structural Modifiers (The "Bond" System):**
+            *   Instead of arbitrary "Base Values," relationships are initialized with specific **Structural Modifiers** that represent social contracts.
+            *   **Maternal/Paternal Bond:** **+80** (Permanent). This massive buffer allows parents to love even "difficult" children, though extreme personality clashes can still drag the total score down over time.
+            *   **Marriage Bond:** **+60** (Permanent). Represents the commitment of marriage.
+            *   **Sibling Bond:** **+30** (Permanent).
+            *   **Civil/In-Law:** **+10** (Permanent).
         *   **Extended Family & In-Law Topology:**
             *   **The Grandparent Bridge:** Paternal and Maternal sides of the family are now linked. Grandparents have "In-Law" relationships with their counterparts.
             *   **Marriage-Driven Sentiment:** The starting score for Grandparent-In-Laws is calculated as `Civil_Base (+10) + (Parent_Marriage_Score * 0.5)`. If the parents have a toxic marriage, the extended family network naturally fractures as grandparents "take sides."
@@ -141,7 +142,7 @@
         *   *Prime (20-50):* Capacity peaks at 100.
         *   *Senescence (50+):* Capacity decays quadratically ($100 - (age-50)^2/25$), hitting 0 at age 100.
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
-    *   **Natural Entropy:** NPCs over age 50 experience slight random health decay annually, ensuring natural death occurs variably between ages 85-100 rather than strictly at the mathematical cap.
+    *   **Natural Entropy:** NPCs over age 50 experience slight random health decay **monthly**, creating a high-mortality window that ensures natural death occurs variably rather than strictly at the mathematical cap.
 
 ### Economy & Career
 *   **Job Market:**
@@ -163,8 +164,9 @@
     *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
 *   **Progression:**
-    *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation. This prevents "Late Enrollment" artifacts and ensures siblings/cousins exist in the school system from the very first tick of the simulation.
-    *   **Performance (Random Walk):** Academic performance (0-100) currently uses a random drift algorithm (+/- 2 per month) and is temporarily decoupled from IQ.
+    *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation.
+    *   **Player-Centric Logging:** While all NPCs simulate school performance and grade advancement in the background, the Event Log now only displays school notifications (Enrollment, Summer Break, Graduation) for the **Player**, reducing log noise.
+    *   **Performance (Random Walk):** Academic performance (0-100) currently uses a random drift algorithm (+/- 2 per month).
     *   **Pass/Fail Logic:**
         *   *Threshold:* Performance must be **> 20** to pass a grade.
         *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
@@ -186,7 +188,9 @@
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/IQ/Looks), and Physical Energy.
     *   **Center Panel (Variable):**
-        *   **Advanced Narrative Engine:** The `SimState` initialization logic synthesizes Weather, City Atmosphere, Household Wealth, and Parental Personality (Big 5) to generate a unique, cohesive opening paragraph. It accounts for specific scenarios like "Teen Mom," "Old Father," or "Neurotic Parents."
+        *   **Advanced Narrative Engine:** The `SimState` initialization logic synthesizes Weather, City Atmosphere, Household Wealth, and Parental Personality (Big 5) to generate a unique, cohesive opening paragraph.
+            *   **Context Awareness:** Accounts for specific scenarios like "Teen Mom," "Old Father," or "Neurotic Parents."
+            *   **Grandparent Presence:** The engine now checks the relationship status of all four grandparents. It dynamically generates flavor text describing their presence (e.g., *"Your maternal grandfather is handing out cigars"*) or their absence/tension (e.g., *"Your paternal grandmother is present but refuses to look at your mother"*) based on their relationships with your parents.
         *   **LogPanel Widget:**
             *   **Smart Wrapping:** Text is dynamically wrapped based on font size and panel width.
             *   **Collapsible History:** The log is structured hierarchically. Clicking year headers (e.g., `[-] Age 5`) toggles the `expanded` state in the history buffer, hiding/showing events for that year.
@@ -221,7 +225,11 @@
             *   **Interactivity:**
                 *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
                 *   **Navigation:** Infinite canvas panning via background drag.
-                *   **Rich Tooltips:** Hovering over a node displays a detailed overlay with Name, Age, Job, and precise Relationship stats.
+                *   **Rich Node Tooltips:** Hovering over a node displays a detailed overlay with Name, Age, Job, and precise Relationship stats.
+                *   **Interactive Edge Highlighting:** Hovering over a relationship line visually highlights it (glows bright yellow and thickens), making it easy to select specific connections in a dense social web.
+                *   **Detailed Edge Tooltips (The "Math of Love"):** Hovering over the connection line between any two agents reveals the full mathematical breakdown of their relationship:
+                    *   **Base Affinity:** Displays the raw psychometric score, explicitly listing factors like *"Value Clash (Openness): -12.5"* or *"Neuroticism Penalty: -5.0"*.
+                    *   **Active Modifiers:** Lists all currently active buffs/debuffs (e.g., *"Maternal Bond: +80.0"*), allowing the player to see exactly why a relationship exists.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
@@ -465,9 +473,6 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Specific Pathology:**
     *   **Disease Library:** Instead of generic "Sick," agents contract specific ailments (Flu, Bunions, Erectile Dysfunction, Cancer, Dementia).
     *   **Treatment Logic:** Each disease has a specific cure probability via standard medicine. Some are chronic and require annual management.
-*   **Alternative Medicine:**
-    *   **Witch Doctors:** A high-risk medical option.
-    *   **RNG Outcomes:** Can cure incurable diseases (like Cancer) instantly, have no effect, or result in immediate death (e.g., "You died after swallowing a toad's eye").
 *   **Juvenile Justice:**
     *   **Juvie:** A separate incarceration system for agents under 18.
     *   **Behavior:** Good behavior in Juvie can lead to early release; bad behavior transfers the agent to adult prison upon turning 18.

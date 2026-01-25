@@ -7,7 +7,8 @@ import logging
 import random
 import uuid
 from .. import constants
-from . import affinity # Import affinity module
+from . import affinity
+from .social import Relationship # Import new class
 
 class Agent:
     """
@@ -572,12 +573,60 @@ class SimState:
 
             parents_txt = f"{intro} {vibe} {mom_txt} {dad_txt}"
 
+        # 6. Grandparent Flavor
+        gp_txt = ""
+        if self.player.parents:
+            father, mother = self.player.parents
+            
+            # Helper to check GP presence
+            def check_gp(gp, child, in_law):
+                if not gp.is_alive: return None
+                
+                # Check relationship with their own child
+                rel_child_obj = gp.relationships.get(child.uid)
+                rel_child = rel_child_obj.total_score if rel_child_obj else 0
+                
+                # Check relationship with the in-law (spouse of child)
+                rel_inlaw_obj = gp.relationships.get(in_law.uid)
+                rel_inlaw = rel_inlaw_obj.total_score if rel_inlaw_obj else 0
+                
+                if rel_child > 50 and rel_inlaw > 20:
+                    return "happy"
+                elif rel_child < 0:
+                    return "absent" # Estranged from own child
+                elif rel_inlaw < -20:
+                    return "tense" # Hates the spouse
+                return "neutral"
+
+            # Paternal GPs
+            if father.parents:
+                p_gpa, p_gma = father.parents
+                status = check_gp(p_gma, father, mother)
+                
+                if status == "happy":
+                    gp_txt += f" Your paternal grandmother, {p_gma.first_name}, is weeping with joy in the corner."
+                elif status == "tense":
+                    gp_txt += f" Your paternal grandmother, {p_gma.first_name}, is present but refuses to look at your mother."
+                elif status == "absent":
+                    gp_txt += " Your father's parents are notably absent."
+
+            # Maternal GPs
+            if mother.parents:
+                m_gpa, m_gma = mother.parents
+                status = check_gp(m_gpa, mother, father)
+                
+                if status == "happy":
+                    gp_txt += f" Your maternal grandfather, {m_gpa.first_name}, is handing out cigars to the nurses."
+                elif status == "tense":
+                    gp_txt += f" Your maternal grandfather, {m_gpa.first_name}, is watching your father like a hawk."
+
         self.current_year_data = {
             "header": ("--- Life Begins ---", constants.COLOR_LOG_HEADER),
             "events": [
                 (f"Name: {self.player.first_name} {self.player.last_name}", constants.COLOR_ACCENT),
                 (f"Born: {birth_month_name} {birth_day}, {self.year} in {self.player.city}, {self.player.country}", constants.COLOR_TEXT),
                 (parents_txt, constants.COLOR_TEXT),
+                (gp_txt, constants.COLOR_TEXT),
                 (f"Nurse: \"It's a {self.player.gender}!\"", constants.COLOR_LOG_POSITIVE),
                 (looks_txt, constants.COLOR_TEXT),
                 (phys_txt, constants.COLOR_TEXT),
@@ -861,23 +910,179 @@ class SimState:
                 "is_in_session": True # Assume school is active
             }
 
-    def _link_agents(self, a, b, type_a_to_b, type_b_to_a, value):
-        """Bi-directional relationship linking."""
-        # Clamp value to valid range
-        value = max(constants.RELATIONSHIP_MIN, min(constants.RELATIONSHIP_MAX, int(value)))
+    def _setup_family_and_player(self):
+        """
+        Procedurally generates the family tree.
+        Algorithm: Backwards Age Calculation -> Forwards Entity Generation.
+        """
+        agent_conf = self.config["agent"]
+        repro_conf = self.config.get("reproduction", {})
         
-        a.relationships[b.uid] = {
-            "type": type_a_to_b, 
-            "value": value, 
-            "name": b.first_name,
-            "is_alive": b.is_alive
-        }
-        b.relationships[a.uid] = {
-            "type": type_b_to_a, 
-            "value": value, 
-            "name": a.first_name,
-            "is_alive": a.is_alive
-        }
+        # 1. Determine Ages (Backwards from Player)
+        player_age = agent_conf.get("initial_age", 0)
+        
+        # Parents
+        father_age = player_age + self._get_reproductive_gap(repro_conf)
+        mother_age = player_age + self._get_reproductive_gap(repro_conf)
+        
+        # Grandparents
+        p_gpa_age = father_age + self._get_reproductive_gap(repro_conf)
+        p_gma_age = father_age + self._get_reproductive_gap(repro_conf)
+        m_gpa_age = mother_age + self._get_reproductive_gap(repro_conf)
+        m_gma_age = mother_age + self._get_reproductive_gap(repro_conf)
+        
+        # Shared Bio Data
+        last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
+        country = random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
+        city = random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
+        
+        # --- Generation 2: Grandparents (Lineage Heads) ---
+        # Paternal
+        p_gpa = self._create_npc(age=p_gpa_age, gender="Male", last_name=last_name, city=city, country=country)
+        p_gma = self._create_npc(age=p_gma_age, gender="Female", last_name=last_name, city=city, country=country)
+        
+        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", mod_name="Marriage", mod_val=60)
+        
+        # Maternal
+        mat_last_name = random.choice(agent_conf["bio"].get("last_names", ["Smith"]))
+        m_gpa = self._create_npc(age=m_gpa_age, gender="Male", last_name=mat_last_name, city=city, country=country)
+        m_gma = self._create_npc(age=m_gma_age, gender="Female", last_name=mat_last_name, city=city, country=country)
+        
+        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", mod_name="Marriage", mod_val=60)
+        
+        # --- Generation 1: Parents & Aunts/Uncles ---
+        
+        # 1. Father
+        father = self._create_npc(age=father_age, gender="Male", parents=(p_gpa, p_gma), 
+                                  last_name=last_name, city=city, country=country)
+        self._assign_job(father)
+        self._link_parent_child(p_gpa, p_gma, father)
+
+        # 2. Mother
+        mother = self._create_npc(age=mother_age, gender="Female", parents=(m_gpa, m_gma),
+                                  last_name=mat_last_name, city=city, country=country)
+        self._assign_job(mother)
+        self._link_parent_child(m_gpa, m_gma, mother)
+
+        # 3. Link Parents
+        self._link_agents(father, mother, "Spouse", "Spouse", mod_name="Marriage", mod_val=60)
+
+        # 4. Paternal Aunts/Uncles
+        self._generate_siblings_for(father, p_gpa, p_gma, repro_conf, city, country, last_name, in_law=mother)
+        
+        # 5. Maternal Aunts/Uncles
+        self._generate_siblings_for(mother, m_gpa, m_gma, repro_conf, city, country, mat_last_name, in_law=father)
+
+        # --- Bridge Grandparents ---
+        # In-Law Link (Civil +10)
+        self._link_agents(p_gpa, m_gpa, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
+        self._link_agents(p_gpa, m_gma, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
+        self._link_agents(p_gma, m_gpa, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
+        self._link_agents(p_gma, m_gma, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
+
+        # --- Generation 0: Player & Siblings ---
+        
+        # 1. Player
+        player = Agent(agent_conf, is_player=True, parents=(father, mother),
+                       age=player_age, last_name=last_name, city=city, country=country,
+                       time_config=self.config.get("time_management", {}))
+        self._link_parent_child(father, mother, player)
+        
+        # 2. Player Siblings
+        self._generate_siblings_for(player, father, mother, repro_conf, city, country, last_name, is_player_gen=True)
+        
+        return player
+
+    def _link_parent_child(self, father, mother, child):
+        """Links a child to both parents with Parental Bond."""
+        self._link_agents(child, father, "Father", "Child", mod_name="Paternal Bond", mod_val=80)
+        self._link_agents(child, mother, "Mother", "Child", mod_name="Maternal Bond", mod_val=80)
+
+    def _generate_siblings_for(self, focal_child, father, mother, repro_conf, city, country, last_name, is_player_gen=False, in_law=None):
+        """Generates siblings and links them."""
+        prob = repro_conf.get("sibling_prob_base", 0.25)
+        decay = repro_conf.get("sibling_prob_decay", 0.5)
+        min_rep = repro_conf.get("min_reproductive_age", 16)
+        
+        while random.random() < prob:
+            gap = self._get_reproductive_gap(repro_conf)
+            sib_age = mother.age - gap
+            
+            if sib_age < 0:
+                prob *= decay
+                continue
+                
+            sib = self._create_npc(age=sib_age, parents=(father, mother),
+                                   last_name=last_name, city=city, country=country)
+            self._link_parent_child(father, mother, sib)
+            
+            # Link to Focal Child (Sibling Bond)
+            self._link_agents(focal_child, sib, "Sibling", "Sibling", mod_name="Sibling Bond", mod_val=30)
+
+            # Link to In-Law
+            if in_law:
+                type_sib = "Brother-in-Law" if sib.gender == "Male" else "Sister-in-Law"
+                type_il = "Brother-in-Law" if in_law.gender == "Male" else "Sister-in-Law"
+                self._link_agents(sib, in_law, type_il, type_sib, mod_name="Civil", mod_val=10)
+            
+            self._assign_initial_schooling(sib)
+            self._assign_job(sib)
+            
+            if not is_player_gen and sib.age >= min_rep:
+                self._generate_cousins_for(sib, repro_conf, city, country)
+
+            prob *= decay
+
+    def _generate_cousins_for(self, aunt_uncle, repro_conf, city, country):
+        """Decides if an Aunt/Uncle has a family."""
+        cousin_prob = repro_conf.get("cousin_prob_base", 0.5)
+        
+        if random.random() < cousin_prob:
+            # 1. Spouse
+            spouse_age = aunt_uncle.age + random.randint(-5, 5)
+            spouse_last = random.choice(self.config["agent"]["bio"].get("last_names", ["Jones"]))
+            
+            spouse = self._create_npc(age=spouse_age, gender="Female" if aunt_uncle.gender == "Male" else "Male",
+                                      last_name=spouse_last, city=city, country=country)
+            self._assign_job(spouse)
+            
+            self._link_agents(aunt_uncle, spouse, "Spouse", "Spouse", mod_name="Marriage", mod_val=60)
+            
+            # 2. First Cousin
+            father = aunt_uncle if aunt_uncle.gender == "Male" else spouse
+            mother = aunt_uncle if aunt_uncle.gender == "Female" else spouse
+            
+            gap = self._get_reproductive_gap(repro_conf)
+            c1_age = mother.age - gap
+            
+            if c1_age >= 0:
+                c1 = self._create_npc(age=c1_age, parents=(father, mother),
+                                      last_name=father.last_name, city=city, country=country)
+                self._link_parent_child(father, mother, c1)
+                self._assign_initial_schooling(c1)
+                self._assign_job(c1)
+                
+                self._generate_siblings_for(c1, father, mother, repro_conf, city, country, father.last_name, is_player_gen=True)
+
+    def _link_agents(self, a, b, type_a_to_b, type_b_to_a, mod_name=None, mod_val=0):
+        """
+        Bi-directional relationship linking using the new Relationship class.
+        Calculates base affinity and applies the structural modifier.
+        """
+        # 1. Calculate Base Affinity (The Gravity)
+        aff_score = affinity.calculate_affinity(a, b)
+        
+        # 2. Create Relationship A -> B
+        rel_a = Relationship(a.uid, b.uid, type_a_to_b, aff_score, b.first_name, b.is_alive)
+        if mod_name:
+            rel_a.add_modifier(mod_name, mod_val)
+        a.relationships[b.uid] = rel_a
+        
+        # 3. Create Relationship B -> A
+        rel_b = Relationship(b.uid, a.uid, type_b_to_a, aff_score, a.first_name, a.is_alive)
+        if mod_name:
+            rel_b.add_modifier(mod_name, mod_val)
+        b.relationships[a.uid] = rel_b
 
     def start_new_year(self, age):
         """Finalizes the current year and starts a new one."""

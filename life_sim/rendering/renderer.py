@@ -451,15 +451,39 @@ class Renderer:
         info = self.social_graph.get_hover_info(sim_state)
         if info:
             lines = []
-            # Line 1: Name + Age
-            lines.append((f"{info['name']} ({info['age']})", constants.COLOR_ACCENT))
-            # Line 2: Job
-            lines.append((info['job'], constants.COLOR_TEXT_DIM))
-            # Line 3: Relationship
-            if info['rel_type'] != "Self":
-                rel_txt = f"{info['rel_type']}: {info['rel_val']}/100"
-                col = constants.COLOR_LOG_POSITIVE if info['rel_val'] > 50 else constants.COLOR_LOG_NEGATIVE
-                lines.append((rel_txt, col))
+            
+            if info.get("type") == "edge":
+                # Edge Tooltip
+                lines.append((f"{info['agent_a']} & {info['agent_b']}", constants.COLOR_ACCENT))
+                
+                # Total Score
+                total = info['total']
+                col_total = constants.COLOR_LOG_POSITIVE if total > 0 else constants.COLOR_LOG_NEGATIVE
+                lines.append((f"Total Score: {total}", col_total))
+                
+                lines.append(("--- Base Affinity ---", constants.COLOR_TEXT_DIM))
+                # Color code the base affinity itself
+                base_col = constants.COLOR_LOG_POSITIVE if info['score'] > 0 else constants.COLOR_LOG_NEGATIVE
+                lines.append((f"Base: {info['score']}", base_col))
+                
+                for factor, val in info['affinity_breakdown']:
+                    col = constants.COLOR_LOG_POSITIVE if val > 0 else constants.COLOR_LOG_NEGATIVE
+                    lines.append((f"  {factor}: {val:+.1f}", col))
+
+                if info['modifiers']:
+                    lines.append(("--- Active Modifiers ---", constants.COLOR_TEXT_DIM))
+                    for mod_name, mod_val in info['modifiers']:
+                        col = constants.COLOR_LOG_POSITIVE if mod_val > 0 else constants.COLOR_LOG_NEGATIVE
+                        lines.append((f"  {mod_name}: {mod_val:+.1f}", col))
+                    
+            else:
+                # Node Tooltip (Legacy/Standard)
+                lines.append((f"{info['name']} ({info['age']})", constants.COLOR_ACCENT))
+                lines.append((info['job'], constants.COLOR_TEXT_DIM))
+                if info['rel_type'] != "Self":
+                    rel_txt = f"{info['rel_type']}: {info['rel_val']}/100"
+                    col = constants.COLOR_LOG_POSITIVE if info['rel_val'] > 50 else constants.COLOR_LOG_NEGATIVE
+                    lines.append((rel_txt, col))
             
             # Calculate Box Size
             mx, my = pygame.mouse.get_pos()
@@ -980,13 +1004,13 @@ class Renderer:
             
             # Name & Status
             name_color = constants.COLOR_TEXT
-            status_text = rel['type']
+            status_text = rel.rel_type
             
-            if not rel['is_alive']:
+            if not rel.is_alive:
                 name_color = constants.COLOR_TEXT_DIM
                 status_text += " (Deceased)"
             
-            name_surf = self.font_main.render(rel['name'], True, name_color)
+            name_surf = self.font_main.render(rel.target_name, True, name_color)
             type_surf = self.font_log.render(status_text, True, constants.COLOR_TEXT_DIM)
             
             self.screen.blit(name_surf, (x + 10, y + 5))
@@ -1000,7 +1024,7 @@ class Renderer:
             self.screen.blit(type_surf, (x + 10, y + 25))
             
             # Relationship Bar
-            if rel['is_alive']:
+            if rel.is_alive:
                 # Define Bar Area
                 bar_w = 100
                 bar_h = 10
@@ -1014,7 +1038,7 @@ class Renderer:
                 center_x = bar_bg.centerx
                 pygame.draw.line(self.screen, (80, 80, 80), (center_x, bar_y), (center_x, bar_y + bar_h))
                 
-                val = rel['value']
+                val = rel.total_score
                 # Clamp for rendering safety
                 val = max(constants.RELATIONSHIP_MIN, min(constants.RELATIONSHIP_MAX, val))
                 

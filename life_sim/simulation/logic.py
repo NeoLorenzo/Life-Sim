@@ -43,8 +43,8 @@ def process_turn(sim_state: SimState):
         if not npc.is_alive:
             if uid in player.relationships:
                 rel = player.relationships[uid]
-                rel["is_alive"] = False
-                sim_state.add_log(f"Your {rel['type']}, {npc.first_name}, died at age {npc.age}.", constants.COLOR_DEATH)
+                rel.is_alive = False
+                sim_state.add_log(f"Your {rel.rel_type}, {npc.first_name}, died at age {npc.age}.", constants.COLOR_DEATH)
                 player.happiness = max(0, player.happiness - 30)
 
     # 4. Global Systems

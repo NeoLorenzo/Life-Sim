@@ -79,10 +79,10 @@ class FamilyTreeLayout:
                 self.nodes[current_agent.uid] = LayoutNode(current_agent.uid, gen, agent=current_agent)
             
             # Traverse Relationships
-            for rel_uid, rel_data in current_agent.relationships.items():
+            for rel_uid, rel in current_agent.relationships.items():
                 if rel_uid not in all_agents_lookup: continue
                 
-                rel_type = rel_data["type"]
+                rel_type = rel.rel_type
                 next_gen = gen
                 
                 if rel_type in ["Father", "Mother"]: next_gen = gen + 1
@@ -323,7 +323,7 @@ class FamilyTreeLayout:
                 if curr in self.nodes and self.nodes[curr].agent:
                     agent = self.nodes[curr].agent
                     for rel_uid, rel in agent.relationships.items():
-                        if rel["type"] in ["Father", "Mother"]:
+                        if rel.rel_type in ["Father", "Mother"]:
                             queue.append(rel_uid)
             return ancestors
 

@@ -59,7 +59,9 @@ def _handle_school_start(sim_state, agent, system, sys_name):
         agent.school["is_in_session"] = True
         grade_idx = agent.school["grade_index"]
         grade_name = grades[grade_idx]["name"]
-        sim_state.add_log(f"Started school year: {grade_name}", constants.COLOR_ACCENT)
+        
+        if agent.is_player:
+            sim_state.add_log(f"Started school year: {grade_name}", constants.COLOR_ACCENT)
         return
 
     # Case B: Not in school -> Check for Enrollment
@@ -79,8 +81,11 @@ def _handle_school_start(sim_state, agent, system, sys_name):
             "performance": 50, # Start average
             "is_in_session": True
         }
-        sim_state.add_log(f"Enrolled in {grade_data['name']} at {agent.school['system']}.", constants.COLOR_LOG_POSITIVE)
-        logger.info(f"Agent enrolled in {grade_data['name']}")
+        
+        if agent.is_player:
+            sim_state.add_log(f"Enrolled in {grade_data['name']} at {agent.school['system']}.", constants.COLOR_LOG_POSITIVE)
+        
+        logger.info(f"Agent {agent.first_name} enrolled in {grade_data['name']}")
 
 def _handle_school_end(sim_state, agent, system):
     """Ends the school year, handles passing/failing/graduation."""
@@ -98,19 +103,25 @@ def _handle_school_end(sim_state, agent, system):
     passed = agent.school["performance"] > 20
     
     if passed:
-        sim_state.add_log(f"Finished {current_grade_name}. Performance: {agent.school['performance']}/100.", constants.COLOR_TEXT)
+        if agent.is_player:
+            sim_state.add_log(f"Finished {current_grade_name}. Performance: {agent.school['performance']}/100.", constants.COLOR_TEXT)
         
         # Check for Graduation
         if current_idx >= len(grades) - 1:
-            sim_state.add_log(f"Graduated from {agent.school['system']}!", constants.COLOR_LOG_POSITIVE)
+            if agent.is_player:
+                sim_state.add_log(f"Graduated from {agent.school['system']}!", constants.COLOR_LOG_POSITIVE)
+            
             agent.school = None # Left school
             # Boost smarts/happiness
             agent.happiness = min(100, agent.happiness + 20)
         else:
             # Advance to next grade for next year
             agent.school["grade_index"] += 1
-            sim_state.add_log("Enjoy your summer break!", constants.COLOR_TEXT_DIM)
+            if agent.is_player:
+                sim_state.add_log("Enjoy your summer break!", constants.COLOR_TEXT_DIM)
     else:
-        sim_state.add_log(f"Failed {current_grade_name}. You must repeat the year.", constants.COLOR_LOG_NEGATIVE)
+        if agent.is_player:
+            sim_state.add_log(f"Failed {current_grade_name}. You must repeat the year.", constants.COLOR_LOG_NEGATIVE)
+        
         agent.happiness = max(0, agent.happiness - 20)
         # Do not increment grade_index

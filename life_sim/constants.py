@@ -70,7 +70,7 @@ COLOR_REL_FRIEND = (100, 200, 100)  # Green
 COLOR_REL_BEST = (50, 255, 50)      # Bright Green
 
 # Affinity Weights (Psychometrics)
-AFFINITY_WEIGHT_ACTOR_N = 0.5   # Neuroticism penalty (Actor)
-AFFINITY_WEIGHT_ACTOR_A = 0.5   # Agreeableness bonus (Actor)
-AFFINITY_WEIGHT_DYADIC_O = 0.25 # Openness difference penalty (Dyadic)
-AFFINITY_WEIGHT_DYADIC_C = 0.25 # Conscientiousness difference penalty (Dyadic)
+AFFINITY_WEIGHT_ACTOR_N = 1.0   # Neuroticism penalty (Actor)
+AFFINITY_WEIGHT_ACTOR_A = 1.0   # Agreeableness bonus (Actor)
+AFFINITY_WEIGHT_DYADIC_O = 0.5  # Openness difference penalty (Dyadic)
+AFFINITY_WEIGHT_DYADIC_C = 0.5  # Conscientiousness difference penalty (Dyadic)

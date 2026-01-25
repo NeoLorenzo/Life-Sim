@@ -36,6 +36,7 @@ class SocialGraphLayout:
         self.show_network = False # New Toggle state
         self.drag_index = -1# Index of node being dragged
         self.hover_index = -1 # Index of node being hovered
+        self.hover_edge_index = -1 # Index of edge being hovered
         self.pan_offset = np.array([0.0, 0.0])
         self.is_panning = False
         self.last_mouse = (0, 0)
@@ -66,16 +67,39 @@ class SocialGraphLayout:
                 self.vel[self.drag_index] = [0, 0] # Stop physics while dragging
                 return True
                 
-            # 3. Handle Hover
-            # Simple distance check (brute force is fine for <1000 nodes)
+            # 3. Handle Hover (Nodes)
             self.hover_index = -1
+            self.hover_edge_index = -1
+            
             if self.count > 0:
-                # Vectorized distance check
+                # Vectorized distance check for Nodes
                 dists = np.sqrt(np.sum((self.pos - np.array([world_mx, world_my]))**2, axis=1))
-                # Find closest within radius
                 closest = np.argmin(dists)
                 if dists[closest] < (self.radii[closest] + 5):
                     self.hover_index = closest
+            
+            # 4. Handle Hover (Edges) - Only if not hovering a node
+            if self.hover_index == -1 and self.count > 0:
+                mouse_p = np.array([world_mx, world_my])
+                
+                for i, (u, v, val) in enumerate(self.edges):
+                    p1 = self.pos[u]
+                    p2 = self.pos[v]
+                    
+                    # Point to Line Segment Distance
+                    # Project point onto line (clamped)
+                    l2 = np.sum((p1 - p2)**2)
+                    if l2 == 0: continue
+                    
+                    t = np.dot(mouse_p - p1, p2 - p1) / l2
+                    t = max(0, min(1, t))
+                    projection = p1 + t * (p2 - p1)
+                    
+                    dist = np.linalg.norm(mouse_p - projection)
+                    
+                    if dist < 5: # 5px tolerance
+                        self.hover_edge_index = i
+                        break
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: # Left Click
@@ -95,32 +119,70 @@ class SocialGraphLayout:
         return False
 
     def get_hover_info(self, sim_state):
-        """Returns dict of info for the hovered node."""
-        if self.hover_index == -1: return None
+        """Returns dict of info for the hovered node OR edge."""
+        from ..simulation import affinity # Import here to avoid circular imports
         
-        uid = self.uids[self.hover_index]
-        agent = sim_state.player if uid == sim_state.player.uid else sim_state.npcs.get(uid)
-        
-        if not agent: return None
-        
-        info = {
-            "name": f"{agent.first_name} {agent.last_name}",
-            "age": f"Age: {agent.age}",
-            "job": agent.job['title'] if agent.job else "Unemployed",
-            "rel_type": "Self",
-            "rel_val": None
-        }
-        
-        if uid != sim_state.player.uid:
-            rel = sim_state.player.relationships.get(uid)
-            if rel:
-                info["rel_type"] = rel['type']
-                info["rel_val"] = rel['value']
-            else:
-                info["rel_type"] = "Stranger"
-                info["rel_val"] = 0
-                
-        return info
+        # Case A: Hovering Node
+        if self.hover_index != -1:
+            uid = self.uids[self.hover_index]
+            agent = sim_state.player if uid == sim_state.player.uid else sim_state.npcs.get(uid)
+            
+            if not agent: return None
+            
+            info = {
+                "type": "node",
+                "name": f"{agent.first_name} {agent.last_name}",
+                "age": f"Age: {agent.age}",
+                "job": agent.job['title'] if agent.job else "Unemployed",
+                "rel_type": "Self",
+                "rel_val": None
+            }
+            
+            if uid != sim_state.player.uid:
+                rel = sim_state.player.relationships.get(uid)
+                if rel:
+                    info["rel_type"] = rel.rel_type
+                    info["rel_val"] = rel.total_score
+                else:
+                    info["rel_type"] = "Stranger"
+                    info["rel_val"] = 0
+            return info
+
+        # Case B: Hovering Edge
+        if self.hover_edge_index != -1:
+            u_idx, v_idx, val = self.edges[self.hover_edge_index]
+            uid_a = self.uids[u_idx]
+            uid_b = self.uids[v_idx]
+            
+            agent_a = sim_state.player if uid_a == sim_state.player.uid else sim_state.npcs.get(uid_a)
+            agent_b = sim_state.player if uid_b == sim_state.player.uid else sim_state.npcs.get(uid_b)
+            
+            if not agent_a or not agent_b: return None
+            
+            # Get the actual Relationship object to access modifiers
+            # We need to find the relationship object. It could be in A or B.
+            rel_obj = agent_a.relationships.get(agent_b.uid)
+            
+            # Calculate Breakdown (Affinity)
+            score, affinity_breakdown = affinity.get_affinity_breakdown(agent_a, agent_b)
+            
+            # Get Active Modifiers
+            modifiers = []
+            if rel_obj:
+                for mod in rel_obj.modifiers:
+                    modifiers.append((mod.name, mod.value))
+            
+            return {
+                "type": "edge",
+                "agent_a": agent_a.first_name,
+                "agent_b": agent_b.first_name,
+                "score": score, # Base Affinity
+                "total": rel_obj.total_score if rel_obj else 0,
+                "affinity_breakdown": affinity_breakdown,
+                "modifiers": modifiers
+            }
+            
+        return None
 
     def build(self, sim_state, bounds):
         """
@@ -176,7 +238,7 @@ class SocialGraphLayout:
             # Determine Color based on Relationship
             rel = sim_state.player.relationships.get(uid)
             if rel:
-                val = rel['value']
+                val = rel.total_score
                 if val > 60:
                     col = constants.COLOR_LOG_POSITIVE # Greenish
                 elif val < 40:
@@ -213,7 +275,7 @@ class SocialGraphLayout:
 
         # A. Player Edges (Always add these)
         for target_uid, rel in sim_state.player.relationships.items():
-            add_edge(sim_state.player.uid, target_uid, rel['value'])
+            add_edge(sim_state.player.uid, target_uid, rel.total_score)
             
         # B. Network Edges (If enabled)
         if self.show_network:
@@ -228,7 +290,7 @@ class SocialGraphLayout:
                 for target_uid, rel in agent.relationships.items():
                     # Only add if target is also visible
                     if target_uid in uid_to_index:
-                        add_edge(uid, target_uid, rel['value'])
+                        add_edge(uid, target_uid, rel.total_score)
 
         # Convert to NumPy
         self.count = len(self.uids)
@@ -334,6 +396,11 @@ class SocialGraphLayout:
             # Thickness Logic (Based purely on intensity)
             # 0-100 maps to 1px-4px width
             width = max(1, int((abs(rel_val) / 100.0) * 4))
+            
+            # Highlight Hovered Edge
+            if self.edges.index((u, v, rel_val)) == self.hover_edge_index:
+                width += 2
+                color = (255, 255, 200) # Bright highlight
                 
             pygame.draw.line(screen, color, p1, p2, width)
 
