@@ -21,6 +21,15 @@
         "iq_sd": 15,
         "initial_looks": 50,
         "initial_money": 0,
+        "genetics": {
+            "height_male_mean": 176,
+            "height_male_sd": 7,
+            "height_female_mean": 163,
+            "height_female_sd": 6,
+            "height_min": 140,
+            "height_max": 215,
+            "height_parent_adjustment": 13
+        },
         "bio": {
             "first_names_male": ["James", "John", "Robert", "Michael", "William"],
             "first_names_female": ["Mary", "Patricia", "Jennifer", "Linda", "Elizabeth"],

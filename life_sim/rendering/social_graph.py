@@ -40,6 +40,12 @@ class SocialGraphLayout:
         self.pan_offset = np.array([0.0, 0.0])
         self.is_panning = False
         self.last_mouse = (0, 0)
+        
+        # Zoom State
+        self.zoom_level = 1.0
+        self.min_zoom = 0.2
+        self.max_zoom = 5.0
+        self.zoom_speed = 0.1
 
     def handle_event(self, event, rel_mouse_pos):
         """
@@ -48,9 +54,10 @@ class SocialGraphLayout:
         Returns: True if event consumed, False otherwise.
         """
         mx, my = rel_mouse_pos
-        # Adjust for Pan
-        world_mx = mx - self.pan_offset[0]
-        world_my = my - self.pan_offset[1]
+        
+        # Convert mouse position to world coordinates (accounting for zoom and pan)
+        world_mx = (mx - self.pan_offset[0] - self.center[0]) / self.zoom_level + self.center[0]
+        world_my = (my - self.pan_offset[1] - self.center[1]) / self.zoom_level + self.center[1]
         
         if event.type == pygame.MOUSEMOTION:
             # 1. Handle Panning
@@ -72,10 +79,11 @@ class SocialGraphLayout:
             self.hover_edge_index = -1
             
             if self.count > 0:
-                # Vectorized distance check for Nodes
+                # Vectorized distance check for Nodes (in world coordinates)
                 dists = np.sqrt(np.sum((self.pos - np.array([world_mx, world_my]))**2, axis=1))
                 closest = np.argmin(dists)
-                if dists[closest] < (self.radii[closest] + 5):
+                # Scale radius threshold by zoom for proper hover detection
+                if dists[closest] < (self.radii[closest] + 5 / self.zoom_level):
                     self.hover_index = closest
             
             # 4. Handle Hover (Edges) - Only if not hovering a node
@@ -97,7 +105,8 @@ class SocialGraphLayout:
                     
                     dist = np.linalg.norm(mouse_p - projection)
                     
-                    if dist < 5: # 5px tolerance
+                    # Scale distance threshold by zoom for proper hover detection
+                    if dist < (5 / self.zoom_level):
                         self.hover_edge_index = i
                         break
 
@@ -108,6 +117,12 @@ class SocialGraphLayout:
                 else:
                     self.is_panning = True
                     self.last_mouse = (mx, my)
+                return True
+            elif event.button == 4: # Mouse wheel up (zoom in)
+                self.zoom_level = min(self.max_zoom, self.zoom_level + self.zoom_speed)
+                return True
+            elif event.button == 5: # Mouse wheel down (zoom out)
+                self.zoom_level = max(self.min_zoom, self.zoom_level - self.zoom_speed)
                 return True
 
         elif event.type == pygame.MOUSEBUTTONUP:
@@ -326,49 +341,71 @@ class SocialGraphLayout:
         
         # Sum forces acting on each node i (sum over j)
         total_force = np.sum(forces, axis=1)
-        
-        # 2. Center Gravity (Pull towards screen center)
-        to_center = self.center - self.pos
-        total_force += to_center * constants.GRAPH_CENTER_GRAVITY
-        
-        # 2b. Spring Attraction (Generic Edges)
+
+        # 2a. Center Gravity (Pull towards center of bounds)
+        center_vec = self.center - self.pos
+        total_force += center_vec * constants.GRAPH_CENTER_GRAVITY
+
+        # 2b. Spring Attraction (Relationship-Based)
         for u, v, rel_val in self.edges:
             # Vector from V to U
             delta = self.pos[u] - self.pos[v]
+            distance = np.linalg.norm(delta)
             
-            # Strength factor
-            # Base attraction for any link is 1.0.
-            # A relationship of 100 adds 1.0 (Total 2.0, which is 2x of 0).
-            # A relationship of -100 adds -2.0 (Total -1.0, which is repulsion).
+            if distance < constants.GRAPH_MIN_DISTANCE:  # Avoid division by zero
+                continue
+                
+            # Normalize direction
+            direction = delta / distance
+            
+            # Enhanced relationship-based attraction using constants
+            # Strong positive relationships should have much stronger attraction
+            # Negative relationships should have repulsion
             if rel_val >= 0:
-                factor = 1.1 + (rel_val / 100.0)
+                # Positive relationships: exponential growth for stronger bonds
+                if rel_val <= constants.GRAPH_WEAK_BOND_THRESHOLD:
+                    # Weak bonds (0-30): 0.5x to 2.0x attraction
+                    factor = constants.GRAPH_WEAK_ATTRACTION_MIN + (rel_val / constants.GRAPH_WEAK_BOND_THRESHOLD) * (constants.GRAPH_WEAK_ATTRACTION_MAX - constants.GRAPH_WEAK_ATTRACTION_MIN)
+                elif rel_val <= constants.GRAPH_MODERATE_BOND_THRESHOLD:
+                    # Moderate bonds (30-70): 2.0x to 6.0x attraction
+                    factor = constants.GRAPH_MODERATE_ATTRACTION_MIN + ((rel_val - constants.GRAPH_WEAK_BOND_THRESHOLD) / (constants.GRAPH_MODERATE_BOND_THRESHOLD - constants.GRAPH_WEAK_BOND_THRESHOLD)) * (constants.GRAPH_MODERATE_ATTRACTION_MAX - constants.GRAPH_MODERATE_ATTRACTION_MIN)
+                else:
+                    # Strong bonds (70-100): 6.0x to 10.0x attraction
+                    factor = constants.GRAPH_STRONG_ATTRACTION_MIN + ((rel_val - constants.GRAPH_MODERATE_BOND_THRESHOLD) / (100 - constants.GRAPH_MODERATE_BOND_THRESHOLD)) * (constants.GRAPH_STRONG_ATTRACTION_MAX - constants.GRAPH_STRONG_ATTRACTION_MIN)
             else:
-                factor = -2.0 + (rel_val / 100.0)
+                # Negative relationships: repulsion that scales with negativity
+                # 0 to -100: 0 to 2.0x repulsion
+                factor = -constants.GRAPH_NEGATIVE_REPULSION_MAX * (abs(rel_val) / 100.0)
             
-            force = delta * constants.GRAPH_ATTRACTION * factor
+            # Apply force with relationship strength
+            force_magnitude = constants.GRAPH_ATTRACTION * factor
+            force = direction * force_magnitude
             
             # Pull V towards U (or push away if factor is negative)
             total_force[v] += force
-            # Pull U towards V
+            # Pull U towards V (Newton's third law)
             total_force[u] -= force
 
         # 3. Integration (Euler)
-        self.vel += total_force * constants.GRAPH_SPEED * 0.01 # Time step factor
+        self.vel += total_force * constants.GRAPH_SPEED * constants.GRAPH_TIME_STEP
         self.vel *= constants.GRAPH_FRICTION # Damping
         self.pos += self.vel
-        
+
         # 4. Hard Boundary Constraint (Bounce)
         # Left/Right
-        np.clip(self.pos[:, 0], self.bounds.left + 10, self.bounds.right - 10, out=self.pos[:, 0])
+        np.clip(self.pos[:, 0], self.bounds.left + constants.GRAPH_BOUNDARY_PADDING, self.bounds.right - constants.GRAPH_BOUNDARY_PADDING, out=self.pos[:, 0])
         # Top/Bottom
-        np.clip(self.pos[:, 1], self.bounds.top + 10, self.bounds.bottom - 10, out=self.pos[:, 1])
+        np.clip(self.pos[:, 1], self.bounds.top + constants.GRAPH_BOUNDARY_PADDING, self.bounds.bottom - constants.GRAPH_BOUNDARY_PADDING, out=self.pos[:, 1])
 
     def draw(self, screen, font):
-        """Draws the nodes and edges with pan offset."""
+        """Draws the nodes and edges with pan offset and zoom."""
         if self.count == 0: return
 
-        # Apply Pan Offset for drawing
-        draw_pos = (self.pos + self.pan_offset).astype(int)
+        # Apply Pan Offset and Zoom for drawing
+        # Transform: scale around center, then apply pan offset
+        center_offset = self.center
+        scaled_pos = (self.pos - center_offset) * self.zoom_level + center_offset
+        draw_pos = (scaled_pos + self.pan_offset).astype(int)
         
         # 1. Draw Edges
         for u, v, rel_val in self.edges:
@@ -393,9 +430,10 @@ class SocialGraphLayout:
             
             color = (r, g, b)
             
-            # Thickness Logic (Based purely on intensity)
-            # 0-100 maps to 1px-4px width
-            width = max(1, int((abs(rel_val) / 100.0) * 4))
+            # Thickness Logic (Based purely on intensity, scaled by zoom)
+            # 0-100 maps to 1px-4px width, then scale by zoom
+            base_width = max(1, int((abs(rel_val) / 100.0) * 4))
+            width = max(1, int(base_width * self.zoom_level))
             
             # Highlight Hovered Edge
             if self.edges.index((u, v, rel_val)) == self.hover_edge_index:
@@ -405,11 +443,11 @@ class SocialGraphLayout:
             pygame.draw.line(screen, color, p1, p2, width)
 
         # 2. Draw Nodes & Labels
-        # ... (Rest of draw method remains identical)
         for i in range(self.count):
             x, y = draw_pos[i]
             color = self.colors[i]
-            radius = self.radii[i]
+            # Scale radius by zoom
+            radius = max(3, int(self.radii[i] * self.zoom_level))
             
             # Highlight Hover
             if i == self.hover_index:
@@ -418,7 +456,9 @@ class SocialGraphLayout:
             pygame.draw.circle(screen, color, (x, y), radius)
             pygame.draw.circle(screen, constants.COLOR_BG, (x, y), radius, 1)
             
-            # Draw Label
+            # Draw Label (text size stays constant)
             label_surf = font.render(self.labels[i], True, constants.COLOR_TEXT)
-            label_rect = label_surf.get_rect(center=(x, y - radius - 10))
+            # Adjust label position to account for zoom
+            label_offset = int((radius + 10) * self.zoom_level)
+            label_rect = label_surf.get_rect(center=(x, y - label_offset))
             screen.blit(label_surf, label_rect)

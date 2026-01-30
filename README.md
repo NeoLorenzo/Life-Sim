@@ -229,8 +229,14 @@
                 *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
         *   **Interactive Social Map (Modal):**
             *   **Advanced Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
-                *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength. A relationship of 100 exerts **2x the attraction force** of a neutral (0) relationship, causing close-knit families and spouses to snap together into tight clusters.
+                *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength using tiered multipliers (Weak: 0.5x-2.0x, Moderate: 2.0x-6.0x, Strong: 6.0x-10.0x), causing close-knit families and spouses to snap together into tight clusters.
                 *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
+                *   **Balanced Forces:** Carefully tuned repulsion (50.0) and attraction (2.0) constants ensure relationship-based forces have meaningful impact without overwhelming the physics.
+            *   **Advanced Navigation & Interaction:**
+                *   **Zoom Controls:** Mouse wheel zoom in/out (0.2x to 5.0x) centered on the modal, with nodes and edges scaling proportionally while text remains constant size for readability.
+                *   **Infinite Canvas Panning:** Click and drag background to pan around the graph.
+                *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
+                *   **Precise Hover Detection:** Hover mechanics properly account for zoom level, ensuring accurate node and edge selection at any magnification.
             *   **Network Visualization:**
                 *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
                 *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (magnitude of the score), and **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
@@ -262,8 +268,6 @@
 Mandatory Next Steps:
 
 Fix family tree because its merging all family trees.
-Remove any magic numbers form the codebase
-Ensure that the deeper the bond with someone the closer they are on the social graph.
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 

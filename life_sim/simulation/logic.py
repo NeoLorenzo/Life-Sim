@@ -178,13 +178,13 @@ def visit_doctor(sim_state: SimState):
     if not player.is_alive:
         return
 
-    cost = 100
+    cost = constants.DOCTOR_VISIT_COST
     if player.money < cost:
         sim_state.add_log(f"You need ${cost} to visit the doctor.", constants.COLOR_LOG_NEGATIVE)
         return
 
     player.money -= cost
-    recovery = random.randint(10, 20)
+    recovery = random.randint(constants.DOCTOR_RECOVERY_MIN, constants.DOCTOR_RECOVERY_MAX)
     old_health = player.health
     # Clamp to max_health instead of static 100
     player.health = min(player.max_health, player.health + recovery)

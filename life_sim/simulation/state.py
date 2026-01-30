@@ -33,7 +33,7 @@ class Agent:
             self.age_months += random.randint(0, 11)
         
         self.health = kwargs.get("health", agent_config.get("initial_health", 50))
-        self.max_health = 100 # Capacity starts at 100
+        self.max_health = constants.HEALTH_PRIME_VALUE # Capacity starts at 100
         self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))
         
         # IQ Initialization (Gaussian)
@@ -144,10 +144,10 @@ class Agent:
         self.inventory = []
 
         # --- Time Management (AP) ---
-        self.ap_max = 24.0
+        self.ap_max = constants.AP_MAX_DAILY
         self.ap_used = 0.0
         self.ap_locked = 0.0 # School/Work
-        self.ap_sleep = 8.0  # Default
+        self.ap_sleep = constants.AP_SLEEP_DEFAULT  # Default
         
         # Calculate initial sleep needs if config provided
         time_config = kwargs.get("time_config", {})
@@ -168,15 +168,15 @@ class Agent:
         self.skin_tone = random.choice(app_conf.get("skin_tones", ["Fair"]))
         
         # 2. Height (Gaussian Distribution)
-        # Male: Avg 176cm, SD 7cm | Female: Avg 163cm, SD 6cm
+        genetics_config = app_conf.get("genetics", {})
         if self.gender == "Male":
-            mu, sigma = 176, 7
+            mu, sigma = genetics_config.get("height_male_mean", 176), genetics_config.get("height_male_sd", 7)
         else:
-            mu, sigma = 163, 6
+            mu, sigma = genetics_config.get("height_female_mean", 163), genetics_config.get("height_female_sd", 6)
             
         self.genetic_height_potential = int(random.gauss(mu, sigma))
         # Clamp to realistic extremes
-        self.genetic_height_potential = max(140, min(215, self.genetic_height_potential))
+        self.genetic_height_potential = max(genetics_config.get("height_min", 140), min(genetics_config.get("height_max", 215), self.genetic_height_potential))
 
     def _init_descendant(self, app_conf):
         """Inherits traits from parents (Next Generation)."""
@@ -186,10 +186,12 @@ class Agent:
         # Male Child = ((Mother + 13) + Father) / 2
         # Female Child = ((Father - 13) + Mother) / 2
         # Add random variance (+/- 10cm)
+        genetics_config = app_conf.get("genetics", {})
+        parent_adjustment = genetics_config.get("height_parent_adjustment", 13)
         if self.gender == "Male":
-            base = ((mother.genetic_height_potential + 13) + father.genetic_height_potential) / 2
+            base = ((mother.genetic_height_potential + parent_adjustment) + father.genetic_height_potential) / 2
         else:
-            base = ((father.genetic_height_potential - 13) + mother.genetic_height_potential) / 2
+            base = ((father.genetic_height_potential - parent_adjustment) + mother.genetic_height_potential) / 2
             
         variance = random.gauss(0, 5) # Standard deviation of 5cm from predicted
         self.genetic_height_potential = int(base + variance)
@@ -273,16 +275,16 @@ class Agent:
         2. Prime (20-50): Stays at 100.
         3. Senescence (50-100): Decays quadratically to 0.
         """
-        if self.age < 20:
+        if self.age < constants.HEALTH_CHILDHOOD_MAX_AGE:
             # Growth Phase: 70 base + 1.5 per year
-            self.max_health = int(70 + (1.5 * self.age))
-        elif self.age < 50:
+            self.max_health = int(constants.HEALTH_BASE_CHILD + (constants.HEALTH_GROWTH_RATE * self.age))
+        elif self.age < constants.HEALTH_PRIME_MAX_AGE:
             # Prime Phase
-            self.max_health = 100
+            self.max_health = constants.HEALTH_PRIME_VALUE
         else:
             # Senescence Phase: 100 - ((age - 50)^2 / 25)
-            decay = ((self.age - 50) ** 2) / 25.0
-            self.max_health = int(max(0, 100 - decay))
+            decay = ((self.age - constants.HEALTH_PRIME_MAX_AGE) ** 2) / constants.HEALTH_SENESCENCE_DIVISOR
+            self.max_health = int(max(0, constants.HEALTH_PRIME_VALUE - decay))
 
         # Ensure current health never exceeds the new cap
         if self.health > self.max_health:
@@ -556,7 +558,7 @@ class SimState:
                     vibe = "It's a standard hospital room, cluttered with plastic cups and blankets. The atmosphere is tired but warm, filled with the quiet relief that you arrived safely."
 
             # 3. The Mother's Moment
-            if m.age < 20:
+            if m.age < constants.MOTHER_YOUNG_AGE:
                 mom_txt = f"Your mother, {m.first_name} ({m.age}), looks terrified, clutching the bedsheets like she wants to run away."
             elif m.personality['Openness']['Fantasy'] > 18 and m.personality['Neuroticism']['Anxiety'] > 15:
                 mom_txt = f"Your mother, {m.first_name}, is currently screaming at a nurse for trying to vaccinate you, insisting on a 'natural immunity' ritual instead."
