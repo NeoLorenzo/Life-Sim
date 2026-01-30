@@ -528,6 +528,226 @@ All agents (Player and NPCs) process the same monthly sequence:
 - **Order Preservation**: Critical for reproducible simulation results
 - **Separation of Concerns**: Global systems (school) process after individual agents
 
+## State Mutation Contracts
+
+This section documents exactly how state changes flow through the simulation, which methods modify which parts of the state, and the order of operations during monthly turns. Understanding these contracts is critical for preventing unexpected side effects when adding new features.
+
+### Core Monthly Turn Process
+
+The simulation follows a strict deterministic order during each monthly turn (`process_turn()`):
+
+#### 1. Global Time Advancement
+**Function**: `process_turn()` (lines 24-29)
+**State Modified**: `SimState.month_index`, `SimState.year`
+**Conditions**: Always executes
+**Effects**:
+- Increments `month_index` (0-11, where 0 = January)
+- On year rollover (month_index > 11): resets to 0 and increments `year`
+- Logs "Happy New Year!" message
+
+#### 2. Player Processing
+**Function**: `_process_agent_monthly(sim_state, player)` (lines 31-32)
+**State Modified**: Player agent attributes
+**Conditions**: Player must be alive (`player.is_alive == True`)
+
+#### 3. NPC Processing
+**Function**: `_process_agent_monthly(sim_state, npc)` + `_simulate_npc_routine(npc)` (lines 34-48)
+**State Modified**: All NPC agents + player relationships
+**Conditions**: NPC must be alive
+**Side Effects**: Updates player relationships when known NPCs die
+
+#### 4. Global System Updates
+**Function**: `school.process_school_turn(sim_state)` (line 51)
+**State Modified**: School system, agent academic performance
+**Conditions**: Always executes
+
+### Agent State Mutation Functions
+
+#### `_process_agent_monthly(sim_state, agent)`
+**Location**: `logic.py` lines 55-117
+**Applies To**: All agents (player + NPCs)
+**State Modifications**:
+
+**A. Biological Updates**
+- `agent.age_months += 1` (always)
+- Birthday detection: `agent.age_months % 12 == 0`
+  - Calls `agent._recalculate_max_health()` (modifies `agent.max_health`)
+  - Calls `agent._recalculate_hormones()` (modifies `agent.fertility`, `agent.libido`)
+  - Seniors (age > 50): `agent.health -= random.randint(0, 3)`
+
+**B. Physical Development**
+- Growth (age ≤ 20, height < potential): 20% chance `agent.height_cm += 1`
+- Shrinkage (age > 60): 3% chance `agent.height_cm -= 1`
+- Calls `agent._recalculate_physique()` (modifies `agent.lean_mass`, `agent.weight_kg`, `agent.bmi`)
+
+**C. Time Management Reset**
+- `agent.ap_used = 0.0` (reset monthly budget)
+- Calls `agent._recalculate_ap_needs()` (modifies `agent.ap_sleep`)
+
+**D. Economic Processing**
+- If employed: `agent.money += int(agent.job['salary'] / 12)`
+
+**E. Mortality Check**
+- Enforces health cap: `agent.health = min(agent.health, agent.max_health)`
+- Death detection: `agent.is_alive = False` if `agent.health <= 0`
+
+#### `_simulate_npc_routine(npc)`
+**Location**: `logic.py` lines 118-140
+**Applies To**: NPCs only
+**State Modifications**:
+- `npc.ap_used += npc.ap_sleep` (sleep allocation)
+- `npc.ap_locked = 8.0` if employed, `7.0` if in school, `0.0` otherwise
+- `npc.ap_used += npc.ap_locked` (obligation allocation)
+
+### Player Action Functions (State Mutating)
+
+#### `work(sim_state)`
+**Location**: `logic.py` lines 141-156
+**Prerequisites**: Player alive + employed
+**State Modifications**:
+- `player.money += int(player.job['salary'] * 0.01)` (1% overtime bonus)
+**Pure**: No - modifies player money
+
+#### `find_job(sim_state)`
+**Location**: `logic.py` lines 157-174
+**Prerequisites**: Player alive + unemployed
+**State Modifications**:
+- `player.job = random.choice(jobs)` (assigns new job)
+**Pure**: No - modifies player job
+
+#### `visit_doctor(sim_state)`
+**Location**: `logic.py` lines 175-193
+**Prerequisites**: Player alive + sufficient money ($100)
+**State Modifications**:
+- `player.money -= constants.DOCTOR_VISIT_COST` (deducts cost)
+- `player.health = min(player.max_health, player.health + recovery)` (heals)
+**Pure**: No - modifies player money and health
+
+### Agent Internal State Mutators
+
+#### `Agent._recalculate_max_health()`
+**Location**: `state.py` lines 278-298
+**Trigger**: Birthdays, age changes
+**State Modifications**:
+- `agent.max_health` (age-based capacity calculation)
+- `agent.health` (clamped to new maximum if exceeded)
+**Pure**: No - modifies agent health state
+
+#### `Agent._recalculate_hormones()`
+**Location**: `state.py` lines 377-435
+**Trigger**: Birthdays, age changes
+**State Modifications**:
+- `agent.fertility` (age/gender-based calculation)
+- `agent.libido` (age/gender-based calculation)
+**Pure**: No - modifies agent hormonal state
+
+#### `Agent._recalculate_physique()`
+**Location**: `state.py` lines 437-465
+**Trigger**: Height changes, athleticism changes
+**State Modifications**:
+- `agent.lean_mass` (calculated from height and athleticism)
+- `agent.weight_kg` (calculated from lean mass and body fat)
+- `agent.bmi` (calculated from weight and height)
+**Pure**: No - modifies agent physique state
+
+#### `Agent._recalculate_ap_needs()`
+**Location**: `state.py` lines 467-483
+**Trigger**: Birthdays, configuration changes
+**State Modifications**:
+- `agent.ap_sleep` (age-based sleep requirements from config)
+**Pure**: No - modifies agent time management state
+
+### SimState State Mutators
+
+#### `SimState._link_agents()`
+**Location**: `state.py` lines 1249-1267
+**Trigger**: Family generation, relationship creation
+**State Modifications**:
+- `agent_a.relationships[agent_b.uid]` (creates relationship object)
+- `agent_b.relationships[agent_a.uid]` (creates reciprocal relationship)
+**Pure**: No - modifies relationship networks
+
+#### `SimState.start_new_year()`
+**Location**: `state.py` lines 1269-1280
+**Trigger**: Player birthdays
+**State Modifications**:
+- `self.history` (archives previous year)
+- `self.current_year_data` (creates new year structure)
+**Pure**: No - modifies historical data
+
+#### `SimState.add_log()`
+**Location**: `state.py` lines 1282-1286
+**Trigger**: Events, actions, notifications
+**State Modifications**:
+- `self.current_year_data["events"]` (adds event log entry)
+**Pure**: No - modifies event history
+
+### Pure Functions (No Side Effects)
+
+These functions are safe to call anywhere without担心 state mutations:
+
+#### `affinity.calculate_affinity(agent_a, agent_b)`
+**Location**: `affinity.py` lines 89-94
+**Returns**: Integer compatibility score (-100 to +100)
+**Pure**: Yes - only reads agent personality data
+
+#### `affinity.get_affinity_breakdown(agent_a, agent_b)`
+**Location**: `affinity.py` lines 11-87
+**Returns**: Tuple of (score, breakdown_list)
+**Pure**: Yes - only reads agent personality data
+
+#### `Agent.get_attr_value(name)`
+**Location**: `state.py` lines 234-271
+**Returns**: Attribute value by string name
+**Pure**: Yes - only reads agent data
+
+#### `Agent.get_personality_sum(trait)`
+**Location**: `state.py` lines 334-336
+**Returns**: Sum of personality facet values
+**Pure**: Yes - only reads personality data
+
+#### `Agent.age` (property)
+**Location**: `state.py` lines 273-276
+**Returns**: Age in years (calculated from age_months)
+**Pure**: Yes - computed property, no state change
+
+#### `Agent.free_ap` (property)
+**Location**: `state.py` lines 485-488
+**Returns**: Available action points
+**Pure**: Yes - computed property, no state change
+
+### State Mutation Dependencies
+
+#### Critical Order Dependencies
+1. **Aging must precede health recalculation**: `age_months` increment affects `_recalculate_max_health()`
+2. **Health recalculation must precede mortality check**: New `max_health` affects death detection
+3. **AP reset must precede NPC routine**: Fresh AP budget needed for `_simulate_npc_routine()`
+4. **School processing must follow agent updates**: Academic performance depends on current agent state
+
+#### Safe Modification Patterns
+- **Adding new agent attributes**: Initialize in `Agent.__init__()`, update in appropriate `_recalculate_*()` method
+- **Adding new monthly processes**: Add to `_process_agent_monthly()` after existing updates
+- **Adding new player actions**: Follow pattern of `work()`, `find_job()`, `visit_doctor()` - check prerequisites, modify state, log results
+- **Adding new pure functions**: Place in appropriate module (affinity.py for calculations, state.py for accessors)
+
+#### Dangerous Patterns to Avoid
+- **Modifying state in pure functions**: Breaks deterministic behavior
+- **Skipping life status checks**: Can cause operations on dead agents
+- **Modifying relationships outside `_link_agents()`**: Bypasses bidirectional consistency
+- **Direct health modifications without clamping**: Can exceed biological limits
+
+### Debugging State Mutations
+
+When debugging unexpected state changes:
+
+1. **Check turn order**: Verify the change happens in the expected phase
+2. **Verify life status**: Ensure `agent.is_alive` checks are present
+3. **Check bidirectional relationships**: Ensure both sides of relationships are updated
+4. **Validate health bounds**: Ensure health stays within `[0, max_health]` range
+5. **Log all mutations**: Use `sim_state.add_log()` for state-changing operations
+
+This contract ensures predictable simulation behavior and helps engineers understand the full impact of their code changes on the simulation state.
+
 ## 🎨 Rendering Package Structure
 
 The rendering system uses Pygame to create a responsive three-panel layout with modular UI components:
