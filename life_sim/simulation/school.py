@@ -89,7 +89,7 @@ def _handle_school_start(sim_state, agent, school_sys):
     if agent.school:
         agent.school["is_in_session"] = True
         
-        # Update display labels in case they changed (though usually static per year)
+        # Update display labels
         grade_info = school_sys.get_grade_info(agent.school["year_index"])
         if grade_info:
             agent.school["year_label"] = grade_info["name"]
@@ -97,10 +97,12 @@ def _handle_school_start(sim_state, agent, school_sys):
         
         if agent.is_player:
             sim_state.add_log(f"Started school year: {agent.school['year_label']} (Form {agent.school['form_label']})", constants.COLOR_ACCENT)
+            # CHECK POPULATION HERE TOO (In case we loaded a save or logic changed)
+            sim_state.populate_classmates()
+            
         return
 
     # Case B: Not in school -> Check for Enrollment
-    # Find the appropriate grade for current age
     eligible_idx = -1
     
     for i, grade in enumerate(school_sys.grades):
@@ -110,8 +112,6 @@ def _handle_school_start(sim_state, agent, school_sys):
             
     if eligible_idx != -1:
         grade_data = school_sys.grades[eligible_idx]
-        
-        # Assign a permanent form label (A, B, C)
         form_label = school_sys.get_random_form_label()
         
         agent.school = {
@@ -121,12 +121,14 @@ def _handle_school_start(sim_state, agent, school_sys):
             "year_index": eligible_idx,
             "year_label": grade_data["name"],
             "form_label": form_label,
-            "performance": 50, # Start average
+            "performance": 50,
             "is_in_session": True
         }
         
         if agent.is_player:
             sim_state.add_log(f"Enrolled in {grade_data['name']} at {school_sys.name}.", constants.COLOR_LOG_POSITIVE)
+            # TRIGGER POPULATION HERE
+            sim_state.populate_classmates()
         
         logger.info(f"Agent {agent.first_name} enrolled in {grade_data['name']} Form {form_label}")
 

@@ -459,11 +459,13 @@ class SimState:
         # Generate Family & Player (Order matters for genetics)
         self.player = self._setup_family_and_player()
         
-        # Structure: List of dictionaries
-        # ... (Rest of __init__ remains the same until self.current_year_data generation)
+        # Generate Classmates (if player is in school)
+        if self.player.school:
+            self._populate_classmates()
+        
         self.history = []
         
-        # Buffer for the current year being simulated
+        # --- Narrative Generation (Restored) ---
         # Generate Narrative Birth Message
         birth_month_name = constants.MONTHS[self.month_index]
         birth_day = random.randint(1, 28)
@@ -517,7 +519,12 @@ class SimState:
         if father_id and mother_id:
             f = self.npcs[father_id]
             m = self.npcs[mother_id]
-            marital_happiness = f.relationships[m.uid]['value']
+            
+            # Check if parents know each other (they should, but safety check)
+            marital_happiness = 50
+            if m.uid in f.relationships:
+                marital_happiness = f.relationships[m.uid].total_score
+                
             household_wealth = m.money + f.money
             
             # 1. The Setting (Weather + City Vibe)
@@ -638,6 +645,105 @@ class SimState:
             ],
             "expanded": True
         }
+
+    def populate_classmates(self):
+        """
+        Generates a cohort of students for the player's current class.
+        Public method called by school.py upon enrollment.
+        """
+        school_data = self.player.school
+        if not school_data: return
+        
+        # 1. Determine Capacity
+        capacity = 20 
+        if self.school_system and self.school_system.id == school_data["school_id"]:
+            capacity = self.school_system.class_capacity
+            
+        # 2. Identify the Cohort (Player + Existing NPCs)
+        cohort = [self.player]
+        for npc in self.npcs.values():
+            if not npc.school: continue
+            if (npc.school["school_id"] == school_data["school_id"] and
+                npc.school["year_index"] == school_data["year_index"] and
+                npc.school["form_label"] == school_data["form_label"]):
+                cohort.append(npc)
+
+        existing_count = len(cohort)
+        needed = capacity - existing_count
+        
+        # 3. Generate New Students (if needed)
+        if needed > 0:
+            self.logger = logging.getLogger(__name__)
+            self.logger.info(f"Populating Class: Generating {needed} students for {school_data['year_label']} {school_data['form_label']}...")
+            
+            for _ in range(needed):
+                classmate = self._generate_lineage_structure(
+                    target_age=self.player.age,
+                    is_player=False,
+                    fixed_city=self.player.city,
+                    fixed_country=self.player.country
+                )
+                
+                # Force Enrollment
+                classmate.school = {
+                    "school_id": school_data["school_id"],
+                    "school_name": school_data["school_name"],
+                    "stage": school_data["stage"],
+                    "year_index": school_data["year_index"],
+                    "year_label": school_data["year_label"],
+                    "form_label": school_data["form_label"],
+                    "performance": random.randint(20, 90),
+                    "is_in_session": school_data["is_in_session"]
+                }
+                
+                cohort.append(classmate)
+
+        # 4. Wire Relationships (The Mesh)
+        # We link every student in the cohort to every other student
+        # This ensures Classmate A knows Classmate B, not just the Player.
+        
+        for i in range(len(cohort)):
+            for j in range(i + 1, len(cohort)):
+                agent_a = cohort[i]
+                agent_b = cohort[j]
+                
+                # Skip if already linked
+                if agent_b.uid in agent_a.relationships:
+                    continue
+                    
+                # Calculate Affinity
+                aff_score = affinity.calculate_affinity(agent_a, agent_b)
+                
+                # Determine Type
+                rel_type = "Classmate"
+                if aff_score > 20: rel_type = "Acquaintance"
+                elif aff_score < -20: rel_type = "Rival"
+                
+                # Link
+                self._link_agents(agent_a, agent_b, rel_type, rel_type)
+
+    def _wire_classmate_relationship(self, classmate):
+        """
+        Establishes the initial relationship between Player and Classmate.
+        """
+        # 1. Calculate Affinity
+        aff_score = affinity.calculate_affinity(self.player, classmate)
+        
+        # 2. Determine Relationship Type based on Affinity
+        # High Affinity -> Potential Friend
+        # Low Affinity -> Rival
+        # Neutral -> Classmate
+        rel_type = "Classmate"
+        
+        if aff_score > 20:
+            rel_type = "Acquaintance"
+        elif aff_score < -20:
+            rel_type = "Rival"
+            
+        # 3. Link Agents
+        # Note: We don't add a structural modifier (like "Bond") yet.
+        # The relationship is purely affinity-driven at start.
+        self._link_agents(self.player, classmate, rel_type, rel_type)
 
     @property
     def agent(self):
@@ -917,18 +1023,30 @@ class SimState:
 
     def _setup_family_and_player(self):
         """
-        Procedurally generates the family tree.
-        Algorithm: Backwards Age Calculation -> Forwards Entity Generation.
+        Procedurally generates the family tree for the player.
+        Wrapper around the generic lineage factory.
+        """
+        agent_conf = self.config["agent"]
+        initial_age = agent_conf.get("initial_age", 0)
+        
+        # Generate the player and their entire family tree
+        return self._generate_lineage_structure(
+            target_age=initial_age,
+            is_player=True
+        )
+
+    def _generate_lineage_structure(self, target_age, is_player=False, fixed_last_name=None, fixed_city=None, fixed_country=None):
+        """
+        Generic factory to generate a full family tree (GPs -> Parents -> Child).
+        Returns the focus child (target_age).
         """
         agent_conf = self.config["agent"]
         repro_conf = self.config.get("reproduction", {})
         
-        # 1. Determine Ages (Backwards from Player)
-        player_age = agent_conf.get("initial_age", 0)
-        
+        # 1. Determine Ages (Backwards from Target)
         # Parents
-        father_age = player_age + self._get_reproductive_gap(repro_conf)
-        mother_age = player_age + self._get_reproductive_gap(repro_conf)
+        father_age = target_age + self._get_reproductive_gap(repro_conf)
+        mother_age = target_age + self._get_reproductive_gap(repro_conf)
         
         # Grandparents
         p_gpa_age = father_age + self._get_reproductive_gap(repro_conf)
@@ -937,9 +1055,10 @@ class SimState:
         m_gma_age = mother_age + self._get_reproductive_gap(repro_conf)
         
         # Shared Bio Data
-        last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
-        country = random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
-        city = random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
+        # Use fixed values if provided (e.g. for classmates in same city), else random
+        last_name = fixed_last_name if fixed_last_name else random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
+        country = fixed_country if fixed_country else random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
+        city = fixed_city if fixed_city else random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
         
         # --- Generation 2: Grandparents (Lineage Heads) ---
         # Paternal
@@ -949,6 +1068,7 @@ class SimState:
         self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", mod_name="Marriage", mod_val=60)
         
         # Maternal
+        # Maternal side often has different last name (Grandfather's name)
         mat_last_name = random.choice(agent_conf["bio"].get("last_names", ["Smith"]))
         m_gpa = self._create_npc(age=m_gpa_age, gender="Male", last_name=mat_last_name, city=city, country=country)
         m_gma = self._create_npc(age=m_gma_age, gender="Female", last_name=mat_last_name, city=city, country=country)
@@ -985,18 +1105,27 @@ class SimState:
         self._link_agents(p_gma, m_gpa, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
         self._link_agents(p_gma, m_gma, "In-Law", "In-Law", mod_name="Civil", mod_val=10)
 
-        # --- Generation 0: Player & Siblings ---
+        # --- Generation 0: Focus Child & Siblings ---
         
-        # 1. Player
-        player = Agent(agent_conf, is_player=True, parents=(father, mother),
-                       age=player_age, last_name=last_name, city=city, country=country,
-                       time_config=self.config.get("time_management", {}))
-        self._link_parent_child(father, mother, player)
+        # 1. Focus Child (Player or NPC)
+        if is_player:
+            child = Agent(agent_conf, is_player=True, parents=(father, mother),
+                          age=target_age, last_name=last_name, city=city, country=country,
+                          time_config=self.config.get("time_management", {}))
+        else:
+            # For NPCs, we use _create_npc to register them in self.npcs
+            child = self._create_npc(age=target_age, parents=(father, mother),
+                                     last_name=last_name, city=city, country=country)
+            self._assign_initial_schooling(child)
+            self._assign_job(child)
+
+        self._link_parent_child(father, mother, child)
         
-        # 2. Player Siblings
-        self._generate_siblings_for(player, father, mother, repro_conf, city, country, last_name, is_player_gen=True)
+        # 2. Siblings
+        # Note: is_player_gen=True prevents infinite recursion of cousins-of-cousins
+        self._generate_siblings_for(child, father, mother, repro_conf, city, country, last_name, is_player_gen=True)
         
-        return player
+        return child
 
     def _link_parent_child(self, father, mother, child):
         """Links a child to both parents with Parental Bond."""

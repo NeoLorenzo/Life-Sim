@@ -52,7 +52,7 @@ ASSETS_DIR = "assets"
 ICON_FT_FILENAME = "icon_ft.png"
 
 # Social Graph Physics
-GRAPH_REPULSION = 10000.0  # Strength of nodes pushing apart
+GRAPH_REPULSION = 1000.0  # Strength of nodes pushing apart
 GRAPH_CENTER_GRAVITY = 0.90 # Pull towards screen center
 GRAPH_FRICTION = 0.91     # Velocity damping (0.0 - 1.0)
 GRAPH_SPEED = 1.0         # Global speed multiplier

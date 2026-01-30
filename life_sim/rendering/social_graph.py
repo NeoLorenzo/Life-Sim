@@ -341,7 +341,7 @@ class SocialGraphLayout:
             # A relationship of 100 adds 1.0 (Total 2.0, which is 2x of 0).
             # A relationship of -100 adds -2.0 (Total -1.0, which is repulsion).
             if rel_val >= 0:
-                factor = 1.0 + (rel_val / 100.0)
+                factor = 1.1 + (rel_val / 100.0)
             else:
                 factor = -2.0 + (rel_val / 100.0)
             

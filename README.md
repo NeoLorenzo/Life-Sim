@@ -50,14 +50,20 @@
         *   **Algorithm:** Implements a "Backwards Age, Forwards Genetics" approach.
             *   *Age Calculation:* Ages are determined top-down starting from the Player (Age 0) -> Parents -> Grandparents using a **Gaussian Distribution** (Mean 28, SD 6) clamped to reproductive limits (16-45). This ensures realistic generational gaps.
             *   *Entity Instantiation:* Agents are created bottom-up (Grandparents -> Parents -> Player) to ensure valid genetic inheritance references exist at instantiation.
-        *   **Psychometric Natural Affinity System ("Affinity as Gravity"):**
-            *   **Deterministic Architecture:** Randomness (RNG) has been completely removed from relationship generation. Relationships are now strictly deterministic based on Seed and Personality.
+        *   **Refined Psychometric Affinity System:**
+            *   **Deterministic Architecture:** Relationships are strictly deterministic based on Seed and Personality, with no randomness in initial calculations.
             *   **The Gravity Model:** Relationships are modeled as `Total_Score = Base_Affinity + Sum(Active_Modifiers)`.
-                *   **Base Affinity:** The permanent, immutable "pull" between two personalities. If two agents are incompatible, their relationship will naturally drift toward hatred unless maintained by active modifiers.
-                *   **Active Modifiers:** Contextual buffs/debuffs that temporarily or permanently alter the score.
-            *   **Doubled Psychometric Weights:** The impact of personality has been doubled to ensure character traits matter more than generic family roles.
-                *   **Actor Effects:** Neuroticism and Agreeableness now apply a **1.0x** weighted penalty/bonus (previously 0.5x). A highly neurotic parent is now a significant source of family stress.
-                *   **Dyadic Effects:** Value Clashes (Openness) and Lifestyle Clashes (Conscientiousness) now apply a **0.5x** weighted penalty (previously 0.25x).
+                *   **Base Affinity:** The permanent psychometric compatibility between two personalities, calculated using the refined affinity engine.
+                *   **Active Modifiers:** Contextual buffs/debuffs that temporarily or permanently alter the score (e.g., Maternal Bond, Marriage).
+            *   **Enhanced Calculation System:**
+                *   **Actor Effects (Individual Traits):** 
+                    *   *Neuroticism:* Threshold-based penalty above 70, scaling at 0.5x the excess value. High neuroticism actively drags down all relationships.
+                    *   *Agreeableness:* Threshold-based bonus above 70, scaling at 0.5x the excess value. High agreeableness provides universal social lubrication.
+                *   **Dyadic Effects (Similarity/Homophily):** 
+                    *   *Openness:* Shared interests vs. value clashes using `(20 - delta) * 0.8` weighting. Small differences create bonuses, large differences create penalties.
+                    *   *Conscientiousness:* Lifestyle sync vs. clashes using `(20 - delta) * 0.8` weighting. Measures compatibility in organization and life approach.
+                    *   *Extraversion:* Energy match using `(20 - delta) * 0.5` weighting. Rewards similar energy levels between agents.
+            *   **Detailed Breakdown System:** The affinity engine provides comprehensive mathematical breakdowns showing exactly how each personality factor contributes to the final score, with clear labeling of positive ("Shared Interests") and negative ("Value Clash") effects.
         *   **Expanded Relationship Range:** The social data model supports a range of **`-100` to `+100`**.
         *   **Structural Modifiers (The "Bond" System):**
             *   Instead of arbitrary "Base Values," relationships are initialized with specific **Structural Modifiers** that represent social contracts.
@@ -174,8 +180,12 @@
         *   *Threshold:* Performance must be **> 20** to pass a grade.
         *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
         *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
-*   **Current Limitations (School MVP):**
-    *   **Empty Shell:** While the player is assigned a specific class (e.g., "Year 9B"), the other 19 students and the Form Tutor for that class are not yet generated. The school currently exists as a structural skeleton to support future population generation.
+*   **Comprehensive Classmate Generation:**
+    *   **Dynamic Population System:** The school now fully populates the form with complete NPC cohorts. When the player enrolls or advances to a new grade, the system generates all missing classmates to fill the form capacity (20 students per form).
+    *   **Generic Lineage Factory:** Utilizes the `_generate_lineage_structure()` method to create fully-realized NPC classmates with complete family trees, genetic inheritance, and personality profiles.
+    *   **Forced Enrollment:** Generated classmates are automatically assigned to the same school, stage, year, and form as the player, ensuring a cohesive peer group.
+    *   **Relationship Meshing:** The system automatically establishes relationships between all classmates in a cohort, creating a realistic social web where every student knows every other student, not just the player.
+    *   **Affinity-Driven Relationships:** Classmate relationships are determined by the refined affinity calculation system, resulting in natural social dynamics (Classmates, Acquaintances, Rivals) based on personality compatibility.
 
 ### Actions & Progression
 *   **Healthcare (Doctor):**
@@ -248,6 +258,12 @@
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
+
+Mandatory Next Steps:
+
+Fix family tree because its merging all family trees.
+Remove any magic numbers form the codebase
+Ensure that the deeper the bond with someone the closer they are on the social graph.
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
