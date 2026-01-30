@@ -71,7 +71,11 @@ class Renderer:
         # Visibility Logic (Action ID -> Lambda accepting player)
         self.visibility_rules = {
             "FIND_JOB": lambda player: player.age >= 16,
-            "WORK": lambda player: player.job is not None
+            "WORK": lambda player: player.job is not None,
+            "SCHOOL_GRADES": lambda player: player.school is not None,
+            "SCHOOL_CLASSMATES": lambda player: player.school is not None,
+            "SCHOOL_STUDY": lambda player: player.school is not None and player.school.get("is_in_session", False),
+            "SCHOOL_SKIP": lambda player: player.school is not None and player.school.get("is_in_session", False)
         }
         
         # Storage for interactive rects in the modal (recalculated every frame)
@@ -97,7 +101,7 @@ class Renderer:
     def _init_ui_structure(self):
         """Creates Tabs and Action Buttons."""
         # 1. Init Tabs
-        tab_names = ["Main", "Social", "Assets"]
+        tab_names = ["Main", "School", "Social", "Assets"]
         tab_w = constants.PANEL_RIGHT_WIDTH // len(tab_names)
         tab_h = 30
         
@@ -124,6 +128,12 @@ class Renderer:
                 ("Find Job", "FIND_JOB"),
                 ("Work Overtime", "WORK"),
                 ("View Attributes", "TOGGLE_ATTR")
+            ],
+            "School": [
+                ("View Grades", "SCHOOL_GRADES"),
+                ("View Classmates", "SCHOOL_CLASSMATES"),
+                ("Study Hard", "SCHOOL_STUDY"),
+                ("Skip Class", "SCHOOL_SKIP")
             ],
             "Social": [
                 ("Social Map", "SOCIAL_MAP"),       # New Feature
@@ -1069,6 +1079,10 @@ class Renderer:
         
         # Draw Tabs
         for tab in self.tabs:
+            # Skip School tab if player is not enrolled in school
+            if tab.text == "School" and sim_state and sim_state.player.school is None:
+                continue
+                
             # Highlight active tab
             is_active = (tab.text == self.active_tab)
             tab.draw(self.screen, active_highlight=is_active)

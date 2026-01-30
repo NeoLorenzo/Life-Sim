@@ -84,9 +84,20 @@
                 "end_month_index": 5,
                 "structure": {
                     "class_capacity": 20,
-                    "forms_per_year": 3,
+                    "forms_per_year": 4,
+                    "form_labels": ["A", "B", "C", "D"],
+                    "students_per_form": 20,
                     "churn_rate": 0.0
                 },
+                "subjects_by_stage": {
+                    "Early Years": ["Literacy", "Numeracy", "Creative Play"],
+                    "Primary": ["Math", "English", "Science", "History", "Art"],
+                    "Secondary": ["Mathematics", "English", "Biology", "Chemistry", "Physics", "History", "Geography", "Art", "Music", "PE"],
+                    "Sixth Form": []
+                },
+                "igcse_core_subjects": ["Mathematics", "English", "Science"],
+                "igcse_elective_subjects": ["History", "Geography", "Art", "Music", "Computer Science", "Business Studies", "Foreign Language"],
+                "ib_groups": ["Group 1: Language", "Group 2: Language Acquisition", "Group 3: Individuals & Societies", "Group 4: Sciences", "Group 5: Mathematics", "Group 6: Arts"],
                 "stages": [
                     {
                         "name": "Early Years",

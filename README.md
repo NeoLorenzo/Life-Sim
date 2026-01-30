@@ -2,6 +2,582 @@
 
 **Life-Sim** is a modular, extensible life simulation engine built in Python. It simulates the biological, economic, and social trajectory of a single agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
 
+## � Project Structure
+
+```
+Life-Sim/
+├── main.py                    # Entry point and application bootstrap
+├── config.json               # Simulation parameters and game configuration
+├── constants.py              # Application constants and static settings
+├── logging_setup.py          # Logging configuration and utilities
+├── assets/                   # Static assets (icons, images, etc.)
+├── logs/                     # Runtime log files (rotating)
+├── life_sim/                 # Core simulation package
+│   ├── __init__.py
+│   ├── simulation/           # Simulation logic and state management
+│   │   ├── __init__.py
+│   │   ├── state.py          # Main simulation state and agent classes
+│   │   ├── logic.py          # Core simulation loop and turn processing
+│   │   ├── affinity.py       # Relationship and personality calculations
+│   │   ├── social.py         # Social interactions and relationships
+│   │   └── school.py         # Education system and academic logic
+│   └── rendering/            # User interface and visualization
+│       ├── __init__.py
+│       ├── renderer.py       # Main UI renderer and layout management
+│       ├── ui.py             # UI components and widgets
+│       ├── family_tree.py    # Interactive family tree visualization
+│       └── social_graph.py   # Social network visualization
+├── README.md                 # This file
+├── LICENSE                   # MIT License
+└── .gitignore               # Git ignore patterns
+```
+
+### Architecture Overview
+- **Entry Point**: `main.py` initializes the simulation, loads configuration, and starts the main game loop
+- **Configuration**: `config.json` contains all simulation parameters (jobs, education, personality traits, etc.)
+- **Simulation Core**: The `life_sim/simulation/` package handles all game logic, agent behavior, and state management
+- **Rendering Layer**: The `life_sim/rendering/` package manages the Pygame-based UI, visualizations, and user interactions
+- **Modular Design**: Each system (agents, relationships, education, rendering) is isolated in its own module following SOLID principles
+
+## 📋 state.py Module Structure
+
+The `state.py` module contains the core data models for the simulation, managing both individual agents and the global simulation state.
+
+### Agent Class
+The `Agent` class represents all human entities (Player and NPCs) with a unified architecture:
+
+**Core Identity & Biology**
+- Basic bio-data: name, gender, age (stored as months), country, city
+- Physical stats: health, happiness, IQ (Gaussian distribution), looks, money
+- Genetic system: supports both procedurally generated "lineage heads" and inherited "descendants"
+
+**Extended Attributes**
+- Physical: strength, athleticism, endurance
+- Personality: Big Five model (OCEAN) with 5 main traits and 30 sub-facets
+- Hormonal curves: fertility and libido with genotype/phenotype separation
+- Hidden traits: karma, luck, sexuality
+
+**Life Systems**
+- Academic: subject-based performance (Math, Science, Language Arts, History)
+- Economic: job status, salary, monthly income processing
+- Social: relationship network with affinity-based scoring
+- Time Management: Action Point (AP) system for daily activities
+
+**State Management**
+- Unique UUID and `is_player` flag for entity distinction
+- Dynamic physique calculations (height, weight, BMI based on genetics and athleticism)
+- Age-based progression with growth, puberty, and senescence phases
+
+**Key Methods**
+- `__init__()`: Initialize agent with config or inherited traits
+- `_init_lineage_head()`: Generate traits for first-generation agents
+- `_init_descendant()`: Inherit traits from parents using genetic formulas
+- `_recalculate_max_health()`: Age-based health capacity calculation
+- `_recalculate_hormones()`: Puberty and aging effects on fertility/libido
+- `_recalculate_physique()`: Calculate weight, BMI from height and athleticism
+- `get_attr_value()`: Unified attribute access for UI rendering
+- `get_personality_sum()`: Calculate Big 5 trait totals
+
+### SimState Class
+The `SimState` class serves as the central container for the entire simulation world:
+
+**Core Responsibilities**
+- **World Container**: Holds all agents (player + NPCs) and global systems
+- **Time Management**: Tracks months, years, and calendar progression
+- **School System**: Manages educational institutions and enrollment
+- **Family Generation**: Creates multi-generational family trees
+- **Narrative Engine**: Generates contextual birth and life event stories
+
+**Key Attributes**
+- `player`: The main Agent controlled by the user
+- `npcs`: Dictionary of all non-player agents (uid → Agent)
+- `school_system`: Global education system instance
+- `month_index`: Current month (0-11, where 0 = January)
+- `year`: Current simulation year
+- `history`: Log of all life events organized by year
+- `config`: Reference to global configuration data
+
+**Key Methods**
+- `__init__()`: Initialize simulation world and generate family
+- `_setup_family_and_player()`: Create multi-generational family structure
+- `_populate_classmates()`: Generate NPC classmates when player enrolls
+- `add_log()`: Add events to the history buffer with color coding
+
+**Initialization Process**
+1. Load configuration and create school system
+2. Set random start month for variety
+3. Generate complete family tree (grandparents → parents → player)
+4. Initialize player's relationships with all family members
+5. Generate narrative birth story based on family context
+6. Populate school classmates if player is enrolled
+
+## ⚙️ logic.py Module Structure
+
+The `logic.py` module contains the core simulation engine that processes turns, handles agent actions, and manages the deterministic progression of the simulation world.
+
+### Core Turn Processing
+
+**`process_turn(sim_state: SimState)`**
+The main simulation loop that advances time by one month:
+
+**Execution Order**
+1. **Global Time Advancement**: Increment month counter, handle year rollover, log new year
+2. **Player Processing**: Apply monthly updates to the player agent
+3. **NPC Processing**: Apply updates to all NPCs, simulate their routines, handle death notifications
+4. **Global Systems**: Process school systems and other world-level mechanics
+
+**Key Design Principles**
+- **Unified Loop**: Player and NPCs share identical biological/economic rules
+- **Deterministic Order**: Critical for reproducible simulation results
+- **Death Handling**: Automatic relationship updates when known NPCs die
+
+### Agent Processing Functions
+
+**`_process_agent_monthly(sim_state, agent)`**
+Applies comprehensive monthly updates to a single agent:
+
+**A. Biological Updates**
+- **Aging**: Increment `age_months` and detect birthdays
+- **Annual Recalculation**: On birthdays, recalculate health capacity and hormones
+- **Natural Entropy**: Seniors (50+) experience random health decay (0-3 points)
+
+**B. Physical Development**
+- **Growth Phase** (≤20 years): 20% chance monthly to grow 1cm toward genetic potential
+- **Shrinkage Phase** (>60 years): 3% chance monthly to lose 1cm
+- **Physique Update**: Recalculate weight, BMI, and body composition
+
+**C. Time Management Reset**
+- **AP Reset**: Clear used action points for new month
+- **Sleep Recalculation**: Update sleep requirements based on age from config
+
+**D. Economic Processing**
+- **Salary Distribution**: Monthly payment (annual salary ÷ 12)
+- **Player Logging**: Salary income logged for player, debug-only for NPCs
+
+**E. Mortality Check**
+- **Health Capping**: Enforce biological maximum health limits
+- **Death Detection**: Mark agents as deceased when health ≤ 0
+
+**`_simulate_npc_routine(npc)`**
+Simulates NPC daily time allocation to maintain valid state:
+
+**Time Allocation**
+1. **Sleep** (Maintenance): Deduct required sleep hours
+2. **Obligations** (Locked): Work (8h) or School (7h) if enrolled/employed
+3. **Free Time**: Remaining AP for future AI decision-making
+
+### Player Action Functions
+
+**`work(sim_state: SimState)`**
+Handles overtime work for employed players:
+- **Prerequisites**: Must be alive and employed
+- **Payment**: 1% of annual salary as overtime bonus
+- **Validation**: Checks employment status before processing
+
+**`find_job(sim_state: SimState)`**
+Manages job seeking for unemployed players:
+- **Age Restriction**: Only available at age 16+
+- **Random Selection**: Picks random job from configuration pool
+- **Guaranteed Success**: Current implementation always succeeds
+
+**`visit_doctor(sim_state: SimState)`**
+Processes medical care for health restoration:
+- **Cost Check**: Requires sufficient funds ($100)
+- **Healing**: Random recovery (10-20 health points)
+- **Health Capping**: Cannot exceed agent's maximum health capacity
+
+### Integration Points
+
+**Main Loop Integration** (`main.py`)
+- **Action Mapping**: UI actions mapped to logic functions via action IDs
+- **State Updates**: Functions directly modify `sim_state` object
+- **Logging**: All actions generate appropriate log entries
+
+**Deterministic Behavior**
+- **No Randomness in Core Logic**: All randomization uses seeded RNG
+- **Reproducible Results**: Same seed + actions = identical outcomes
+- **Debug Support**: Comprehensive logging for troubleshooting
+
+### Error Handling & Validation
+
+**Safety Checks**
+- **Life Status**: All functions verify agent is alive before processing
+- **Prerequisites**: Actions validate required conditions (employment, funds, age)
+- **State Consistency**: Maintains valid agent states after each operation
+
+**Graceful Failures**
+- **Informative Messages**: Clear feedback when actions cannot be performed
+- **State Preservation**: Failed actions don't modify simulation state
+- **Logging**: All failures logged for debugging
+
+## 🧠 affinity.py Module Structure
+
+The `affinity.py` module contains the psychometric compatibility engine that calculates natural relationships between agents based on their Big Five personality traits. This system forms the foundation of all social interactions in the simulation.
+
+### Core Affinity Functions
+
+**`calculate_affinity(agent_a, agent_b)`**
+The primary interface for calculating psychometric compatibility:
+- **Purpose**: Returns a single affinity score (-100 to +100) representing natural compatibility
+- **Usage**: Used throughout relationship initialization, family generation, and social system creation
+- **Deterministic**: Same personalities always produce the same affinity score
+
+**`get_affinity_breakdown(agent_a, agent_b)`**
+Detailed analysis function that provides complete scoring breakdown:
+- **Return Values**: Tuple of (final_score, breakdown_list)
+- **Breakdown Format**: List of (description, score_value) pairs showing each factor's contribution
+- **UI Integration**: Used by social graph hover tooltips to show relationship mechanics
+
+### Affinity Calculation Model
+
+The system uses a **Gravity Model** approach: `Total_Score = Base_Affinity + Sum(Active_Modifiers)`
+
+**1. Actor Effects (Individual Traits)**
+These affect how an agent relates to *anyone*:
+
+**Neuroticism (The "Grump" Factor)**
+- **Threshold**: 70+ points trigger penalties
+- **Formula**: `-(Neuroticism - 70) * 0.5`
+- **Effect**: High neuroticism agents universally drag down relationship scores
+- **Rationale**: Represents difficulty in maintaining positive social connections
+
+**Agreeableness (The "Nice" Factor)**
+- **Threshold**: 70+ points trigger bonuses
+- **Formula**: `(Agreeableness - 70) * 0.5`
+- **Effect**: High agreeableness agents universally boost relationship scores
+- **Rationale**: Natural social lubrication and conflict avoidance
+
+**2. Dyadic Effects (Similarity/Homophily)**
+These compare traits between two agents using the formula: `(Threshold - Delta) * Weight`
+
+**Openness (Shared Interests vs. Value Clash)**
+- **Threshold**: 20-point difference tolerance
+- **Weight**: 0.8 (high impact)
+- **Positive**: "Shared Interests" when difference < 20
+- **Negative**: "Value Clash" when difference > 20
+- **Rationale**: Core value alignment is critical for long-term compatibility
+
+**Conscientiousness (Lifestyle Sync vs. Clash)**
+- **Threshold**: 20-point difference tolerance
+- **Weight**: 0.8 (high impact)
+- **Positive**: "Lifestyle Sync" for similar organization levels
+- **Negative**: "Lifestyle Clash" for different approaches to life
+- **Rationale**: Daily habits and organization style significantly affect coexistence
+
+**Extraversion (Energy Match)**
+- **Threshold**: 20-point difference tolerance
+- **Weight**: 0.5 (moderate impact)
+- **Positive**: "Energy Match" for similar social energy levels
+- **Rationale**: Energy compatibility affects social comfort, though less critical than values
+
+### Score Calculation Process
+
+**Step-by-Step Flow**
+1. **Initialize**: Start with score = 0.0, empty breakdown list
+2. **Actor Effects**: Apply individual trait modifiers for both agents
+3. **Dyadic Effects**: Calculate similarity/difference penalties and bonuses
+4. **Categorize Effects**: Label significant effects (>5 points) for user feedback
+5. **Final Clamp**: Round and clamp result to [-100, +100] range
+
+**Breakdown Categories**
+- **Positive Labels**: "Shared Interests", "Lifestyle Sync", "Energy Match"
+- **Negative Labels**: "Value Clash", "Lifestyle Clash"
+- **Individual Labels**: "{Name}'s Neuroticism", "{Name}'s Agreeableness"
+
+### Integration Points
+
+**Family Generation** (`state.py`)
+- **Spouse Matching**: Base marriage score (40) + affinity + history variance
+- **Parent-Child**: Biological imperative (50) + affinity
+- **Sibling Bonds**: Base sibling score (20) + affinity
+- **In-Law Relationships**: Pure affinity-based scoring
+
+**School System** (`state.py`)
+- **Classmate Networks**: All students in a cohort are linked using affinity
+- **Relationship Types**: 
+  - >20 affinity: "Acquaintance"
+  - -20 to 20: "Classmate" 
+  - <-20: "Rival"
+
+**Social Graph Visualization** (`social_graph.py`)
+- **Hover Information**: Real-time affinity breakdown display
+- **Edge Visualization**: Color and thickness based on total relationship score
+- **Debug Support**: Detailed mathematical breakdown for relationship analysis
+
+### Design Principles
+
+**Psychometric Foundation**
+- **Big Five Model**: Based on established OCEAN personality psychology
+- **Research-Backed**: Weightings reflect real-world relationship research
+- **Deterministic**: Same personality profiles always produce identical results
+
+**Mathematical Properties**
+- **Symmetric**: `affinity(A, B) == affinity(B, A)`
+- **Bounded**: Scores strictly clamped to [-100, +100]
+- **Additive**: Multiple effects combine linearly for predictable behavior
+
+**Game Balance**
+- **Mean Reversion**: Extreme personalities have strong effects but don't dominate
+- **Threshold-Based**: Effects only trigger beyond meaningful personality levels
+- **Weight Hierarchy**: Core values (Openness, Conscientiousness) weighted higher than social energy
+
+### Extensibility
+
+**Future Enhancements**
+- **Cultural Factors**: Could add cultural compatibility modifiers
+- **Age Preferences**: Age-based attraction/repulsion factors
+- **Situational Modifiers**: Context-dependent affinity adjustments
+- **Learning System**: Agents could adapt based on relationship success/failure
+
+**Performance Considerations**
+- **Pure Functions**: No side effects, safe for caching
+- **Lightweight Calculation**: Minimal computational overhead
+- **Batch Processing**: Efficient for processing large agent populations
+
+## 👥 social.py Module Structure
+
+The `social.py` module defines the data structures that manage social connections and relationship dynamics between agents. It provides the foundational classes for representing how agents relate to each other through a flexible modifier system.
+
+### Core Data Structures
+
+**`@dataclass Modifier`**
+Represents temporary or permanent factors that affect relationship scores:
+
+**Key Attributes**
+- `name`: String identifier for the modifier (e.g., "Maternal Bond", "Marriage", "Argument")
+- `value`: Numeric impact on relationship score (positive or negative)
+- `duration`: Time remaining in months (-1 for permanent modifiers)
+- `decay`: Monthly reduction rate for time-based modifiers
+
+**Use Cases**
+- **Permanent Bonds**: Marriage (+60), Maternal/Paternal Bond (+80)
+- **Temporary Effects**: "Recent Argument" (-20, duration: 3 months)
+- **Decaying Effects**: "New Romance" (+30, decay: -5 per month)
+
+**`Relationship` Class**
+Represents a social connection between two agents with dynamic scoring:
+
+**Core Properties**
+- `owner_uid`: UUID of the agent who owns this relationship
+- `target_uid`: UUID of the agent this relationship points to
+- `rel_type`: Relationship category (Spouse, Friend, Rival, Classmate, etc.)
+- `base_affinity`: Initial psychometric compatibility score from affinity engine
+- `target_name`: Human-readable name for UI display
+- `is_alive`: Whether the target agent is still living
+
+**Dynamic Scoring System**
+- `modifiers`: List of active Modifier objects affecting the relationship
+- `cached_score`: Calculated total score (base_affinity + sum(modifiers))
+- `total_score`: Property accessor for the current relationship value
+
+### Relationship Mechanics
+
+**Score Calculation Formula**
+```
+Total Score = Base Affinity + Σ(Active Modifiers)
+Final Score = clamp(Total Score, -100, +100)
+```
+
+**Modifier Management**
+- **Add/Update**: `add_modifier()` creates new modifiers or overwrites existing ones
+- **Automatic Recalculation**: Score updates immediately when modifiers change
+- **Decay Processing**: Time-based modifiers can decrease in value over time
+- **Permanent vs. Temporary**: Distinguished by duration (-1 = permanent)
+
+**Score Range & Interpretation**
+- **-100 to -20**: Strongly negative (Enemy, Nemesis)
+- **-20 to 20**: Neutral/Weak (Acquaintance, Stranger)
+- **20 to 60**: Positive (Friend, Good Relationship)
+- **60 to 100**: Very Positive (Best Friend, Close Family)
+
+### Key Methods
+
+**`add_modifier(name, value, duration=-1, decay=0.0)`**
+Manages relationship modifiers with intelligent updates:
+- **Overwrite Logic**: Replaces existing modifiers with same name
+- **Immediate Recalculation**: Updates cached score automatically
+- **Flexible Duration**: Supports both permanent and temporary effects
+
+**`recalculate()`**
+Core scoring algorithm:
+- **Summation**: Adds base affinity to all active modifier values
+- **Clamping**: Ensures final score stays within [-100, +100] bounds
+- **Caching**: Stores result for efficient repeated access
+
+### Legacy Compatibility
+
+**Dictionary Interface**
+Provides backward compatibility with existing code:
+- `__getitem__()`: Allows dictionary-style access (rel["value"], rel["type"])
+- `__setitem__()`: Limited write access for specific properties
+- **Migration Path**: Smooth transition from old dict-based to object-oriented design
+
+**Supported Keys**
+- `"value"`: Returns cached_score
+- `"type"`: Returns rel_type
+- `"name"`: Returns target_name
+- `"is_alive"`: Returns is_alive status
+
+### Integration Points
+
+**Affinity Engine Integration**
+- **Base Scores**: Receives initial compatibility from `affinity.calculate_affinity()`
+- **Dynamic Adjustment**: Modifiers can enhance or diminish natural compatibility
+- **Bidirectional**: Each agent maintains their own relationship object
+
+**Family Generation** (`state.py`)
+- **Structural Bonds**: Uses permanent modifiers for family relationships
+- **Inheritance**: Parent-child bonds get +50 biological imperative
+- **Marriage**: Spouse relationships combine affinity with +60 marriage bond
+
+**Social Systems**
+- **Network Formation**: Classmates, coworkers, and community members
+- **Event Processing**: Life events can add/remove modifiers
+- **Temporal Dynamics**: Relationships evolve through modifier changes
+
+### Design Principles
+
+**Separation of Concerns**
+- **Data Structure Only**: Contains no game logic, pure data management
+- **Reusable Components**: Modifier system works for any relationship type
+- **Clear Boundaries**: Distinct from affinity calculation and social logic
+
+**Performance Optimization**
+- **Cached Scoring**: Avoids recalculation when modifiers haven't changed
+- **Lightweight Objects**: Minimal memory footprint per relationship
+- **Efficient Updates**: Only recalculates when modifiers are modified
+
+**Extensibility**
+- **Flexible Modifier System**: Easy to add new relationship effects
+- **Type Agnostic**: Works for any relationship category
+- **Temporal Support**: Built-in support for time-based relationship changes
+
+### Usage Patterns
+
+**Family Relationships**
+```python
+# Mother-child bond
+rel.add_modifier("Maternal Bond", 80, duration=-1)  # Permanent
+```
+
+**Social Events**
+```python
+# Recent argument
+rel.add_modifier("Argument", -20, duration=3)  # 3 months
+```
+
+**Life Changes**
+```python
+# Marriage bonus
+rel.add_modifier("Marriage", 60, duration=-1)  # Permanent
+```
+
+**Temporary Effects**
+```python
+# New friendship bloom
+rel.add_modifier("New Friendship", 30, decay=5.0)  # Decays over time
+```
+
+## Monthly Simulation Cycle
+
+The simulation advances in **1-month increments** when the player clicks "Age Up (+1 Month)". Each turn follows a deterministic order of operations:
+
+### 1. Global Time Advancement
+- Increment month counter and handle year rollover
+- Update simulation date (Month/Year) for timeline tracking
+
+### 2. Agent Processing (Player & NPCs)
+All agents (Player and NPCs) process the same monthly sequence:
+
+**A. Biological Updates**
+- Age increment (monthly aging)
+- Birthday check: annual biological recalculation (health capacity, hormones)
+- Natural entropy: seniors (50+) experience random health decay
+
+**B. Physical Development**
+- Height growth for children/teens (stochastic, 20% chance/month)
+- Age-related shrinkage for seniors (60+, 3% chance/month)
+- Physique recalculation (weight, BMI based on genetics and athleticism)
+
+**C. Time Management Reset**
+- Action Points (AP) reset to full 24.0 daily budget
+- Sleep needs recalculated based on age bracket from config
+- Locked AP allocated for mandatory obligations (School/Work)
+
+**D. Economic Processing**
+- Monthly salary distribution (annual salary ÷ 12)
+- Income added to agent's money balance
+
+### 3. NPC-Specific Processing
+- Automated routine: NPCs auto-spend AP on mandatory tasks
+- Death notifications: Player informed when known NPCs die
+
+### 4. Global System Updates
+- **School System**: Academic progress, enrollment, graduation
+- Subject grades updated based on natural aptitude
+- Monthly change tracking for performance visualization
+
+### 5. Mortality Check
+- Health clamped to maximum capacity
+- Death condition: agents marked as deceased if health ≤ 0
+- Player death ends the simulation; NPC deaths trigger relationship updates
+
+### Key Design Principles
+- **Unified Loop**: Player and NPCs share identical biological/economic rules
+- **Deterministic**: Same seed + actions = identical outcomes
+- **Order Preservation**: Critical for reproducible simulation results
+- **Separation of Concerns**: Global systems (school) process after individual agents
+
+## 🎨 Rendering Package Structure
+
+The rendering system uses Pygame to create a responsive three-panel layout with modular UI components:
+
+### UI Architecture
+
+**Main Renderer (`renderer.py`)**
+- **Three-Panel Layout**: Fixed 1920x1080 window with Left (300px), Center (variable), Right (300px) panels
+- **Event Hub**: Central event handling with priority-based modal system
+- **State Management**: Tracks viewing modes (agent attributes, family tree, social graph)
+- **UI Initialization**: Creates tabs, buttons, and manages dynamic visibility rules
+
+**Core UI Components (`ui.py`)**
+- **Button**: Interactive buttons with hover states and action IDs
+- **LogPanel**: Scrollable, word-wrapped event history with collapsible year headers
+- **APBar**: 24-segment visual representation of daily Action Point budget
+
+**Interactive Visualizations**
+- **FamilyTreeLayout**: Layered graph with pan/zoom, node interaction, and relationship-based positioning
+- **SocialGraphLayout**: Real-time force-directed physics simulation with filtering controls
+
+### UI Component Interaction
+
+**Event Flow**
+1. **Main Loop** (`main.py`) passes events to `Renderer.handle_event()`
+2. **Priority System**: Modals (social graph, family tree, attributes) → Tabs → Buttons → Dynamic elements
+3. **Action Processing**: Returns action IDs to main loop for simulation state changes
+
+**State Synchronization**
+- **Read-Only Access**: UI components read from `sim_state` for rendering
+- **Event-Driven Updates**: Main loop processes actions and updates simulation state
+- **Render Cycle**: `Renderer.render()` called each frame with updated state
+
+**Dynamic Visibility**
+- **Context Rules**: Buttons appear/disappear based on agent state (age, job status, etc.)
+- **Auto-Layout**: UI elements reflow when visibility changes
+- **Modal Management**: Center panel switches between log, modals, and visualizations
+
+**Interactive Features**
+- **Tooltips**: Hover information for grades and relationships
+- **Pinning System**: Click attribute cards to pin them to the dashboard
+- **Real-time Physics**: Social graph updates continuously when open
+- **Infinite Canvas**: Family tree and social graph support pan/zoom navigation
+
+### Design Principles
+- **Separation of Concerns**: Rendering logic isolated from simulation state
+- **Event-Driven**: UI actions flow through main loop for state consistency
+- **Component Reusability**: Modular widgets for consistent behavior
+- **Performance Optimized**: Efficient rendering with dirty flag patterns and clipping
+
 ## 🚀 Current Features (MVP 0.5)
 
 ### Core Simulation & Architecture
@@ -157,19 +733,27 @@
     *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
     *   **Income:** Salaries are distributed monthly (`Salary / 12`) during the `process_turn` phase, simulating realistic cash flow.
     *   **NPC Savings Initialization:** Upon generation, adult NPCs are assigned a starting cash balance calculated as `10% of Salary * Years Worked (Age - 18)`, simulating prior life savings.
-*   **Active Income (Overtime):**
-    *   **Mechanic:** Employed agents can manually "Work Overtime."
-    *   **Reward:** Immediate cash bonus equal to **1%** of the annual salary.
-    *   **Constraint:** Action is blocked if the agent is unemployed.
-
 ### Education System
+*   **Comprehensive School Configuration:**
+    *   **Detailed Structure:** Configurable forms per year (4 forms: A, B, C, D) with 20 students per form
+    *   **Stage-Based Subjects:** Different subject lists for each educational stage:
+        *   **Early Years:** Literacy, Numeracy, Creative Play
+        *   **Primary:** Math, English, Science, History, Art
+        *   **Secondary:** Mathematics, English, Biology, Chemistry, Physics, History, Geography, Art, Music, PE
+        *   **Sixth Form:** Empty (filled by IGCSE/IB choices)
+    *   **IGCSE Curriculum:** Core subjects (Mathematics, English, Science) and electives (History, Geography, Art, Music, Computer Science, Business Studies, Foreign Language)
+    *   **IB Framework:** Six subject groups (Language, Language Acquisition, Individuals & Societies, Sciences, Mathematics, Arts)
+*   **School UI Integration:**
+    *   **Dedicated School Tab:** New tab in the right panel that only appears when the agent is enrolled in school
+    *   **Context-Aware Visibility:** School tab and buttons automatically hide when not enrolled or during summer break
+    *   **School Actions:** View Grades, View Classmates, Study Hard, Skip Class (with proper session state checking)
 *   **Persistent School Entity:**
     *   **The Royal British College of Lisbon:** The simulation now instantiates a specific school object with defined metadata (Tuition: €18,000, Uniform Policy, Location).
     *   **Hierarchical Structure:** Grades are no longer a flat list but are grouped into logical **Stages** (Early Years, Primary, Secondary, Sixth Form), allowing for future rule differentiation (e.g., Uniforms optional in Sixth Form).
 *   **The Cohort System:**
     *   **Form Assignment:** Upon enrollment, agents are assigned to a specific **Form** (e.g., "Year 7**B**").
     *   **Static Groups:** This assignment is persistent. If a player starts in the "B" stream, they remain in the "B" stream until graduation, simulating a stable peer group.
-    *   **Structure:** Configured for **3 Forms per Year** (A, B, C) with a capacity of **20 students** each.
+    *   **Structure:** Configured for **4 Forms per Year** (A, B, C, D) with a capacity of **20 students** each.
 *   **Academic Calendar:**
     *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
@@ -281,9 +865,10 @@
                         *   **Base Affinity:** Displays the raw psychometric score, explicitly listing factors like *"Value Clash (Openness): -12.5"* or *"Neuroticism Penalty: -5.0"*.
                         *   **Active Modifiers:** Lists all currently active buffs/debuffs (e.g., *"Maternal Bond: +80.0"*), allowing the player to see exactly why a relationship exists.
     *   **Right Panel (300px):**
-        *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
-        *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
+        *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **School**, **Social**, **Assets**).
+        *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed, School tab hidden when not enrolled).
         *   **Auto-Layout:** The interface automatically restacks buttons to fill gaps when items are hidden.
+        *   **School Integration:** Dedicated School tab with education-specific actions that only appears during enrollment.
         *   **Social Dashboard:** The Social Tab now features a **Relationship List**.
         *   **Bi-directional Relationship Bars:** UI cards now feature a center-aligned bar.
             *   **Positive:** Fills **Green to the right** (0 to 100).
@@ -717,12 +1302,86 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     *   **Medicine:** Curing a disease is not a treatment plan; it is a roll of `(Doctor_Competence * Money_Spent) vs. (Disease_Lethality)`.
     *   *Reasoning:* This keeps the gameplay loop fast. The player inputs resources (Money/Time), and the engine outputs a binary result (Guilty/Not Guilty, Cured/Dead).
 
+## 🏗️ Key Architectural Decisions & Trade-offs
+
+These foundational technical decisions shape the simulation's behavior, performance, and development philosophy. Each choice represents a deliberate trade-off between competing priorities.
+
+### 1. Framework Choice: Why Pygame?
+*   **Decision:** Use Pygame as the rendering and input framework instead of alternatives like Tkinter, PyQt, or web-based solutions.
+*   **Trade-offs:**
+    *   **Pros:** 
+        *   **Fine-grained Control:** Direct pixel-level rendering enables custom visualizations (family trees, social graphs) that would be difficult in standard widget toolkits.
+        *   **Performance:** Hardware-accelerated 2D rendering handles complex UI elements and animations smoothly.
+        *   **Simplicity:** Minimal dependencies (just Pygame + NumPy) reduces installation complexity.
+        *   **Event Model:** Immediate, low-latency input handling suitable for interactive simulations.
+    *   **Cons:**
+        *   **Manual Layout:** No automatic widget positioning or responsive layouts - everything must be manually positioned.
+        *   **No Native Widgets:** Must implement all UI components (buttons, scrollbars, tooltips) from scratch.
+        *   **Desktop-Only:** Cannot run in browsers without additional layers like Pygbag.
+*   **Rationale:** Pygame strikes the optimal balance between control and simplicity for a research-focused simulation. The need for custom visualizations (force-directed social graphs, layered family trees) outweighs the convenience of pre-built widgets.
+
+### 2. Time Granularity: Why Monthly Ticks?
+*   **Decision:** Advance simulation time in 1-month increments rather than daily, hourly, or real-time progression.
+*   **Trade-offs:**
+    *   **Pros:**
+        *   **Meaningful Decisions:** Each month represents a significant life chapter (school progress, career changes, relationship evolution).
+        *   **Performance:** Fewer simulation ticks = faster computation, especially with large NPC populations.
+        *   **Data Management:** Monthly intervals align with real-world reporting periods (salaries, academic grades, biological milestones).
+        *   **Player Agency:** Turn-based approach allows thoughtful decision-making rather than reactive gameplay.
+    *   **Cons:**
+        *   **Temporal Resolution:** Cannot model short-term events (daily routines, weekly schedules, emergency responses).
+        *   **Realism Loss:** Some life processes (illness progression, job hunting) happen on shorter timescales in reality.
+        *   **Action Density:** Multiple activities must be abstracted into monthly outcomes rather than individual events.
+*   **Rationale:** Monthly ticks provide the sweet spot between meaningful progression and computational efficiency. The Action Point (AP) system simulates daily time allocation within each monthly turn, preserving short-term decision-making while maintaining long-term pacing.
+
+### 3. Simulation Model: Why Deterministic with Seeded RNG?
+*   **Decision:** Use a deterministic simulation model where identical seeds + actions produce identical outcomes, rather than fully stochastic or purely procedural systems.
+*   **Trade-offs:**
+    *   **Pros:**
+        *   **Reproducibility:** Critical for debugging, testing, and scientific analysis. Bugs can be reliably reproduced and verified.
+        *   **Shareability:** Players can share seeds to experience identical life scenarios, enabling community comparison.
+        *   **Testing:** Automated tests can verify specific life outcomes given known inputs and seeds.
+        *   **Analysis:** Researchers can study the impact of single variables while holding all else constant.
+    *   **Cons:**
+        *   **Predictability:** Knowledge of the seed reduces surprise and discovery for repeat players.
+        *   **Limited Emergence:** True randomness can create unexpected emergent behaviors that deterministic systems cannot.
+        *   **Implementation Complexity:** Requires careful state management and consistent RNG usage across all modules.
+*   **Rationale:** Determinism enables Life-Sim to function as both a game and a research tool. The stochastic elements (personality-based RNG, random events) provide variety within a reproducible framework. Player choices remain the primary source of divergence, not random chance.
+
+### 4. Architecture: Monolithic vs. Microservices
+*   **Decision:** Use a single-process monolithic architecture instead of distributed microservices or multi-process designs.
+*   **Trade-offs:**
+    *   **Pros:**
+        *   **Simplicity:** No network communication, service discovery, or distributed state management.
+        *   **Performance:** Direct function calls with no serialization or network overhead.
+        *   **Debugging:** Single process enables straightforward debugging and profiling.
+        *   **Deployment:** Single executable file with minimal runtime dependencies.
+    *   **Cons:**
+        *   **Scalability:** Limited to single-core performance (though NumPy provides some parallelization).
+        *   **Modularity:** Larger codebase in a single process requires stricter discipline to maintain separation of concerns.
+        *   **Fault Isolation:** A crash in any module brings down the entire simulation.
+*   **Rationale:** For a single-player life simulation, the complexity of distributed systems outweighs any benefits. The simulation's computational needs fit comfortably within modern single-threaded performance, and the Action Point system naturally provides opportunities for future parallelization if needed.
+
+### 5. Data Model: In-Memory vs. Persistent State
+*   **Decision:** Keep the entire simulation state in memory during runtime with periodic save points, rather than database-driven persistence.
+*   **Trade-offs:**
+    *   **Pros:**
+        *   **Speed:** Direct memory access is orders of magnitude faster than database queries.
+        *   **Simplicity:** No ORM, migrations, or query optimization to manage.
+        *   **Consistency:** All state changes happen in a single transaction (the monthly turn).
+        *   **Flexibility:** Complex object graphs (relationships, family trees) are easier to navigate in memory.
+    *   **Cons:**
+        *   **Memory Usage:** Large populations consume significant RAM.
+        *   **Durability:** Crashes can lose unsaved progress.
+        *   **Scalability:** Limited to what fits in available memory.
+*   **Rationale:** Life simulations require constant access to interconnected relationship data and agent states. The performance benefits of in-memory access outweigh the persistence advantages of databases for this use case. The monthly turn structure provides natural save points.
+
 ## 🛠️ Installation & Usage
 
 1.  **Prerequisites:** Python 3.10+, Pygame, NumPy.
 2.  **Install Dependencies:**
     ```bash
-    pip install pygame numpy
+pip install pygame numpy
     ```
 3.  **Run Simulation:**
     ```bash
