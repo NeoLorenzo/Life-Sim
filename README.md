@@ -157,20 +157,25 @@
     *   **Constraint:** Action is blocked if the agent is unemployed.
 
 ### Education System
-*   **Configurable Framework:**
-    *   **Systems:** Supports defining custom school structures in `config.json`.
-    *   **Default:** Implements the **British International** system (Nursery through Year 13/IB) as the default.
+*   **Persistent School Entity:**
+    *   **The Royal British College of Lisbon:** The simulation now instantiates a specific school object with defined metadata (Tuition: €18,000, Uniform Policy, Location).
+    *   **Hierarchical Structure:** Grades are no longer a flat list but are grouped into logical **Stages** (Early Years, Primary, Secondary, Sixth Form), allowing for future rule differentiation (e.g., Uniforms optional in Sixth Form).
+*   **The Cohort System:**
+    *   **Form Assignment:** Upon enrollment, agents are assigned to a specific **Form** (e.g., "Year 7**B**").
+    *   **Static Groups:** This assignment is persistent. If a player starts in the "B" stream, they remain in the "B" stream until graduation, simulating a stable peer group.
+    *   **Structure:** Configured for **3 Forms per Year** (A, B, C) with a capacity of **20 students** each.
 *   **Academic Calendar:**
     *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
 *   **Progression:**
     *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation.
-    *   **Player-Centric Logging:** While all NPCs simulate school performance and grade advancement in the background, the Event Log now only displays school notifications (Enrollment, Summer Break, Graduation) for the **Player**, reducing log noise.
     *   **Performance (Random Walk):** Academic performance (0-100) currently uses a random drift algorithm (+/- 2 per month).
     *   **Pass/Fail Logic:**
         *   *Threshold:* Performance must be **> 20** to pass a grade.
         *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
         *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
+*   **Current Limitations (School MVP):**
+    *   **Empty Shell:** While the player is assigned a specific class (e.g., "Year 9B"), the other 19 students and the Form Tutor for that class are not yet generated. The school currently exists as a structural skeleton to support future population generation.
 
 ### Actions & Progression
 *   **Healthcare (Doctor):**
@@ -243,12 +248,6 @@
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
-
-The following features should be implimented ASAP:
-
-*   Add more flavor in birth, specifically whether the GPs are present based on their relationships.
-*   Give player ability to also highlight the connection between two agents and see tooltip showing information related to whats affecting the relationship between the two agents.
-*   Do a check to see if there is anything in the README which doesnt reflect the current codebase, or if there is anything in the codebase which isnt reflected in the readme.
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 

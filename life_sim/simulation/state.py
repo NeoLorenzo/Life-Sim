@@ -7,7 +7,7 @@ import logging
 import random
 import uuid
 from .. import constants
-from . import affinity
+from . import school, affinity
 from .social import Relationship # Import new class
 
 class Agent:
@@ -446,6 +446,9 @@ class SimState:
     def __init__(self, config: dict):
         self.config = config
         self.npcs = {} # uid -> Agent
+        
+        # Initialize School System
+        self.school_system = school.School(config["education"])
         
         # Time Tracking
         # Start at a random month in the start year
@@ -886,26 +889,28 @@ class SimState:
         Checks if the agent should be in school based on age and enrolls them.
         This prevents 'Late Enrollment' logs when the first September hits.
         """
-        edu_conf = self.config.get("education", {})
-        sys_name = edu_conf.get("default_system", "British_International")
-        system = edu_conf.get("systems", {}).get(sys_name)
-        
-        if not system: return
+        if not self.school_system: return
 
         # Find the correct grade for their current age
-        grades = system["grades"]
-        eligible_grade_idx = -1
+        eligible_idx = -1
         
-        for i, grade in enumerate(grades):
+        for i, grade in enumerate(self.school_system.grades):
             if agent.age == grade["min_age"]:
-                eligible_grade_idx = i
+                eligible_idx = i
                 break
         
         # If they match a grade, enroll them silently
-        if eligible_grade_idx != -1:
+        if eligible_idx != -1:
+            grade_data = self.school_system.grades[eligible_idx]
+            form_label = self.school_system.get_random_form_label()
+            
             agent.school = {
-                "system": sys_name,
-                "grade_index": eligible_grade_idx,
+                "school_id": self.school_system.id,
+                "school_name": self.school_system.name,
+                "stage": grade_data["stage"],
+                "year_index": eligible_idx,
+                "year_label": grade_data["name"],
+                "form_label": form_label,
                 "performance": 50, # Start average
                 "is_in_session": True # Assume school is active
             }

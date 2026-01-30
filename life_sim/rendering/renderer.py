@@ -919,18 +919,16 @@ class Renderer:
         
         # Job / School Display
         if player.school:
-            sys_name = player.school['system']
-            # Get grade name from config
-            edu_conf = sim_state.config.get("education", {}).get("systems", {}).get(sys_name, {})
-            grades = edu_conf.get("grades", [])
-            grade_idx = player.school['grade_index']
-            
-            grade_name = "Unknown"
-            if 0 <= grade_idx < len(grades):
-                grade_name = grades[grade_idx]['name']
-                
             status = "In Session" if player.school['is_in_session'] else "Summer Break"
-            y += draw_text(f"School: {grade_name}")
+            
+            # Line 1: School Name
+            y += draw_text(f"{player.school['school_name']}", color=constants.COLOR_ACCENT)
+            
+            # Line 2: Year + Form (e.g. "Year 9B")
+            full_class = f"{player.school['year_label']}{player.school['form_label']}"
+            y += draw_text(f"Class: {full_class} ({player.school['stage']})")
+            
+            # Line 3: Status
             y += draw_text(f"Status: {status}", color=constants.COLOR_TEXT_DIM)
         else:
             y += draw_text(f"Job: {player.job['title'] if player.job else 'Unemployed'}")
