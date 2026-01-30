@@ -214,43 +214,44 @@
             *   **Economic Visibility:** The **Vitals** column now includes **Money** for all agents, allowing the player to verify the economic progress of NPCs (parents saving money, siblings earning wages).
             *   **Pinning System:** Clicking any attribute card toggles it into the **Pinned Attributes** list on the Left Panel (Dashboard), allowing players to track specific stats (e.g., "Fitness") without reopening the modal.
             *   **Visual Feedback:** Neuroticism traits use inverted color logic (High = Red, Low = Green), while positive traits use standard logic.
-        *   **Interactive Family Tree (Modal):**
-            *   **Topology:** Uses a **Layered Graph** approach with **Virtual Marriage Hubs** to handle complex relations (half-siblings, in-laws).
-            *   **Layout Algorithm:**
-                1.  **Harvest:** BFS traversal from the focus agent to find all relatives.
-                2.  **Rank:** Assigns generations relative to the focus (Parents = +1, Children = -1).
-                3.  **Ordering:** Uses **Ancestry-Based Sorting** to keep family units (spouses and children) vertically aligned under their grandparents.
-                4.  **Relaxation:** Runs 5 iterations of a force-directed sweep (Down/Up) to center parents over children and resolve collisions.
-            *   **Rendering:** Draws **Orthogonal Edges** (Manhattan geometry). Spousal links connect bottom-to-center; Parent-Child links use a "Bus" style routing.
-            *   **Visual Distinction:** Nodes feature dynamic borders to distinguish relationships: **Solid Borders** indicate blood relatives (sharing a common ancestor), while **Dashed Borders** indicate in-laws or spouses.
-            *   **Controls:**
-                *   **Left-Drag:** Pan the view (infinite canvas).
-                *   **Left-Click:** Refocus the tree on the clicked relative.
-                *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
-        *   **Interactive Social Map (Modal):**
-            *   **Advanced Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
-                *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength using tiered multipliers (Weak: 0.5x-2.0x, Moderate: 2.0x-6.0x, Strong: 6.0x-10.0x), causing close-knit families and spouses to snap together into tight clusters.
-                *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
-                *   **Balanced Forces:** Carefully tuned repulsion (50.0) and attraction (2.0) constants ensure relationship-based forces have meaningful impact without overwhelming the physics.
-            *   **Advanced Navigation & Interaction:**
-                *   **Zoom Controls:** Mouse wheel zoom in/out (0.2x to 5.0x) centered on the modal, with nodes and edges scaling proportionally while text remains constant size for readability.
-                *   **Infinite Canvas Panning:** Click and drag background to pan around the graph.
-                *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
-                *   **Precise Hover Detection:** Hover mechanics properly account for zoom level, ensuring accurate node and edge selection at any magnification.
-            *   **Network Visualization:**
-                *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
-                *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (magnitude of the score), and **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
-            *   **Filters & Controls:**
-                *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
-                *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
-            *   **Interactivity:**
-                *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
-                *   **Navigation:** Infinite canvas panning via background drag.
-                *   **Rich Node Tooltips:** Hovering over a node displays a detailed overlay with Name, Age, Job, and precise Relationship stats.
-                *   **Interactive Edge Highlighting:** Hovering over a relationship line visually highlights it (glows bright yellow and thickens), making it easy to select specific connections in a dense social web.
-                *   **Detailed Edge Tooltips (The "Math of Love"):** Hovering over the connection line between any two agents reveals the full mathematical breakdown of their relationship:
-                    *   **Base Affinity:** Displays the raw psychometric score, explicitly listing factors like *"Value Clash (Openness): -12.5"* or *"Neuroticism Penalty: -5.0"*.
-                    *   **Active Modifiers:** Lists all currently active buffs/debuffs (e.g., *"Maternal Bond: +80.0"*), allowing the player to see exactly why a relationship exists.
+            *   **Interactive Family Tree (Modal):**
+                *   **Topology:** Uses a **Layered Graph** approach with **Virtual Marriage Hubs** to handle complex relations (half-siblings, in-laws).
+                *   **Relationship Filtering:** The BFS traversal algorithm filters relationships to only include direct family connections (Father, Mother, Child, Spouse), preventing the merging of separate family trees that occurred through "In-Law" bridge relationships.
+                *   **Layout Algorithm:**
+                    1.  **Harvest:** BFS traversal from the focus agent to find all relatives.
+                    2.  **Rank:** Assigns generations relative to the focus (Parents = +1, Children = -1).
+                    3.  **Ordering:** Uses **Ancestry-Based Sorting** to keep family units (spouses and children) vertically aligned under their grandparents.
+                    4.  **Relaxation:** Runs 5 iterations of a force-directed sweep (Down/Up) to center parents over children and resolve collisions.
+                *   **Rendering:** Draws **Orthogonal Edges** (Manhattan geometry). Spousal links connect bottom-to-center; Parent-Child links use a "Bus" style routing.
+                *   **Visual Distinction:** Nodes feature dynamic borders to distinguish relationships: **Solid Borders** indicate blood relatives (sharing a common ancestor), while **Dashed Borders** indicate in-laws or spouses.
+                *   **Controls:**
+                    *   **Left-Drag:** Pan the view (infinite canvas).
+                    *   **Left-Click:** Refocus the tree on the clicked relative.
+                    *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
+            *   **Interactive Social Map (Modal):**
+                *   **Advanced Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
+                    *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength using tiered multipliers (Weak: 0.5x-2.0x, Moderate: 2.0x-6.0x, Strong: 6.0x-10.0x), causing close-knit families and spouses to snap together into tight clusters.
+                    *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
+                    *   **Balanced Forces:** Carefully tuned repulsion (50.0) and attraction (2.0) constants ensure relationship-based forces have meaningful impact without overwhelming the physics.
+                *   **Advanced Navigation & Interaction:**
+                    *   **Zoom Controls:** Mouse wheel zoom in/out (0.2x to 5.0x) centered on the modal, with nodes and edges scaling proportionally while text remains constant size for readability.
+                    *   **Infinite Canvas Panning:** Click and drag background to pan around the graph.
+                    *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
+                    *   **Precise Hover Detection:** Hover mechanics properly account for zoom level, ensuring accurate node and edge selection at any magnification.
+                *   **Network Visualization:**
+                    *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
+                    *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (magnitude of the score), and **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
+                *   **Filters & Controls:**
+                    *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
+                    *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
+                *   **Interactivity:**
+                    *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
+                    *   **Navigation:** Infinite canvas panning via background drag.
+                    *   **Rich Node Tooltips:** Hovering over a node displays a detailed overlay with Name, Age, Job, and precise Relationship stats.
+                    *   **Interactive Edge Highlighting:** Hovering over a relationship line visually highlights it (glows bright yellow and thickens), making it easy to select specific connections in a dense social web.
+                    *   **Detailed Edge Tooltips (The "Math of Love"):** Hovering over the connection line between any two agents reveals the full mathematical breakdown of their relationship:
+                        *   **Base Affinity:** Displays the raw psychometric score, explicitly listing factors like *"Value Clash (Openness): -12.5"* or *"Neuroticism Penalty: -5.0"*.
+                        *   **Active Modifiers:** Lists all currently active buffs/debuffs (e.g., *"Maternal Bond: +80.0"*), allowing the player to see exactly why a relationship exists.
     *   **Right Panel (300px):**
         *   **Tabbed Navigation:** Actions are organized into switchable categories (**Main**, **Social**, **Assets**).
         *   **Dynamic Visibility:** Buttons appear/disappear based on context (e.g., "Find Job" hidden <16, "Work Overtime" hidden if unemployed).
@@ -264,10 +265,6 @@
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
 ## 🗺️ Roadmap (Planned Features)
-
-Mandatory Next Steps:
-
-Fix family tree because its merging all family trees.
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 

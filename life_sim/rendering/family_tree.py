@@ -68,6 +68,9 @@ class FamilyTreeLayout:
         queue = [(focus_agent, 0)] # (Agent, Generation)
         visited_uids.add(focus_agent.uid)
         
+        # Only traverse direct family relationships to prevent merging all families
+        ALLOWED_REL_TYPES = ["Father", "Mother", "Child", "Spouse"]
+        
         # Temporary storage for rank assignment
         agent_gen_map = {focus_agent.uid: 0}
         
@@ -83,6 +86,10 @@ class FamilyTreeLayout:
                 if rel_uid not in all_agents_lookup: continue
                 
                 rel_type = rel.rel_type
+                
+                # Only traverse direct family relationships to prevent merging all families
+                if rel_type not in ALLOWED_REL_TYPES: continue
+                
                 next_gen = gen
                 
                 if rel_type in ["Father", "Mother"]: next_gen = gen + 1
@@ -111,7 +118,7 @@ class FamilyTreeLayout:
             # 1. Link to Parents via Marriage Hub
             # Find parents in the harvested set
             parents = [r_uid for r_uid, r in agent.relationships.items() 
-                       if r["type"] in ["Father", "Mother"] and r_uid in self.nodes]
+                       if r.rel_type in ["Father", "Mother"] and r_uid in self.nodes]
             
             if parents:
                 parents.sort()
