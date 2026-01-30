@@ -76,11 +76,24 @@ def _process_single_agent_school(sim_state, agent, school_sys):
 
     # 3. Monthly Update (if in session)
     if agent.school and agent.school["is_in_session"]:
-        # Random performance drift
-        drift = random.randint(-2, 2)
-        agent.school["performance"] += drift
-        # Clamp
-        agent.school["performance"] = max(0, min(100, agent.school["performance"]))
+        # Update each subject individually based on natural aptitude only
+        for subject_name, subject_data in agent.subjects.items():
+            # Base drift influenced by natural aptitude only (no randomness)
+            aptitude_influence = (subject_data["natural_aptitude"] - 50) * 0.02  # -1 to +1 based on aptitude
+            
+            # Store previous grade for change tracking
+            previous_grade = subject_data["current_grade"]
+            
+            # Apply change and clamp to 0-100
+            subject_data["current_grade"] += aptitude_influence
+            subject_data["current_grade"] = max(0, min(100, subject_data["current_grade"]))
+            
+            # Track monthly change for tooltips
+            subject_data["monthly_change"] = round(subject_data["current_grade"] - previous_grade, 1)
+        
+        # Update overall performance for compatibility (average of all subjects)
+        overall_performance = sum(s["current_grade"] for s in agent.subjects.values()) / len(agent.subjects)
+        agent.school["performance"] = int(overall_performance)
 
 def _handle_school_start(sim_state, agent, school_sys):
     """Starts the school year, enrolling or advancing grades."""

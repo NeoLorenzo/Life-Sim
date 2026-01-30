@@ -127,6 +127,9 @@ class Agent:
         # Structure: { "Main": { "Facet": Value, ... }, ... }
         self.personality = self._generate_big_five(attr_config)
         
+        # --- Academic Subjects ---
+        self.subjects = self._initialize_subjects()
+        
         self.religiousness = self._rand_attr(attr_config, "religiousness")
         
         # Hidden
@@ -261,6 +264,10 @@ class Agent:
         if name == "Luck": return self.luck
         if name == "Religiousness": return self.religiousness
         
+        # Academic Subjects
+        if name in self.subjects:
+            return self.subjects[name]["current_grade"]
+        
         return 0
 
     @property
@@ -327,6 +334,45 @@ class Agent:
     def get_personality_sum(self, trait):
         """Returns the sum (0-120) of a main trait."""
         return sum(self.personality.get(trait, {}).values())
+
+    def _initialize_subjects(self):
+        """Initialize academic subjects with natural aptitude based on IQ and personality."""
+        subjects = {}
+        
+        # Get personality facets for calculations
+        openness = self.personality.get("Openness", {})
+        conscientiousness = self.personality.get("Conscientiousness", {})
+        
+        # Normalize IQ to 0-100 scale for calculations
+        iq_normalized = (self.iq - 50) / 130.0 * 100  # IQ range 50-180 mapped to 0-100
+        iq_normalized = max(0, min(100, iq_normalized))
+        
+        # Calculate natural aptitude for each subject
+        subjects["Math"] = {
+            "current_grade": 50,  # Start at middle grade
+            "natural_aptitude": min(100, max(0, (iq_normalized * 0.4) + (conscientiousness.get("Competence", 10) * 1.5) + (openness.get("Ideas", 10) * 1.5))),
+            "monthly_change": 0.0  # Track last month's change for tooltips
+        }
+        
+        subjects["Science"] = {
+            "current_grade": 50,
+            "natural_aptitude": min(100, max(0, (iq_normalized * 0.5) + (conscientiousness.get("Competence", 10) * 1.25) + (openness.get("Ideas", 10) * 1.25))),
+            "monthly_change": 0.0
+        }
+        
+        subjects["Language Arts"] = {
+            "current_grade": 50,
+            "natural_aptitude": min(100, max(0, (iq_normalized * 0.4) + (openness.get("Aesthetics", 10) * 1.5) + (conscientiousness.get("Competence", 10) * 1.5))),
+            "monthly_change": 0.0
+        }
+        
+        subjects["History"] = {
+            "current_grade": 50,
+            "natural_aptitude": min(100, max(0, (iq_normalized * 0.3) + (openness.get("Values", 10) * 2.0) + (conscientiousness.get("Competence", 10) * 1.5))),
+            "monthly_change": 0.0
+        }
+        
+        return subjects
 
     def _recalculate_hormones(self):
         """

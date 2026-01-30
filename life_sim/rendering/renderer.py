@@ -62,6 +62,10 @@ class Renderer:
         
         self.buttons = {} # Dict[str, List[Button]]
         self.tabs = []    # List[Button] (Using Button class for tabs)
+        
+        # Tooltip zones for clickable grade areas
+        self.tooltip_zones = []  # List of (Rect, subject_name) tuples
+        
         self.active_tab = "Main"
         
         # Visibility Logic (Action ID -> Lambda accepting player)
@@ -144,6 +148,13 @@ class Renderer:
         """
         Processes input events.
         """
+        # 0d. Check Grade Tooltip Zones (Left Panel)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for rect, subject_name in self.tooltip_zones:
+                if rect.collidepoint(event.pos):
+                    # Show subject tooltip (handled in render method)
+                    return None
+
         # 0. Check Social Graph Modal (Top Priority)
         if self.viewing_social_graph:
             # 1. Toggle Buttons
@@ -355,6 +366,7 @@ class Renderer:
     def render(self, sim_state):
         """Draws the full UI."""
         self.ft_buttons = [] # Reset interactive buttons for this frame
+        self.tooltip_zones = []  # Reset tooltip zones for this frame
         
         # Physics Step
         if self.viewing_social_graph:
@@ -379,6 +391,9 @@ class Renderer:
             self.log_panel.draw(self.screen)
             
         self._draw_right_panel(sim_state)
+        
+        # Draw tooltips on top of everything
+        self._draw_grade_tooltips(sim_state)
         
         pygame.display.flip()
 
@@ -930,13 +945,48 @@ class Renderer:
             
             # Line 3: Status
             y += draw_text(f"Status: {status}", color=constants.COLOR_TEXT_DIM)
-        else:
-            y += draw_text(f"Job: {player.job['title'] if player.job else 'Unemployed'}")
-            
-        y += 20
         
-        # Dynamic Pinned Attributes
-        y += draw_text("--- Attributes ---", color=constants.COLOR_TEXT_DIM)
+        # Academics Section (only if in school)
+        if player.school:
+            y += draw_text("--- Academics ---", color=constants.COLOR_TEXT_DIM)
+            
+            # Helper function to get grade color
+            def get_grade_color(grade):
+                if grade >= 90: return constants.COLOR_LOG_POSITIVE  # Green
+                elif grade >= 70: return constants.COLOR_LOG_HEADER  # Blue  
+                elif grade >= 50: return (255, 255, 100)  # Yellow
+                else: return constants.COLOR_LOG_NEGATIVE  # Red
+            
+            # Display each subject on separate lines to avoid wrapping issues
+            subjects = player.subjects
+            subject_names = ["Math", "Science", "Language Arts", "History"]
+            
+            for subject in subject_names:
+                if subject in subjects:
+                    grade = int(subjects[subject]["current_grade"])
+                    color = get_grade_color(grade)
+                    
+                    # Draw subject name and grade on same line with color
+                    subject_text = f"{subject}: "
+                    grade_text = str(grade)
+                    
+                    # Render subject name
+                    subject_surf = self.font_main.render(subject_text, True, constants.COLOR_TEXT)
+                    self.screen.blit(subject_surf, (x, y))
+                    
+                    # Render grade with color right after subject name
+                    grade_x = x + subject_surf.get_width()
+                    grade_surf = self.font_main.render(grade_text, True, color)
+                    grade_rect = pygame.Rect(grade_x, y, grade_surf.get_width(), grade_surf.get_height())
+                    self.screen.blit(grade_surf, (grade_x, y))
+                    
+                    # Store click zone for tooltip
+                    self.tooltip_zones.append((grade_rect, subject))
+                    
+                    # Move to next line
+                    y += draw_text("")
+        
+        y += 20
         
         for attr in player.pinned_attributes:
             val = player.get_attr_value(attr)
@@ -948,6 +998,70 @@ class Renderer:
                 txt = f"{attr}: {val}"
                 
             y += draw_text(txt)
+
+    def _draw_grade_tooltips(self, sim_state):
+        """Draw tooltips for grade hover/click zones."""
+        mx, my = pygame.mouse.get_pos()
+        
+        for rect, subject_name in self.tooltip_zones:
+            if rect.collidepoint((mx, my)):
+                player = sim_state.player
+                if subject_name in player.subjects:
+                    subject_data = player.subjects[subject_name]
+                    
+                    # Build tooltip lines
+                    lines = []
+                    lines.append((f"{subject_name} Details", constants.COLOR_ACCENT))
+                    lines.append((f"Current Grade: {int(subject_data['current_grade'])}", constants.COLOR_TEXT))
+                    lines.append((f"Natural Aptitude: {int(subject_data['natural_aptitude'])}", constants.COLOR_TEXT))
+                    
+                    # Monthly change with color
+                    change = subject_data['monthly_change']
+                    if change > 0:
+                        change_text = f"This Month: +{change}"
+                        change_color = constants.COLOR_LOG_POSITIVE
+                    elif change < 0:
+                        change_text = f"This Month: {change}"
+                        change_color = constants.COLOR_LOG_NEGATIVE
+                    else:
+                        change_text = "This Month: 0"
+                        change_color = constants.COLOR_TEXT_DIM
+                    
+                    lines.append((change_text, change_color))
+                    
+                    # Calculate box size
+                    line_height = 20
+                    box_w = 0
+                    box_h = len(lines) * line_height + 10
+                    
+                    surfaces = []
+                    for text, color in lines:
+                        s = self.font_log.render(text, True, color)
+                        box_w = max(box_w, s.get_width())
+                        surfaces.append(s)
+                    
+                    box_w += 20  # Padding
+                    
+                    # Position tooltip
+                    bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
+                    
+                    # Keep tooltip on screen
+                    if bg_rect.right > constants.SCREEN_WIDTH:
+                        bg_rect.x -= box_w + 30
+                    if bg_rect.bottom > constants.SCREEN_HEIGHT:
+                        bg_rect.y -= box_h + 30
+                    
+                    # Draw tooltip background and border
+                    pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
+                    pygame.draw.rect(self.screen, constants.COLOR_BORDER, bg_rect, 1)
+                    
+                    # Draw text
+                    curr_y = bg_rect.y + 5
+                    for s in surfaces:
+                        self.screen.blit(s, (bg_rect.x + 10, curr_y))
+                        curr_y += line_height
+                    
+                    break  # Only show one tooltip at a time
 
     def _draw_right_panel(self, sim_state):
         pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)

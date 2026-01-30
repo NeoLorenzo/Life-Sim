@@ -173,11 +173,39 @@
 *   **Academic Calendar:**
     *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
     *   **Status:** Tracks "In Session" vs. "Summer Break" states.
+*   **Subject-Based Academic System:**
+    *   **Four Core Subjects:** Math, Science, Language Arts, and History replace the single performance score.
+    *   **Natural Aptitude Calculation:** Each subject's aptitude is calculated based on IQ and Big 5 personality traits:
+        *   **Math:** (IQ × 0.4) + (Conscientiousness × 0.3) + (Openness[Ideas] × 0.3)
+        *   **Science:** (IQ × 0.5) + (Conscientiousness × 0.25) + (Openness[Ideas] × 0.25)
+        *   **Language Arts:** (IQ × 0.4) + (Openness[Aesthetics] × 0.3) + (Conscientiousness × 0.3)
+        *   **History:** (IQ × 0.3) + (Openness[Values] × 0.4) + (Conscientiousness × 0.3)
+    *   **Deterministic Grade Progression:** Grades change monthly based purely on natural aptitude, removing random fluctuations:
+        *   **Formula:** `(natural_aptitude - 50) × 0.02` per month
+        *   **High aptitude (80):** +0.6 monthly improvement
+        *   **Average aptitude (50):** No change
+        *   **Low aptitude (20):** -0.6 monthly decline
+        *   **Perfect aptitude (100):** +1.0 monthly improvement
+    *   **Monthly Change Tracking:** Each subject tracks its monthly change for tooltip display, showing progression patterns.
+*   **Interactive Academic Dashboard:**
+    *   **Left Panel Display:** When enrolled in school, the left dashboard shows an "Academics" section with all four subjects and their current grades.
+    *   **Color-Coded Performance:** Grades are color-coded for quick visual assessment:
+        *   **90-100:** Green (Excellent)
+        *   **70-89:** Blue (Good)
+        *   **50-69:** Yellow (Average)
+        *   **<50:** Red (Poor)
+    *   **Vertical Layout:** Each subject appears on its own line to prevent wrapping issues and ensure readability within panel bounds.
+    *   **Interactive Tooltips:** Hovering over any grade reveals detailed information:
+        *   Current grade and subject name
+        *   Natural aptitude score
+        *   Monthly change with color-coded direction (green for positive, red for negative)
+        *   Smart positioning to stay within screen boundaries
+    *   **Top-Layer Rendering:** Tooltips render on top of all other UI elements, including modals, ensuring visibility.
 *   **Progression:**
     *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation.
-    *   **Performance (Random Walk):** Academic performance (0-100) currently uses a random drift algorithm (+/- 2 per month).
+    *   **Overall Performance:** Calculated as the average of all subject grades for backward compatibility with existing systems.
     *   **Pass/Fail Logic:**
-        *   *Threshold:* Performance must be **> 20** to pass a grade.
+        *   *Threshold:* Overall performance must be **> 20** to pass a grade.
         *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
         *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
 *   **Comprehensive Classmate Generation:**
@@ -700,6 +728,82 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     ```bash
     python main.py
     ```
+
+## 📋 Development Rules & Standards
+
+This project follows strict development rules to ensure code quality, maintainability, and scientific rigor. All contributors must adhere to these standards:
+
+### 1. No Magic Numbers - Configuration Separation
+Configuration is separated into two distinct types:
+- **Application Constants:** All values that are static to the application/framework (e.g., visualization settings, rendering properties, file paths) are defined in `constants.py`. These don't change between runs.
+- **Simulation Parameters:** All variables that define a specific experiment or scenario (e.g., number of entities/agents, behavioral parameters, initial conditions) are loaded from a `config.json` file. This enables running different scenarios without touching core code.
+
+### 2. Logging System - No Direct Prints
+All runtime messages use the Python logging system with levels `INFO, DEBUG, WARNING, ERROR, CRITICAL`. No direct `print` in the simulation core.
+- Logging configuration is loaded from config at startup: global level, formats, destinations.
+- Every run writes logs to both the console and a rotating file in the run folder.
+- Log format includes timestamp, step/frame/tick, module, event name, and key fields. At minimum include seed, run id, and step/frame/tick.
+- Hot loops must throttle logs: sample every N steps; aggregate counts and print summaries once per second of wall time; or only log state changes (not steady states).
+- `INFO` is for human-scale events and milestones. `DEBUG` is dense trace and off by default. `WARNING/ERROR` are reserved for real problems.
+- Long-term trends do not stream to console. Persist metrics and plot after the run or in a dashboard.
+- Exceptions inside steps/ticks are caught at the outer loop, logged with the last N lines of `DEBUG` from each module, then the run stops cleanly.
+
+### 3. Maximum Realism with Managed Complexity
+The simulation aims for maximum realism **in behavior and outcomes**, with complexity managed deliberately. Implementations should model real-world processes or constraints accurately, with a cited source where possible. If exact 1:1 realism causes excessive complexity or poor performance, use this checklist before deferring to Rule 8. If **two or more** checks are "yes," switch to a scientifically-grounded abstraction (Rule 8). All abstractions must still leverage real-world properties/constraints and be explicitly documented.
+- **Impact check** — Does this detail materially affect emergent behaviors or final metrics? If no, abstract it.
+- **Performance check** — Does adding this detail slow the core loop by >10%? If yes, abstract it.
+- **Maintainability check** — Will this detail require constant retuning when other systems change? If yes, abstract it.
+
+### 4. Emergent Behavior Focus
+The simulation should leverage emergent behaviors.
+
+### 5. Incremental Implementation
+Implement changes incrementally. After each small modification, pause to review its impact and confirm it behaves as expected (and aligns with Rule 3) before adding the next feature.
+
+### 6. Hypothesis-Driven Development
+Every new feature/modification begins with a clear, testable hypothesis containing:
+- A prediction of the change's impact on realism or emergent behavior (Rules 3 & 4).
+- A specific prediction of the resulting console/log output (Rule 2).
+- Include a **Validation Protocol**: exact speeds, run-times, and steps needed to verify both the log prediction and behavioral impact before proceeding (Rule 5).
+
+### 7. High Modularity & SOLID Principles
+Keep the code highly modular. Each distinct system (e.g., environment, agents, mechanics/systems, rendering, I/O) lives in its own module, class, or function.
+- **SOLID (explicit and enforced):**
+  - **SRP:** Each module/class has exactly one job. If a second concern appears, split it.
+  - **OCP:** Once a module is in use on `main`, treat it as closed for modification. Add behavior via composition/extension (Strategy, Decorator, new classes) rather than editing stable code. If a breaking change is unavoidable, write an ADR and provide a backward-compatible path until deprecation.
+  - **LSP:** Implementations must be drop-in replacements for their interfaces/base types. Don't narrow inputs or weaken output guarantees; preserve invariants and error semantics.
+  - **ISP:** Prefer small, purpose-built interfaces over "god" interfaces. Callers shouldn't depend on methods they don't use.
+  - **DIP:** Depend on abstractions (Protocols/ABCs), not concretes. Inject collaborators via constructors/factories. Only the composition root (`main.py`/wiring) binds interfaces to implementations.
+- A module must not depend on another module's internal state—only its public interface or passed-in data.
+- Every module has a **data contract**: explicit inputs (types, units), outputs (types, units), side effects, and invariants. State this at the top of the file and mirror it in docstrings.
+- All files must include a comment including their path and name at the top of the file.
+- Global variables are allowed only for immutable constants (Rule 1).
+- Each new module/function must be testable in isolation with synthetic inputs before full integration.
+
+### 8. Scientifically-Grounded Abstractions
+If a real-world process is too complex or expensive for 1:1 simulation (Rule 3), use a **scientifically-grounded abstraction**. Document assumptions, simplifications, and limitations in code comments or a design doc.
+
+### 9. Code Style & Documentation
+Follow a consistent style guide (e.g., PEP 8). Code should be self-commenting where possible; add comments to explain the **why**, especially for complex abstractions (complements Rule 8).
+
+### 10. Performance-Driven Development
+Performance changes are driven by profiling, not guesses.
+- Before merging a feature, profile one fixed-seed run for a fixed number of steps. Identify the top two hot functions. Store profiling output in `/profiles`. Filenames include date, seed, step count, and branch name. Keep a simple timing table in the PR notes.
+- Use NumPy for array math/vectorized transforms and any operation touching many agents or grid cells at once. Pre-allocate arrays outside loops. Avoid per-element Python loops in hot paths.
+- Scalar glue code can use plain Python. Don't wrap tiny scalars in NumPy.
+- If a vectorized NumPy path is still slow, consider Numba for small, pure-numeric hot functions. Only add Numba when a profile shows a win and the function has no Python objects.
+- Avoid pandas in the core step/tick. Convert to arrays for the loop. Use pandas only in post-run analysis.
+- Set a dtype policy. Default `float64` unless memory or profiling proves `float32` helps. Keep dtypes consistent to avoid hidden casts.
+- Any PR that materially touches the core loop must include before/after timings for the same seed and step count. If slower beyond an agreed threshold, explain the tradeoff or fix it.
+
+### 11. Deterministic Randomness
+All randomness is controlled by a single **master seed**. No code may call random functions directly without using this seeded generator. The master seed initializes all relevant RNGs (Python `random`, NumPy, and any library-specific RNGs). The seed is defined in config (or constants), logged at start of every run, and saved with run outputs. Runs must be fully deterministic given the same seed, configuration, and library versions. Log the exact Python and library versions with outputs. True unpredictability may only be introduced with explicit approval and must be clearly documented in code and commit message.
+
+### 12. Readability First
+**Readability first** (humans are the audience). If a reviewer can't understand a module quickly, treat it as a bug. Prefer clarity over cleverness.
+- Comments explain **why**, not **what**.
+- Public functions/classes have docstrings with inputs/outputs/units/invariants and a short example.
+- Long expressions are split and named; nested logic is flattened with early returns where safe.
 
 ## 🎨 Credits & Assets
 
