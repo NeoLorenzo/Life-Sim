@@ -1167,7 +1167,9 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 
 ## 🚀 Current Features (MVP 0.5)
 
-### Core Simulation & Architecture
+<details>
+<summary><strong>Core Simulation & Architecture</strong></summary>
+
 *   **Deterministic Simulation Loop:**
     *   **Master Seed:** The entire simulation (Python `random`, `numpy.random`) is initialized via a single integer seed defined in `config.json`, ensuring 100% reproducibility for debugging and sharing runs.
     *   **Turn-Based Logic:** The simulation advances in **1-month increments** (`process_turn`).
@@ -1203,7 +1205,11 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
         *   **Automated Routine:** NPCs possess a simulated Action Point (AP) budget. A passive routine automatically "spends" their AP on mandatory obligations (Work, School, Sleep) to maintain a valid state for future AI decision-making.
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
 
-### Identity & Biology
+</details>
+
+<details>
+<summary><strong>Identity & Biology</strong></summary>
+
 *   **Procedural Generation & Genetics:**
     *   **Lineage System:** Distinguishes between **Lineage Heads** (First Generation, procedurally generated) and **Descendants** (Next Generation, inherited traits).
     *   **Bio-Data:** Agents are initialized with a First Name, Last Name, Gender, Country, and City. Descendants inherit Last Name, City, and Country from parents.
@@ -1313,7 +1319,11 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
     *   **Death Condition:** If Health drops to $\le 0$, the `is_alive` flag is set to `False`, and further actions are blocked.
     *   **Natural Entropy:** NPCs over age 50 experience slight random health decay **monthly**, creating a high-mortality window that ensures natural death occurs variably rather than strictly at the mathematical cap.
 
-### Economy & Career
+</details>
+
+<details>
+<summary><strong>Economy & Career</strong></summary>
+
 *   **Job Market:**
     *   **Data Structure:** Jobs are defined in `config.json` with a `title` and `salary`.
     *   **Application Logic:** The "Find Job" action picks a random job from the pool. Success is currently guaranteed (requirements removed for IQ refactor).
@@ -1386,7 +1396,11 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
     *   **Relationship Meshing:** The system automatically establishes relationships between all classmates in a cohort, creating a realistic social web where every student knows every other student, not just the player.
     *   **Affinity-Driven Relationships:** Classmate relationships are determined by the refined affinity calculation system, resulting in natural social dynamics (Classmates, Acquaintances, Rivals) based on personality compatibility.
 
-### Actions & Progression
+</details>
+
+<details>
+<summary><strong>Actions & Progression</strong></summary>
+
 *   **Healthcare (Doctor):**
     *   **Cost:** Flat fee of **$100**.
     *   **Effect:** Restores Health by a random value of **10 to 20** (clamped to the current `max_health`).
@@ -1394,7 +1408,11 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 *   **Toggle Attributes:**
     *   A UI-only action that pauses the log view to inspect the full list of 15+ agent attributes (Identity, Physical, Personality, Skills).
 
-### User Interface & Visualization
+</details>
+
+<details>
+<summary><strong>User Interface & Visualization</strong></summary>
+
 *   **Technical Specs:**
     *   **Resolution:** Fixed **1920x1080** window.
     *   **Framerate:** Capped at 60 FPS.
@@ -1464,7 +1482,10 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
         *   **Interactive Cards:** Each relationship card includes "Attributes" (to view the NPC's stats), a **Family Tree Icon** (graphical button), and "Interact" buttons.
         *   **Styling:** Buttons feature rounded corners and hover-responsive darkening (RGB 80,80,80). The primary action button is now labeled "Age Up (+1 Month)".
 
-## 🗺️ Roadmap (Planned Features)
+</details>
+
+<details>
+<summary><strong>🗺️ Roadmap (Planned Features)</strong></summary>
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
@@ -1830,7 +1851,10 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Intelligence:** IQ/Memory tests.
 *   **The "Rat" Collection:** A push-your-luck mini-game for informants trying to record mafia conversations.
 
-## ⚖️ Design Philosophy & Abstractions
+</details>
+
+<details>
+<summary><strong>⚖️ Design Philosophy & Abstractions</strong></summary>
 
 To maintain playability and focus on emergent storytelling, **Life-Sim** deliberately abstracts specific real-world complexities. We prioritize *decision-making* over *micromanagement*.
 
@@ -1889,7 +1913,10 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
     *   **Medicine:** Curing a disease is not a treatment plan; it is a roll of `(Doctor_Competence * Money_Spent) vs. (Disease_Lethality)`.
     *   *Reasoning:* This keeps the gameplay loop fast. The player inputs resources (Money/Time), and the engine outputs a binary result (Guilty/Not Guilty, Cured/Dead).
 
-## 🏗️ Key Architectural Decisions & Trade-offs
+</details>
+
+<details>
+<summary><strong>🏗️ Key Architectural Decisions & Trade-offs</strong></summary>
 
 These foundational technical decisions shape the simulation's behavior, performance, and development philosophy. Each choice represents a deliberate trade-off between competing priorities.
 
@@ -1962,6 +1989,8 @@ These foundational technical decisions shape the simulation's behavior, performa
         *   **Durability:** Crashes can lose unsaved progress.
         *   **Scalability:** Limited to what fits in available memory.
 *   **Rationale:** Life simulations require constant access to interconnected relationship data and agent states. The performance benefits of in-memory access outweigh the persistence advantages of databases for this use case. The monthly turn structure provides natural save points.
+
+</details>
 
 ## 🛠️ Installation & Usage
 
