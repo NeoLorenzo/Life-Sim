@@ -2,7 +2,28 @@
 
 **Life-Sim** is a modular, extensible life simulation engine built in Python. It simulates the biological, economic, and social trajectory of a single agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
 
-## � Project Structure
+## 📚 Table of Contents
+
+- [Project Structure](#-project-structure)
+- [Core Modules](#core-modules)
+  - [state.py - Data Models](#-statepy-module-structure)
+  - [logic.py - Simulation Engine](#️-logicpy-module-structure)
+  - [affinity.py - Relationship Engine](#-affinitypy-module-structure)
+  - [social.py - Social Data Structures](#-socialpy-module-structure)
+  - [school.py - Education System](#-schoolpy-module-structure)
+  - [Rendering Package](#-rendering-package-structure)
+- [Simulation Flow](#simulation-flow)
+  - [Monthly Cycle](#monthly-simulation-cycle)
+  - [State Mutation Contracts](#state-mutation-contracts)
+- [Current Features](#-current-features-mvp-05)
+- [Planned Features](#-roadmap-planned-features)
+- [Design Philosophy](#-design-philosophy--abstractions)
+- [Architecture Decisions](#-key-architectural-decisions--trade-offs)
+- [Installation & Usage](#️-installation--usage)
+- [Development Standards](#-development-rules--standards)
+- [Credits](#-credits--assets)
+
+## 📁 Project Structure
 
 ```
 Life-Sim/
@@ -39,37 +60,60 @@ Life-Sim/
 - **Rendering Layer**: The `life_sim/rendering/` package manages the Pygame-based UI, visualizations, and user interactions
 - **Modular Design**: Each system (agents, relationships, education, rendering) is isolated in its own module following SOLID principles
 
-## 📋 state.py Module Structure
+## 📋 Core Modules
+
+<details>
+<summary><strong>state.py - Data Models</strong></summary>
 
 The `state.py` module contains the core data models for the simulation, managing both individual agents and the global simulation state.
 
-### Agent Class
+<details>
+<summary><strong>Agent Class</strong></summary>
+
 The `Agent` class represents all human entities (Player and NPCs) with a unified architecture:
 
-**Core Identity & Biology**
+<details>
+<summary><strong>Core Identity & Biology</strong></summary>
+
 - Basic bio-data: name, gender, age (stored as months), country, city
 - Physical stats: health, happiness, IQ (Gaussian distribution), looks, money
 - **Form Assignment**: `form` attribute for school form tracking (A, B, C, D)
 - Genetic system: supports both procedurally generated "lineage heads" and inherited "descendants"
 
-**Extended Attributes**
+</details>
+
+<details>
+<summary><strong>Extended Attributes</strong></summary>
+
 - Physical: strength, athleticism, endurance
 - Personality: Big Five model (OCEAN) with 5 main traits and 30 sub-facets
 - Hormonal curves: fertility and libido with genotype/phenotype separation
 - Hidden traits: karma, luck, sexuality
 
-**Life Systems**
+</details>
+
+<details>
+<summary><strong>Life Systems</strong></summary>
+
 - Academic: subject-based performance (Math, Science, Language Arts, History)
 - Economic: job status, salary, monthly income processing
 - Social: relationship network with affinity-based scoring and modifiers
 - Time Management: Action Point (AP) system for daily activities
 
-**State Management**
+</details>
+
+<details>
+<summary><strong>State Management</strong></summary>
+
 - Unique UUID and `is_player` flag for entity distinction
 - Dynamic physique calculations (height, weight, BMI based on genetics and athleticism)
 - Age-based progression with growth, puberty, and senescence phases
 
-**Key Methods**
+</details>
+
+<details>
+<summary><strong>Key Methods</strong></summary>
+
 - `__init__()`: Initialize agent with config or inherited traits, including optional `form` parameter
 - `_init_lineage_head()`: Generate traits for first-generation agents
 - `_init_descendant()`: Inherit traits from parents using genetic formulas
@@ -79,10 +123,18 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - `get_attr_value()`: Unified attribute access for UI rendering
 - `get_personality_sum()`: Calculate Big 5 trait totals
 
-### SimState Class
+</details>
+
+</details>
+
+<details>
+<summary><strong>SimState Class</strong></summary>
+
 The `SimState` class serves as the central container for the entire simulation world:
 
-**Core Responsibilities**
+<details>
+<summary><strong>Core Responsibilities</strong></summary>
+
 - **World Container**: Holds all agents (player + NPCs) and global systems
 - **Time Management**: Tracks months, years, and calendar progression
 - **School System**: Manages educational institutions and enrollment
@@ -90,7 +142,11 @@ The `SimState` class serves as the central container for the entire simulation w
 - **Narrative Engine**: Generates contextual birth and life event stories
 - **Class Population**: Generates 80-student cohorts with form assignments
 
-**Key Attributes**
+</details>
+
+<details>
+<summary><strong>Key Attributes</strong></summary>
+
 - `player`: The main Agent controlled by the user
 - `npcs`: Dictionary of all non-player agents (uid → Agent)
 - `school_system`: Global education system instance
@@ -99,7 +155,11 @@ The `SimState` class serves as the central container for the entire simulation w
 - `history`: Log of all life events organized by year
 - `config`: Reference to global configuration data
 
-**Key Methods**
+</details>
+
+<details>
+<summary><strong>Key Methods</strong></summary>
+
 - `populate_classmates()`: Generates 79 classmates for total of 80 students with form assignments
 - `_assign_form_to_student()`: Helper function for form assignment (A, B, C, D)
 - `_link_agents()`: Creates bidirectional relationships with optional modifiers
@@ -109,7 +169,11 @@ The `SimState` class serves as the central container for the entire simulation w
 - `__init__()`: Initialize simulation world and generate family
 - `add_log()`: Add events to the history buffer with color coding
 
-**Initialization Process**
+</details>
+
+<details>
+<summary><strong>Initialization Process</strong></summary>
+
 1. Load configuration and create school system
 2. Set random start month for variety
 3. Generate complete family tree (grandparents → parents → player)
@@ -117,62 +181,108 @@ The `SimState` class serves as the central container for the entire simulation w
 5. Generate narrative birth story based on family context
 6. Populate school classmates if player is enrolled
 
-## ⚙️ logic.py Module Structure
+</details>
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>⚙️ logic.py - Simulation Engine</strong></summary>
 
 The `logic.py` module contains the core simulation engine that processes turns, handles agent actions, and manages the deterministic progression of the simulation world.
 
-### Core Turn Processing
+<details>
+<summary><strong>Core Turn Processing</strong></summary>
 
 **`process_turn(sim_state: SimState)`**
 The main simulation loop that advances time by one month:
 
-**Execution Order**
+<details>
+<summary><strong>Execution Order</strong></summary>
+
 1. **Global Time Advancement**: Increment month counter, handle year rollover, log new year
 2. **Player Processing**: Apply monthly updates to the player agent
 3. **NPC Processing**: Apply updates to all NPCs, simulate their routines, handle death notifications
 4. **Global Systems**: Process school systems and other world-level mechanics
 
-**Key Design Principles**
+</details>
+
+<details>
+<summary><strong>Key Design Principles</strong></summary>
+
 - **Unified Loop**: Player and NPCs share identical biological/economic rules
 - **Deterministic Order**: Critical for reproducible simulation results
 - **Death Handling**: Automatic relationship updates when known NPCs die
 
-### Agent Processing Functions
+</details>
+
+</details>
+
+<details>
+<summary><strong>Agent Processing Functions</strong></summary>
 
 **`_process_agent_monthly(sim_state, agent)`**
 Applies comprehensive monthly updates to a single agent:
 
-**A. Biological Updates**
+<details>
+<summary><strong>A. Biological Updates</strong></summary>
+
 - **Aging**: Increment `age_months` and detect birthdays
 - **Annual Recalculation**: On birthdays, recalculate health capacity and hormones
 - **Natural Entropy**: Seniors (50+) experience random health decay (0-3 points)
 
-**B. Physical Development**
+</details>
+
+<details>
+<summary><strong>B. Physical Development</strong></summary>
+
 - **Growth Phase** (≤20 years): 20% chance monthly to grow 1cm toward genetic potential
 - **Shrinkage Phase** (>60 years): 3% chance monthly to lose 1cm
 - **Physique Update**: Recalculate weight, BMI, and body composition
 
-**C. Time Management Reset**
+</details>
+
+<details>
+<summary><strong>C. Time Management Reset</strong></summary>
+
 - **AP Reset**: Clear used action points for new month
 - **Sleep Recalculation**: Update sleep requirements based on age from config
 
-**D. Economic Processing**
+</details>
+
+<details>
+<summary><strong>D. Economic Processing</strong></summary>
+
 - **Salary Distribution**: Monthly payment (annual salary ÷ 12)
 - **Player Logging**: Salary income logged for player, debug-only for NPCs
 
-**E. Mortality Check**
+</details>
+
+<details>
+<summary><strong>E. Mortality Check</strong></summary>
+
 - **Health Capping**: Enforce biological maximum health limits
 - **Death Detection**: Mark agents as deceased when health ≤ 0
+
+</details>
 
 **`_simulate_npc_routine(npc)`**
 Simulates NPC daily time allocation to maintain valid state:
 
-**Time Allocation**
+<details>
+<summary><strong>Time Allocation</strong></summary>
+
 1. **Sleep** (Maintenance): Deduct required sleep hours
 2. **Obligations** (Locked): Work (8h) or School (7h) if enrolled/employed
 3. **Free Time**: Remaining AP for future AI decision-making
 
-### Player Action Functions
+</details>
+
+</details>
+
+<details>
+<summary><strong>Player Action Functions</strong></summary>
 
 **`work(sim_state: SimState)`**
 Handles overtime work for employed players:
@@ -192,7 +302,10 @@ Processes medical care for health restoration:
 - **Healing**: Random recovery (10-20 health points)
 - **Health Capping**: Cannot exceed agent's maximum health capacity
 
-### Integration Points
+</details>
+
+<details>
+<summary><strong>Integration Points</strong></summary>
 
 **Main Loop Integration** (`main.py`)
 - **Action Mapping**: UI actions mapped to logic functions via action IDs
@@ -204,7 +317,10 @@ Processes medical care for health restoration:
 - **Reproducible Results**: Same seed + actions = identical outcomes
 - **Debug Support**: Comprehensive logging for troubleshooting
 
-### Error Handling & Validation
+</details>
+
+<details>
+<summary><strong>Error Handling & Validation</strong></summary>
 
 **Safety Checks**
 - **Life Status**: All functions verify agent is alive before processing
@@ -216,11 +332,17 @@ Processes medical care for health restoration:
 - **State Preservation**: Failed actions don't modify simulation state
 - **Logging**: All failures logged for debugging
 
-## 🧠 affinity.py Module Structure
+</details>
+
+</details>
+
+<details>
+<summary><strong>🧠 affinity.py - Relationship Engine</strong></summary>
 
 The `affinity.py` module contains the psychometric compatibility engine that calculates natural relationships between agents based on their Big Five personality traits. This system forms the foundation of all social interactions in the simulation.
 
-### Core Affinity Functions
+<details>
+<summary><strong>Core Affinity Functions</strong></summary>
 
 **`calculate_affinity(agent_a, agent_b)`**
 The primary interface for calculating psychometric compatibility:
@@ -234,7 +356,10 @@ Detailed analysis function that provides complete scoring breakdown:
 - **Breakdown Format**: List of (description, score_value) pairs showing each factor's contribution
 - **UI Integration**: Used by social graph hover tooltips to show relationship mechanics
 
-### Affinity Calculation Model
+</details>
+
+<details>
+<summary><strong>Affinity Calculation Model</strong></summary>
 
 The system uses a **Gravity Model** approach: `Total_Score = Base_Affinity + Sum(Active_Modifiers)`
 
@@ -276,7 +401,10 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
 - **Positive**: "Energy Match" for similar social energy levels
 - **Rationale**: Energy compatibility affects social comfort, though less critical than values
 
-### Score Calculation Process
+</details>
+
+<details>
+<summary><strong>Score Calculation Process</strong></summary>
 
 **Step-by-Step Flow**
 1. **Initialize**: Start with score = 0.0, empty breakdown list
@@ -290,7 +418,10 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
 - **Negative Labels**: "Value Clash", "Lifestyle Clash"
 - **Individual Labels**: "{Name}'s Neuroticism", "{Name}'s Agreeableness"
 
-### Integration Points
+</details>
+
+<details>
+<summary><strong>Integration Points</strong></summary>
 
 **Family Generation** (`state.py`)
 - **Spouse Matching**: Base marriage score (40) + affinity + history variance
@@ -323,7 +454,10 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
 - **Cohort Organization**: Visual grouping by form assignments
 - **Social Cohesion**: Enhanced visual feedback for form-based relationships
 
-### Design Principles
+</details>
+
+<details>
+<summary><strong>Design Principles</strong></summary>
 
 **Psychometric Foundation**
 - **Big Five Model**: Based on established OCEAN personality psychology
@@ -340,7 +474,10 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
 - **Threshold-Based**: Effects only trigger beyond meaningful personality levels
 - **Weight Hierarchy**: Core values (Openness, Conscientiousness) weighted higher than social energy
 
-### Extensibility
+</details>
+
+<details>
+<summary><strong>Extensibility</strong></summary>
 
 **Future Enhancements**
 - **Cultural Factors**: Could add cultural compatibility modifiers
@@ -353,11 +490,17 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
 - **Lightweight Calculation**: Minimal computational overhead
 - **Batch Processing**: Efficient for processing large agent populations
 
-## 👥 social.py Module Structure
+</details>
+
+</details>
+
+<details>
+<summary><strong>👥 social.py - Social Data Structures</strong></summary>
 
 The `social.py` module defines the data structures that manage social connections and relationship dynamics between agents. It provides the foundational classes for representing how agents relate to each other through a flexible modifier system.
 
-### Core Data Structures
+<details>
+<summary><strong>Core Data Structures</strong></summary>
 
 **`@dataclass Modifier`**
 Represents temporary or permanent factors that affect relationship scores:
@@ -391,7 +534,10 @@ Represents a social connection between two agents with dynamic scoring:
 - `cached_score`: Calculated total score (base_affinity + sum(modifiers))
 - `total_score`: Property accessor for the current relationship value
 
-### Relationship Mechanics
+</details>
+
+<details>
+<summary><strong>Relationship Mechanics</strong></summary>
 
 **Score Calculation Formula**
 ```
@@ -411,7 +557,10 @@ Final Score = clamp(Total Score, -100, +100)
 - **20 to 60**: Positive (Friend, Good Relationship)
 - **60 to 100**: Very Positive (Best Friend, Close Family)
 
-### Key Methods
+</details>
+
+<details>
+<summary><strong>Key Methods</strong></summary>
 
 **`add_modifier(name, value, duration=-1, decay=0.0)`**
 Manages relationship modifiers with intelligent updates:
@@ -425,7 +574,10 @@ Core scoring algorithm:
 - **Clamping**: Ensures final score stays within [-100, +100] bounds
 - **Caching**: Stores result for efficient repeated access
 
-### Legacy Compatibility
+</details>
+
+<details>
+<summary><strong>Legacy Compatibility</strong></summary>
 
 **Dictionary Interface**
 Provides backward compatibility with existing code:
@@ -439,7 +591,10 @@ Provides backward compatibility with existing code:
 - `"name"`: Returns target_name
 - `"is_alive"`: Returns is_alive status
 
-### Integration Points
+</details>
+
+<details>
+<summary><strong>Integration Points</strong></summary>
 
 **Affinity Engine Integration**
 - **Base Scores**: Receives initial compatibility from `affinity.calculate_affinity()`
@@ -456,7 +611,10 @@ Provides backward compatibility with existing code:
 - **Event Processing**: Life events can add/remove modifiers
 - **Temporal Dynamics**: Relationships evolve through modifier changes
 
-### Design Principles
+</details>
+
+<details>
+<summary><strong>Design Principles</strong></summary>
 
 **Separation of Concerns**
 - **Data Structure Only**: Contains no game logic, pure data management
@@ -473,7 +631,10 @@ Provides backward compatibility with existing code:
 - **Type Agnostic**: Works for any relationship category
 - **Temporal Support**: Built-in support for time-based relationship changes
 
-### Usage Patterns
+</details>
+
+<details>
+<summary><strong>Usage Patterns</strong></summary>
 
 **Family Relationships**
 ```python
@@ -498,6 +659,10 @@ rel.add_modifier("Marriage", 60, duration=-1)  # Permanent
 # New friendship bloom
 rel.add_modifier("New Friendship", 30, decay=5.0)  # Decays over time
 ```
+
+</details>
+
+</details>
 
 ## Monthly Simulation Cycle
 
@@ -769,11 +934,13 @@ When debugging unexpected state changes:
 
 This contract ensures predictable simulation behavior and helps engineers understand the full impact of their code changes on the simulation state.
 
-## 🏫 school.py Module Structure
+<details>
+<summary><strong>🏫 school.py - Education System</strong></summary>
 
 The `school.py` module manages the educational system, including school institutions, form assignments, and academic progression. It provides the infrastructure for organizing students into forms and tracking their educational journey.
 
-### School Class
+<details>
+<summary><strong>School Class</strong></summary>
 
 The `School` class represents an educational institution with form-based organization:
 
@@ -792,7 +959,10 @@ The `School` class represents an educational institution with form-based organiz
 - `enroll_student(student_id, form=None)`: Enrolls student in specific or random form
 - `get_form_students(form_letter)`: Returns list of student IDs in given form
 
-### Form Assignment System
+</details>
+
+<details>
+<summary><strong>Form Assignment System</strong></summary>
 
 **Student Tracking**
 - **Central Registry**: `student_forms` dictionary maintains all student assignments
@@ -804,7 +974,10 @@ The `School` class represents an educational institution with form-based organiz
 - **Capacity Management**: Respects `forms_per_year` and `class_capacity` constraints
 - **Random Assignment**: When no specific form requested, uses weighted random selection
 
-### Academic System Integration
+</details>
+
+<details>
+<summary><strong>Academic System Integration</strong></summary>
 
 **Monthly Processing** (`process_school_turn()`)
 - **Player & NPC Processing**: Handles all enrolled agents each month
@@ -821,7 +994,10 @@ The `School` class represents an educational institution with form-based organiz
 - **Progression Logic**: Advances students to next grade or handles graduation
 - **Form Preservation**: Students maintain their form assignment when advancing grades
 
-### School Year Calendar
+</details>
+
+<details>
+<summary><strong>School Year Calendar</strong></summary>
 
 **Academic Timeline**
 - **Start Month**: Beginning of academic year (typically September)
@@ -834,7 +1010,10 @@ The `School` class represents an educational institution with form-based organiz
 - **Linear Progression**: Students advance through grades based on age and performance
 - **Form Consistency**: Students remain in same form throughout their time at the school
 
-### Integration Points
+</details>
+
+<details>
+<summary><strong>Integration Points</strong></summary>
 
 **State Management** (`state.py`)
 - **Class Population**: `populate_classmates()` generates 80-student cohorts
@@ -851,7 +1030,10 @@ The `School` class represents an educational institution with form-based organiz
 - **Structural Parameters**: Forms per year, class capacity, academic calendar
 - **Grade Progression**: Age-based grade level assignments and requirements
 
-### Design Principles
+</details>
+
+<details>
+<summary><strong>Design Principles</strong></summary>
 
 **Modular Architecture**
 - **Separation of Concerns**: School logic isolated from agent state management
@@ -868,11 +1050,17 @@ The `School` class represents an educational institution with form-based organiz
 - **Batch Processing**: Monthly updates process all enrolled students efficiently
 - **Minimal State**: Lightweight school objects with essential tracking data
 
-## 🎨 Rendering Package Structure
+</details>
+
+</details>
+
+<details>
+<summary><strong>🎨 Rendering Package Structure</strong></summary>
 
 The rendering system uses Pygame to create a responsive three-panel layout with modular UI components:
 
-### UI Architecture
+<details>
+<summary><strong>UI Architecture</strong></summary>
 
 **Main Renderer (`renderer.py`)**
 - **Three-Panel Layout**: Fixed 1920x1080 window with Left (300px), Center (variable), Right (300px) panels
@@ -889,7 +1077,10 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **FamilyTreeLayout**: Layered graph with pan/zoom, node interaction, and relationship-based positioning
 - **SocialGraphLayout**: Real-time force-directed physics simulation with filtering controls
 
-### UI Component Interaction
+</details>
+
+<details>
+<summary><strong>UI Component Interaction</strong></summary>
 
 **Event Flow**
 1. **Main Loop** (`main.py`) passes events to `Renderer.handle_event()`
@@ -912,11 +1103,19 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Real-time Physics**: Social graph updates continuously when open
 - **Infinite Canvas**: Family tree and social graph support pan/zoom navigation
 
-### Design Principles
+</details>
+
+<details>
+<summary><strong>Design Principles</strong></summary>
+
 - **Separation of Concerns**: Rendering logic isolated from simulation state
 - **Event-Driven**: UI actions flow through main loop for state consistency
 - **Component Reusability**: Modular widgets for consistent behavior
 - **Performance Optimized**: Efficient rendering with dirty flag patterns and clipping
+
+</details>
+
+</details>
 
 ## 🚀 Current Features (MVP 0.5)
 
