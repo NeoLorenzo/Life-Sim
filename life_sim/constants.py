@@ -83,6 +83,41 @@ COLOR_REL_NEUTRAL = (150, 150, 150) # Gray
 COLOR_REL_FRIEND = (100, 200, 100)  # Green
 COLOR_REL_BEST = (50, 255, 50)      # Bright Green
 
+# ---------------------------------------------------------------------------
+# Affinity Engine — Psychometric Compatibility Tuning
+# ---------------------------------------------------------------------------
+# Actor-effect threshold: personality sum above this triggers a score modifier.
+# 70 chosen because Big Five facets score 0-20 each across 6 facets (max 120);
+# 70 represents ~58% of max, the point at which a trait is reliably dominant
+# rather than merely average.
+AFFINITY_ACTOR_THRESHOLD      = 70
+
+# Actor-effect weight: score change per point above the threshold.
+# 0.5 keeps individual personality from overwhelming dyadic compatibility;
+# at max trait sum (120) the bonus/penalty is ±25, leaving room for pair effects.
+AFFINITY_ACTOR_WEIGHT         = 0.5
+
+# Dyadic similarity threshold: max trait-sum delta that still produces a bonus.
+# 20 points (~17% of the 0-120 range) is the window of "close enough" similarity
+# before the effect flips from attraction to repulsion.
+AFFINITY_DYADIC_THRESHOLD     = 20
+
+# Dyadic weights per trait — higher weight = more influence on final score.
+# Openness and Conscientiousness govern core values and daily-life compatibility,
+# so they are weighted equally and higher than Extraversion, which governs social
+# energy style — a real friction source but not a dealbreaker.
+AFFINITY_OPENNESS_WEIGHT      = 0.8
+AFFINITY_CONSCIENTIOUSNESS_WEIGHT = 0.8
+AFFINITY_EXTRAVERSION_WEIGHT  = 0.5
+
+# Minimum absolute effect magnitude to warrant a breakdown label in the UI.
+# Below this the contribution is noise; surfacing it would clutter tooltips.
+AFFINITY_LABEL_THRESHOLD      = 5
+
+# Hard clamp bounds — documented invariant: scores are strictly [-100, +100].
+AFFINITY_SCORE_MIN            = -100
+AFFINITY_SCORE_MAX            = 100
+
 # Affinity Weights (Psychometrics)
 AFFINITY_WEIGHT_ACTOR_N = 1.0   # Neuroticism penalty (Actor)
 AFFINITY_WEIGHT_ACTOR_A = 1.0   # Agreeableness bonus (Actor)
