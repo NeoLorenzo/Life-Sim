@@ -742,7 +742,8 @@ All agents (Player and NPCs) process the same monthly sequence:
 
 This section documents exactly how state changes flow through the simulation, which methods modify which parts of the state, and the order of operations during monthly turns. Understanding these contracts is critical for preventing unexpected side effects when adding new features.
 
-### Core Monthly Turn Process
+<details>
+<summary><strong>Core Monthly Turn Process</strong></summary>
 
 The simulation follows a strict deterministic order during each monthly turn (`process_turn()`):
 
@@ -771,7 +772,10 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **State Modified**: School system, agent academic performance
 **Conditions**: Always executes
 
-### Agent State Mutation Functions
+</details>
+
+<details>
+<summary><strong>Agent State Mutation Functions</strong></summary>
 
 #### `_process_agent_monthly(sim_state, agent)`
 **Location**: `logic.py` lines 55-117
@@ -809,7 +813,10 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - `npc.ap_locked = 8.0` if employed, `7.0` if in school, `0.0` otherwise
 - `npc.ap_used += npc.ap_locked` (obligation allocation)
 
-### Player Action Functions (State Mutating)
+</details>
+
+<details>
+<summary><strong>Player Action Functions (State Mutating)</strong></summary>
 
 #### `work(sim_state)`
 **Location**: `logic.py` lines 141-156
@@ -833,7 +840,10 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - `player.health = min(player.max_health, player.health + recovery)` (heals)
 **Pure**: No - modifies player money and health
 
-### Agent Internal State Mutators
+</details>
+
+<details>
+<summary><strong>Agent Internal State Mutators</strong></summary>
 
 #### `Agent._recalculate_max_health()`
 **Location**: `state.py` lines 278-298
@@ -867,7 +877,10 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - `agent.ap_sleep` (age-based sleep requirements from config)
 **Pure**: No - modifies agent time management state
 
-### SimState State Mutators
+</details>
+
+<details>
+<summary><strong>SimState State Mutators</strong></summary>
 
 #### `SimState._link_agents()`
 **Location**: `state.py` lines 1249-1267
@@ -892,7 +905,10 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - `self.current_year_data["events"]` (adds event log entry)
 **Pure**: No - modifies event history
 
-### Pure Functions (No Side Effects)
+</details>
+
+<details>
+<summary><strong>Pure Functions (No Side Effects)</strong></summary>
 
 These functions are safe to call anywhere without担心 state mutations:
 
@@ -926,7 +942,10 @@ These functions are safe to call anywhere without担心 state mutations:
 **Returns**: Available action points
 **Pure**: Yes - computed property, no state change
 
-### State Mutation Dependencies
+</details>
+
+<details>
+<summary><strong>State Mutation Dependencies</strong></summary>
 
 #### Critical Order Dependencies
 1. **Aging must precede health recalculation**: `age_months` increment affects `_recalculate_max_health()`
@@ -946,7 +965,10 @@ These functions are safe to call anywhere without担心 state mutations:
 - **Modifying relationships outside `_link_agents()`**: Bypasses bidirectional consistency
 - **Direct health modifications without clamping**: Can exceed biological limits
 
-### Debugging State Mutations
+</details>
+
+<details>
+<summary><strong>Debugging State Mutations</strong></summary>
 
 When debugging unexpected state changes:
 
@@ -957,6 +979,8 @@ When debugging unexpected state changes:
 5. **Log all mutations**: Use `sim_state.add_log()` for state-changing operations
 
 This contract ensures predictable simulation behavior and helps engineers understand the full impact of their code changes on the simulation state.
+
+</details>
 
 <details>
 <summary><strong>🏫 school.py - Education System</strong></summary>
