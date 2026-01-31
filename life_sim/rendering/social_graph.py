@@ -28,8 +28,15 @@ class SocialGraphLayout:
         self.radii = []
         self.is_player_mask = [] 
         self.edges = [] 
+        self.edge_colors = [] # Cached edge colors
+        self.edge_widths = [] # Cached edge widths
         self.player_index = -1
         self.labels = [] # Cached display names for the graph
+        self.label_surfaces = {} # Cached font surfaces for labels
+        
+        # Spatial Indexing for Performance
+        self.grid_size = 150  # Size of each grid cell in world coordinates
+        self.spatial_grid = {}  # (grid_x, grid_y) -> [node_indices, edge_indices]
         
         # Interaction State
         self.show_all = True 
@@ -43,9 +50,13 @@ class SocialGraphLayout:
         
         # Zoom State
         self.zoom_level = 1.0
-        self.min_zoom = 0.2
+        self.min_zoom = 0.7
         self.max_zoom = 5.0
-        self.zoom_speed = 0.1
+        self.zoom_speed = 0.05
+        
+        # Label visibility based on zoom
+        self.label_fade_start_zoom = 1.5  # Start fading labels at this zoom level
+        self.label_fade_end_zoom = 1.3   # Labels completely invisible below this zoom level
 
     def _get_relationship_color(self, score):
         """
@@ -69,6 +80,31 @@ class SocialGraphLayout:
             g = int(200 * (1-t) + 20 * t)
             b = int(200 * (1-t) + 20 * t)
         return (r, g, b)
+    
+    def _get_edge_color_and_width(self, rel_val):
+        """
+        Returns cached color and width for edge based on relationship value.
+        """
+        if rel_val >= 0:
+            # Green Interpolation (0 -> Gray, 100 -> Bright Green)
+            t = rel_val / 100.0
+            # Gray (150,150,150) to Green (50, 255, 50)
+            r = int(150 * (1-t) + 50 * t)
+            g = int(150 * (1-t) + 255 * t)
+            b = int(150 * (1-t) + 50 * t)
+        else:
+            # Red Interpolation (0 -> Gray, -100 -> Deep Red)
+            t = abs(rel_val) / 100.0
+            # Gray (150,150,150) to Red (220, 20, 20)
+            r = int(150 * (1-t) + 220 * t)
+            g = int(150 * (1-t) + 20 * t)
+            b = int(150 * (1-t) + 20 * t)
+        
+        color = (r, g, b)
+        # Base width: 0-100 maps to 1px-4px width
+        base_width = max(1, int((abs(rel_val) / 100.0) * 4))
+        
+        return color, base_width
 
     def handle_event(self, event, rel_mouse_pos):
         """
@@ -222,6 +258,63 @@ class SocialGraphLayout:
             
         return None
 
+    def _get_label_opacity(self):
+        """
+        Calculate label opacity based on current zoom level.
+        Returns opacity value (0-255) where 0 = fully transparent, 255 = fully opaque.
+        """
+        if self.zoom_level >= self.label_fade_start_zoom:
+            return 255  # Fully visible
+        elif self.zoom_level <= self.label_fade_end_zoom:
+            return 0    # Fully invisible
+        else:
+            # Linear interpolation between fade start and end
+            fade_range = self.label_fade_start_zoom - self.label_fade_end_zoom
+            fade_progress = (self.zoom_level - self.label_fade_end_zoom) / fade_range
+            return int(255 * fade_progress)
+
+    def _build_spatial_grid(self):
+        """
+        Builds spatial indexing grid for efficient viewport culling.
+        Divides world space into grid cells and registers nodes/edges.
+        """
+        self.spatial_grid.clear()
+        
+        # Register nodes in grid cells
+        for i, (x, y) in enumerate(self.pos):
+            grid_x = int(x / self.grid_size)
+            grid_y = int(y / self.grid_size)
+            key = (grid_x, grid_y)
+            
+            if key not in self.spatial_grid:
+                self.spatial_grid[key] = [[], []]  # [nodes, edges]
+            
+            self.spatial_grid[key][0].append(i)  # Add node index
+        
+        # Register edges in grid cells (edges can span multiple cells)
+        for edge_idx, (u, v, _) in enumerate(self.edges):
+            x1, y1 = self.pos[u]
+            x2, y2 = self.pos[v]
+            
+            # Calculate grid cells this edge passes through
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            
+            # Get grid cell range for this edge
+            min_grid_x = int(min_x / self.grid_size)
+            max_grid_x = int(max_x / self.grid_size)
+            min_grid_y = int(min_y / self.grid_size)
+            max_grid_y = int(max_y / self.grid_size)
+            
+            # Register edge in all grid cells it could intersect
+            for gx in range(min_grid_x, max_grid_x + 1):
+                for gy in range(min_grid_y, max_grid_y + 1):
+                    key = (gx, gy)
+                    if key not in self.spatial_grid:
+                        self.spatial_grid[key] = [[], []]
+                    
+                    self.spatial_grid[key][1].append(edge_idx)  # Add edge index
+
     def build(self, sim_state, bounds):
         """
         Initializes nodes and relationship edges.
@@ -235,7 +328,10 @@ class SocialGraphLayout:
         self.radii = []
         self.is_player_mask = []
         self.edges = []
+        self.edge_colors = [] # Reset edge colors
+        self.edge_widths = [] # Reset edge widths
         self.labels = [] # Reset labels
+        self.label_surfaces.clear() # Clear cached label surfaces
         
         # Helper to track indices
         uid_to_index = {}
@@ -329,6 +425,17 @@ class SocialGraphLayout:
         self.count = len(self.uids)
         self.pos = np.array(temp_pos, dtype=np.float64)
         self.vel = np.zeros((self.count, 2), dtype=np.float64)
+        
+        # Pre-calculate edge colors and widths for optimization
+        self.edge_colors = []
+        self.edge_widths = []
+        for _, _, rel_val in self.edges:
+            color, width = self._get_edge_color_and_width(rel_val)
+            self.edge_colors.append(color)
+            self.edge_widths.append(width)
+        
+        # Build spatial grid for efficient viewport culling
+        self._build_spatial_grid()
 
     def update_physics(self):
         """
@@ -425,58 +532,119 @@ class SocialGraphLayout:
         scaled_pos = (self.pos - center_offset) * self.zoom_level + center_offset
         draw_pos = (scaled_pos + self.pan_offset).astype(int)
         
-        # 1. Draw Edges
-        for u, v, rel_val in self.edges:
+        # Viewport Culling: Calculate visible world bounds
+        # Convert screen corners to world coordinates
+        screen_width, screen_height = constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT
+        viewport_left = (-self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0]
+        viewport_right = (screen_width - self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0]
+        viewport_top = (-self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1]
+        viewport_bottom = (screen_height - self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1]
+        
+        # Add padding for partially visible elements (larger padding at lower zoom)
+        culling_padding = 100 / self.zoom_level
+        viewport_left -= culling_padding
+        viewport_right += culling_padding
+        viewport_top -= culling_padding
+        viewport_bottom += culling_padding
+        
+        # Helper function to check if position is in viewport
+        def is_in_viewport(x, y, radius=0):
+            return (viewport_left - radius <= x <= viewport_right + radius and
+                    viewport_top - radius <= y <= viewport_bottom + radius)
+        
+        # 1. Draw Edges (using cached colors and widths) with viewport culling
+        # Batch edges by color to reduce state changes
+        edge_groups = {}
+        for i, (u, v, rel_val) in enumerate(self.edges):
+            # Quick viewport culling for edges
+            x1, y1 = self.pos[u]
+            x2, y2 = self.pos[v]
+            
+            # Simple bounding box check for edge visibility
+            edge_min_x = min(x1, x2)
+            edge_max_x = max(x1, x2)
+            edge_min_y = min(y1, y2)
+            edge_max_y = max(y1, y2)
+            
+            if (edge_max_x < viewport_left or edge_min_x > viewport_right or
+                edge_max_y < viewport_top or edge_min_y > viewport_bottom):
+                continue  # Skip this edge, it's completely outside viewport
+            
             p1 = draw_pos[u]
             p2 = draw_pos[v]
             
-            # Color Logic
-            if rel_val >= 0:
-                # Green Interpolation (0 -> Gray, 100 -> Bright Green)
-                t = rel_val / 100.0
-                # Gray (150,150,150) to Green (50, 255, 50)
-                r = int(150 * (1-t) + 50 * t)
-                g = int(150 * (1-t) + 255 * t)
-                b = int(150 * (1-t) + 50 * t)
-            else:
-                # Red Interpolation (0 -> Gray, -100 -> Deep Red)
-                t = abs(rel_val) / 100.0
-                # Gray (150,150,150) to Red (220, 20, 20)
-                r = int(150 * (1-t) + 220 * t)
-                g = int(150 * (1-t) + 20 * t)
-                b = int(150 * (1-t) + 20 * t)
+            # Use cached color and width
+            color = self.edge_colors[i]
+            width = max(1, int(self.edge_widths[i] * self.zoom_level))
             
-            color = (r, g, b)
-            
-            # Thickness Logic (Based purely on intensity, scaled by zoom)
-            # 0-100 maps to 1px-4px width, then scale by zoom
-            base_width = max(1, int((abs(rel_val) / 100.0) * 4))
-            width = max(1, int(base_width * self.zoom_level))
-            
-            # Highlight Hovered Edge
-            if self.edges.index((u, v, rel_val)) == self.hover_edge_index:
-                width += 2
+            # Highlight Hovered Edge (using index instead of search)
+            if i == self.hover_edge_index:
                 color = (255, 255, 200) # Bright highlight
-                
-            pygame.draw.line(screen, color, p1, p2, width)
+                width += 2
+            
+            # Group edges by color for batch drawing
+            if color not in edge_groups:
+                edge_groups[color] = []
+            edge_groups[color].append((p1, p2, width))
+        
+        # Draw edge groups
+        for color, edges in edge_groups.items():
+            for p1, p2, width in edges:
+                pygame.draw.line(screen, color, p1, p2, width)
 
-        # 2. Draw Nodes & Labels
+        # 2. Draw Nodes & Labels (with cached label surfaces) with viewport culling
+        # Batch node drawing by color
+        node_groups = {}
+        visible_nodes = []
+        
         for i in range(self.count):
-            x, y = draw_pos[i]
+            x, y = self.pos[i]
+            radius = self.radii[i]
+            
+            # Viewport culling for nodes
+            if not is_in_viewport(x, y, radius):
+                continue  # Skip this node, it's outside viewport
+            
+            visible_nodes.append(i)
+            draw_x, draw_y = draw_pos[i]
             color = self.colors[i]
             # Scale radius by zoom
-            radius = max(3, int(self.radii[i] * self.zoom_level))
+            scaled_radius = max(3, int(radius * self.zoom_level))
             
             # Highlight Hover
             if i == self.hover_index:
-                pygame.draw.circle(screen, (255, 255, 0), (x, y), radius + 2)
+                pygame.draw.circle(screen, (255, 255, 0), (draw_x, draw_y), scaled_radius + 2)
             
-            pygame.draw.circle(screen, color, (x, y), radius)
-            pygame.draw.circle(screen, constants.COLOR_BG, (x, y), radius, 1)
-            
-            # Draw Label (text size stays constant)
-            label_surf = font.render(self.labels[i], True, constants.COLOR_TEXT)
-            # Adjust label position to account for zoom
-            label_offset = int((radius + 10) * self.zoom_level)
-            label_rect = label_surf.get_rect(center=(x, y - label_offset))
-            screen.blit(label_surf, label_rect)
+            # Group nodes by color
+            if color not in node_groups:
+                node_groups[color] = []
+            node_groups[color].append((draw_x, draw_y, scaled_radius))
+        
+        # Draw node groups
+        for color, nodes in node_groups.items():
+            for draw_x, draw_y, scaled_radius in nodes:
+                pygame.draw.circle(screen, color, (draw_x, draw_y), scaled_radius)
+                pygame.draw.circle(screen, constants.COLOR_BG, (draw_x, draw_y), scaled_radius, 1)
+        
+        # 3. Draw Labels (use cached surfaces) only for visible nodes
+        label_opacity = self._get_label_opacity()
+        if label_opacity > 0:  # Only draw labels if they have some opacity
+            for i in visible_nodes:
+                draw_x, draw_y = draw_pos[i]
+                scaled_radius = max(3, int(self.radii[i] * self.zoom_level))
+                
+                # Draw Label (use cached surface if available)
+                label = self.labels[i]
+                if label not in self.label_surfaces:
+                    self.label_surfaces[label] = font.render(label, True, constants.COLOR_TEXT)
+                
+                label_surf = self.label_surfaces[label]
+                # Apply opacity by creating a temporary surface with alpha
+                if label_opacity < 255:
+                    label_surf = label_surf.copy()
+                    label_surf.set_alpha(label_opacity)
+                
+                # Adjust label position to account for zoom
+                label_offset = int((scaled_radius + 10) * self.zoom_level)
+                label_rect = label_surf.get_rect(center=(draw_x, draw_y - label_offset))
+                screen.blit(label_surf, label_rect)
