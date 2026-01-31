@@ -1159,7 +1159,7 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Separation of Concerns**: Rendering logic isolated from simulation state
 - **Event-Driven**: UI actions flow through main loop for state consistency
 - **Component Reusability**: Modular widgets for consistent behavior
-- **Performance Optimized**: Efficient rendering with dirty flag patterns and clipping
+- **Performance Optimized:** Vectorized viewport culling, pre-rendered node surfaces, and zero-allocation draw loops
 
 </details>
 
@@ -1451,13 +1451,13 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
                     *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
                     *   **Balanced Forces:** Carefully tuned repulsion (50.0) and attraction (2.0) constants ensure relationship-based forces have meaningful impact without overwhelming the physics.
                 *   **Advanced Navigation & Interaction:**
-                    *   **Zoom Controls:** Mouse wheel zoom in/out (0.2x to 5.0x) centered on the modal, with nodes and edges scaling proportionally while text remains constant size for readability.
+                    *   **Zoom Controls:** Mouse wheel zoom in/out (0.7x to 5.0x) centered on the modal, with nodes and edges scaling proportionally. Labels fade out smoothly between 1.5x and 1.3x zoom to reduce clutter at lower magnifications.
                     *   **Infinite Canvas Panning:** Click and drag background to pan around the graph.
                     *   **Physics Interaction:** Users can drag nodes to fling them around the canvas; the physics engine reacts elastically.
                     *   **Precise Hover Detection:** Hover mechanics properly account for zoom level, ensuring accurate node and edge selection at any magnification.
                 *   **Network Visualization:**
-                    *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs are color-coded by their relationship to the player (Green=Friend, Red=Enemy, Gray=Stranger).
-                    *   **Edges:** Dynamic lines representing relationships. **Thickness** indicates intensity (magnitude of the score), and **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
+                    *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs use a continuous color gradient based on relationship score: Light Gray at 0 (neutral/stranger), interpolating to Bright Green at +100 (closest bonds) and Deep Red at -100 (enemies).
+                    *   **Edges:** Dynamic lines representing relationships. **Thickness** scales linearly with relationship intensity from 1px (weak) to 4px (strong). **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
                 *   **Filters & Controls:**
                     *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
                     *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
@@ -2146,21 +2146,33 @@ NUM_AGENTS = 25  # Scale from 5-50 agents
 
 **1. NumPy Vectorization:**
 ```python
-# Vectorized physics calculations
+# Repulsion — pairwise forces over all nodes (vectorized)
 diff = self.pos[:, np.newaxis, :] - self.pos[np.newaxis, :, :]
 forces = diff * force_mag[:, :, np.newaxis]
 total_force = np.sum(forces, axis=1)
+
+# Attraction — fully vectorized over all edges using cached index arrays.
+# Piecewise factor (Weak/Moderate/Strong tiers) computed via boolean masks;
+# forces scattered back to nodes with np.add.at (no Python loop).
+delta = self.pos[self._edge_u] - self.pos[self._edge_v]
+dist  = np.linalg.norm(delta, axis=1)
+# ... piecewise factor via boolean masks ...
+np.add.at(total_force, v_idx,  force)
+np.add.at(total_force, u_idx, -force)
 ```
 
 **2. Efficient Data Structures:**
 - NumPy arrays for position/velocity vectors
-- Pre-allocated memory for performance
+- Pre-allocated workspace arrays for edge-visibility culling (`_edge_vis_u_pos`, `_edge_vis_min`, etc.) reused every frame via `np.take(..., out=)` and `np.minimum(..., out=)`
+- Cached edge-endpoint lists (`_edge_u_list`, `_edge_v_list`) and radii array (`_radii_arr`) built once in `build()`, eliminating per-frame list-to-array conversion and tuple unpacking
+- Pre-allocated label `Rect` objects (`_label_rects`) mutated in-place each frame instead of `get_rect()` allocations
 - Spatial indexing for collision detection
 
 **3. Rendering Optimizations:**
-- Batch drawing operations
-- Level-of-detail scaling
-- Viewport culling for off-screen elements
+- Single-pass drawing using pre-rendered node surfaces (blit replaces per-frame `draw.circle`)
+- Vectorized viewport culling: NumPy boolean masks over all nodes and edges, with pre-allocated workspace arrays reused via `out=` parameters (zero per-frame allocation)
+- Python-side hot-loop optimization: all NumPy arrays converted to plain lists via `.tolist()` before iteration; all attribute lookups bound to locals (eliminates `LOAD_ATTR` overhead per iteration)
+- Zoom-gated caches: scaled edge widths and label `Rect` objects pre-computed on zoom change, mutated in-place each frame
 
 #### Profiling Output Example
 ```

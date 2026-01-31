@@ -434,8 +434,38 @@ class SocialGraphLayout:
             self.edge_colors.append(color)
             self.edge_widths.append(width)
         
+        # Cache radii as a numpy array — used every frame for visibility culling
+        self._radii_arr = np.array(self.radii, dtype=np.float64)
+
+        # Cache edge arrays as NumPy for vectorized physics
+        if self.edges:
+            edge_arr = np.array(self.edges, dtype=np.float64)
+            self._edge_u   = edge_arr[:, 0].astype(np.intp)
+            self._edge_v   = edge_arr[:, 1].astype(np.intp)
+            self._edge_vals = edge_arr[:, 2]
+            # Plain Python lists for the draw loop — avoids tuple unpack per iteration
+            self._edge_u_list = self._edge_u.tolist()
+            self._edge_v_list = self._edge_v.tolist()
+        else:
+            self._edge_u   = np.array([], dtype=np.intp)
+            self._edge_v   = np.array([], dtype=np.intp)
+            self._edge_vals = np.array([], dtype=np.float64)
+            self._edge_u_list = []
+            self._edge_v_list = []
+
+        # Pre-allocate workspace arrays for edge visibility culling in draw()
+        E = len(self.edges)
+        self._edge_vis_u_pos  = np.empty((E, 2), dtype=np.float64)
+        self._edge_vis_v_pos  = np.empty((E, 2), dtype=np.float64)
+        self._edge_vis_min    = np.empty((E, 2), dtype=np.float64)
+        self._edge_vis_max    = np.empty((E, 2), dtype=np.float64)
+        self._edge_vis_mask   = np.empty(E, dtype=np.bool_)
+        
         # Build spatial grid for efficient viewport culling
         self._build_spatial_grid()
+
+        # Pre-render node surfaces for the current node set and zoom level
+        self._rebuild_node_surfaces()
 
     def update_physics(self):
         """
@@ -471,45 +501,57 @@ class SocialGraphLayout:
         center_vec = self.center - self.pos
         total_force += center_vec * constants.GRAPH_CENTER_GRAVITY
 
-        # 2b. Spring Attraction (Relationship-Based)
-        for u, v, rel_val in self.edges:
-            # Vector from V to U
-            delta = self.pos[u] - self.pos[v]
-            distance = np.linalg.norm(delta)
-            
-            if distance < constants.GRAPH_MIN_DISTANCE:  # Avoid division by zero
-                continue
-                
-            # Normalize direction
-            direction = delta / distance
-            
-            # Enhanced relationship-based attraction using constants
-            # Strong positive relationships should have much stronger attraction
-            # Negative relationships should have repulsion
-            if rel_val >= 0:
-                # Positive relationships: exponential growth for stronger bonds
-                if rel_val <= constants.GRAPH_WEAK_BOND_THRESHOLD:
-                    # Weak bonds (0-30): 0.5x to 2.0x attraction
-                    factor = constants.GRAPH_WEAK_ATTRACTION_MIN + (rel_val / constants.GRAPH_WEAK_BOND_THRESHOLD) * (constants.GRAPH_WEAK_ATTRACTION_MAX - constants.GRAPH_WEAK_ATTRACTION_MIN)
-                elif rel_val <= constants.GRAPH_MODERATE_BOND_THRESHOLD:
-                    # Moderate bonds (30-70): 2.0x to 6.0x attraction
-                    factor = constants.GRAPH_MODERATE_ATTRACTION_MIN + ((rel_val - constants.GRAPH_WEAK_BOND_THRESHOLD) / (constants.GRAPH_MODERATE_BOND_THRESHOLD - constants.GRAPH_WEAK_BOND_THRESHOLD)) * (constants.GRAPH_MODERATE_ATTRACTION_MAX - constants.GRAPH_MODERATE_ATTRACTION_MIN)
-                else:
-                    # Strong bonds (70-100): 6.0x to 10.0x attraction
-                    factor = constants.GRAPH_STRONG_ATTRACTION_MIN + ((rel_val - constants.GRAPH_MODERATE_BOND_THRESHOLD) / (100 - constants.GRAPH_MODERATE_BOND_THRESHOLD)) * (constants.GRAPH_STRONG_ATTRACTION_MAX - constants.GRAPH_STRONG_ATTRACTION_MIN)
-            else:
-                # Negative relationships: repulsion that scales with negativity
-                # 0 to -100: 0 to 2.0x repulsion
-                factor = -constants.GRAPH_NEGATIVE_REPULSION_MAX * (abs(rel_val) / 100.0)
-            
-            # Apply force with relationship strength
-            force_magnitude = constants.GRAPH_ATTRACTION * factor
-            force = direction * force_magnitude
-            
-            # Pull V towards U (or push away if factor is negative)
-            total_force[v] += force
-            # Pull U towards V (Newton's third law)
-            total_force[u] -= force
+        # 2b. Spring Attraction (Vectorized)
+        if len(self.edges) > 0:
+            # Pre-built edge arrays (cache these in build() as self._edge_u, etc.)
+            u_idx = self._edge_u          # shape (E,)
+            v_idx = self._edge_v          # shape (E,)
+            rel_vals = self._edge_vals    # shape (E,) float64
+
+            # --- Geometry (all vectorized) ---
+            delta = self.pos[u_idx] - self.pos[v_idx]          # (E, 2)
+            dist  = np.linalg.norm(delta, axis=1)              # (E,)
+
+            # Mask out edges shorter than min distance
+            valid = dist >= constants.GRAPH_MIN_DISTANCE       # (E,) bool
+            # Avoid division by zero on invalid entries
+            safe_dist = np.where(valid, dist, 1.0)
+            direction = delta / safe_dist[:, np.newaxis]       # (E, 2)
+
+            # --- Piecewise factor calculation (vectorized) ---
+            factor = np.zeros_like(rel_vals)
+
+            # Negative relationships: linear repulsion
+            neg = rel_vals < 0
+            factor[neg] = -constants.GRAPH_NEGATIVE_REPULSION_MAX * (np.abs(rel_vals[neg]) / 100.0)
+
+            # Weak bonds: 0 to WEAK_THRESHOLD
+            w = constants.GRAPH_WEAK_BOND_THRESHOLD
+            m = constants.GRAPH_MODERATE_BOND_THRESHOLD
+            weak  = (~neg) & (rel_vals <= w)
+            factor[weak] = (constants.GRAPH_WEAK_ATTRACTION_MIN +
+                            (rel_vals[weak] / w) *
+                            (constants.GRAPH_WEAK_ATTRACTION_MAX - constants.GRAPH_WEAK_ATTRACTION_MIN))
+
+            # Moderate bonds: WEAK_THRESHOLD to MODERATE_THRESHOLD
+            mod = (~neg) & (rel_vals > w) & (rel_vals <= m)
+            factor[mod] = (constants.GRAPH_MODERATE_ATTRACTION_MIN +
+                        ((rel_vals[mod] - w) / (m - w)) *
+                        (constants.GRAPH_MODERATE_ATTRACTION_MAX - constants.GRAPH_MODERATE_ATTRACTION_MIN))
+
+            # Strong bonds: MODERATE_THRESHOLD to 100
+            strong = (~neg) & (rel_vals > m)
+            factor[strong] = (constants.GRAPH_STRONG_ATTRACTION_MIN +
+                            ((rel_vals[strong] - m) / (100.0 - m)) *
+                            (constants.GRAPH_STRONG_ATTRACTION_MAX - constants.GRAPH_STRONG_ATTRACTION_MIN))
+
+            # --- Force application (vectorized scatter) ---
+            force_mag = (constants.GRAPH_ATTRACTION * factor * valid)[:, np.newaxis]  # (E, 1)
+            force     = direction * force_mag                                          # (E, 2)
+
+            # np.add.at handles duplicate indices correctly (unlike +=)
+            np.add.at(total_force, v_idx,  force)   # Pull v toward u
+            np.add.at(total_force, u_idx, -force)   # Pull u toward v (Newton's 3rd)
 
         # 3. Integration (Euler)
         self.vel += total_force * constants.GRAPH_SPEED * constants.GRAPH_TIME_STEP
@@ -522,129 +564,160 @@ class SocialGraphLayout:
         # Top/Bottom
         np.clip(self.pos[:, 1], self.bounds.top + constants.GRAPH_BOUNDARY_PADDING, self.bounds.bottom - constants.GRAPH_BOUNDARY_PADDING, out=self.pos[:, 1])
 
+    # --- Call this once in build(), and again whenever zoom changes ---
+    def _rebuild_node_surfaces(self):
+        """
+        Pre-renders every unique node appearance (color + scaled radius) to a small
+        surface. A blit is a single memcpy; two draw.circle calls are not.
+        Also caches the hover surface for each unique radius.
+        """
+        self._node_surfaces = {}        # (color, scaled_radius) -> Surface
+        self._hover_surfaces = {}       # scaled_radius -> Surface
+        self._scaled_radii = []         # flat list, one int per node
+
+        for i in range(self.count):
+            r = max(3, int(self.radii[i] * self.zoom_level))
+            self._scaled_radii.append(r)
+
+            color = self.colors[i]
+            key = (color, r)
+            if key not in self._node_surfaces:
+                size = r * 2 + 2          # +1px border on each side
+                surf = pygame.Surface((size, size), pygame.SRCALPHA)
+                pygame.draw.circle(surf, color, (r + 1, r + 1), r)
+                pygame.draw.circle(surf, constants.COLOR_BG, (r + 1, r + 1), r, 1)
+                self._node_surfaces[key] = surf
+
+            if r not in self._hover_surfaces:
+                hr = r + 2
+                size = hr * 2 + 2
+                surf = pygame.Surface((size, size), pygame.SRCALPHA)
+                pygame.draw.circle(surf, (255, 255, 0), (hr + 1, hr + 1), hr)
+                self._hover_surfaces[r] = surf
+
+        # Pre-scale edge widths for current zoom — recomputed only when zoom changes
+        self._scaled_edge_widths = [max(1, int(w * self.zoom_level)) for w in self.edge_widths]
+
+        # Pre-allocate label rects (one per node) — mutated in-place each frame
+        self._label_rects = [pygame.Rect(0, 0, 1, 1) for _ in range(self.count)]
+
+        # Cache the last zoom level used so draw() knows when to rebuild
+        self._last_zoom_for_surfaces = self.zoom_level
+
     def draw(self, screen, font):
         """Draws the nodes and edges with pan offset and zoom."""
         if self.count == 0: return
 
-        # Apply Pan Offset and Zoom for drawing
-        # Transform: scale around center, then apply pan offset
+        # Rebuild pre-rendered node surfaces only if zoom changed since last build
+        if self._last_zoom_for_surfaces != self.zoom_level:
+            self._rebuild_node_surfaces()
+
+        # --- Transform all positions once, then drop into plain Python lists.
+        #     Indexing a Python list with a Python int is a direct pointer lookup.
+        #     Indexing a numpy array with anything triggers bounds-check + view overhead. ---
         center_offset = self.center
         scaled_pos = (self.pos - center_offset) * self.zoom_level + center_offset
-        draw_pos = (scaled_pos + self.pan_offset).astype(int)
-        
-        # Viewport Culling: Calculate visible world bounds
-        # Convert screen corners to world coordinates
-        screen_width, screen_height = constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT
-        viewport_left = (-self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0]
-        viewport_right = (screen_width - self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0]
-        viewport_top = (-self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1]
-        viewport_bottom = (screen_height - self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1]
-        
-        # Add padding for partially visible elements (larger padding at lower zoom)
-        culling_padding = 100 / self.zoom_level
-        viewport_left -= culling_padding
-        viewport_right += culling_padding
-        viewport_top -= culling_padding
-        viewport_bottom += culling_padding
-        
-        # Helper function to check if position is in viewport
-        def is_in_viewport(x, y, radius=0):
-            return (viewport_left - radius <= x <= viewport_right + radius and
-                    viewport_top - radius <= y <= viewport_bottom + radius)
-        
-        # 1. Draw Edges (using cached colors and widths) with viewport culling
-        # Batch edges by color to reduce state changes
-        edge_groups = {}
-        for i, (u, v, rel_val) in enumerate(self.edges):
-            # Quick viewport culling for edges
-            x1, y1 = self.pos[u]
-            x2, y2 = self.pos[v]
-            
-            # Simple bounding box check for edge visibility
-            edge_min_x = min(x1, x2)
-            edge_max_x = max(x1, x2)
-            edge_min_y = min(y1, y2)
-            edge_max_y = max(y1, y2)
-            
-            if (edge_max_x < viewport_left or edge_min_x > viewport_right or
-                edge_max_y < viewport_top or edge_min_y > viewport_bottom):
-                continue  # Skip this edge, it's completely outside viewport
-            
-            p1 = draw_pos[u]
-            p2 = draw_pos[v]
-            
-            # Use cached color and width
-            color = self.edge_colors[i]
-            width = max(1, int(self.edge_widths[i] * self.zoom_level))
-            
-            # Highlight Hovered Edge (using index instead of search)
-            if i == self.hover_edge_index:
-                color = (255, 255, 200) # Bright highlight
-                width += 2
-            
-            # Group edges by color for batch drawing
-            if color not in edge_groups:
-                edge_groups[color] = []
-            edge_groups[color].append((p1, p2, width))
-        
-        # Draw edge groups
-        for color, edges in edge_groups.items():
-            for p1, p2, width in edges:
-                pygame.draw.line(screen, color, p1, p2, width)
+        draw_pos_list = (scaled_pos + self.pan_offset).astype(int).tolist()  # list of [x, y]
 
-        # 2. Draw Nodes & Labels (with cached label surfaces) with viewport culling
-        # Batch node drawing by color
-        node_groups = {}
-        visible_nodes = []
-        
-        for i in range(self.count):
-            x, y = self.pos[i]
-            radius = self.radii[i]
-            
-            # Viewport culling for nodes
-            if not is_in_viewport(x, y, radius):
-                continue  # Skip this node, it's outside viewport
-            
-            visible_nodes.append(i)
-            draw_x, draw_y = draw_pos[i]
-            color = self.colors[i]
-            # Scale radius by zoom
-            scaled_radius = max(3, int(radius * self.zoom_level))
-            
-            # Highlight Hover
-            if i == self.hover_index:
-                pygame.draw.circle(screen, (255, 255, 0), (draw_x, draw_y), scaled_radius + 2)
-            
-            # Group nodes by color
-            if color not in node_groups:
-                node_groups[color] = []
-            node_groups[color].append((draw_x, draw_y, scaled_radius))
-        
-        # Draw node groups
-        for color, nodes in node_groups.items():
-            for draw_x, draw_y, scaled_radius in nodes:
-                pygame.draw.circle(screen, color, (draw_x, draw_y), scaled_radius)
-                pygame.draw.circle(screen, constants.COLOR_BG, (draw_x, draw_y), scaled_radius, 1)
-        
-        # 3. Draw Labels (use cached surfaces) only for visible nodes
+        # --- Viewport bounds in world coordinates ---
+        screen_width, screen_height = constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT
+        culling_padding = 100 / self.zoom_level
+        vp_left   = (-self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0] - culling_padding
+        vp_right  = (screen_width  - self.pan_offset[0] - center_offset[0]) / self.zoom_level + center_offset[0] + culling_padding
+        vp_top    = (-self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1] - culling_padding
+        vp_bottom = (screen_height - self.pan_offset[1] - center_offset[1]) / self.zoom_level + center_offset[1] + culling_padding
+
+        # --- Vectorized visibility masks (computed once in NumPy) ---
+        node_visible = ((self.pos[:, 0] >= vp_left  - self._radii_arr) &
+                        (self.pos[:, 0] <= vp_right + self._radii_arr) &
+                        (self.pos[:, 1] >= vp_top   - self._radii_arr) &
+                        (self.pos[:, 1] <= vp_bottom + self._radii_arr))
+        # .tolist() converts to plain Python ints — fast path for all indexing below
+        visible_indices = np.flatnonzero(node_visible).tolist()
+
+        if len(self.edges) > 0:
+            # Reuse pre-allocated workspace — zero allocations in this block
+            np.take(self.pos, self._edge_u, axis=0, out=self._edge_vis_u_pos)
+            np.take(self.pos, self._edge_v, axis=0, out=self._edge_vis_v_pos)
+            np.minimum(self._edge_vis_u_pos, self._edge_vis_v_pos, out=self._edge_vis_min)
+            np.maximum(self._edge_vis_u_pos, self._edge_vis_v_pos, out=self._edge_vis_max)
+            np.greater_equal(self._edge_vis_max[:, 0], vp_left,  out=self._edge_vis_mask)
+            self._edge_vis_mask &= (self._edge_vis_min[:, 0] <= vp_right)
+            self._edge_vis_mask &= (self._edge_vis_max[:, 1] >= vp_top)
+            self._edge_vis_mask &= (self._edge_vis_min[:, 1] <= vp_bottom)
+            visible_edge_indices = np.flatnonzero(self._edge_vis_mask).tolist()
+        else:
+            visible_edge_indices = []
+
+        # --- Local variable binds: pulls attribute lookups out of hot loops.
+        #     `self.X` is a dict lookup (type.__getattribute__) every iteration;
+        #     a local is a single LOAD_FAST bytecode op. ---
+        edges           = self.edges
+        edge_colors     = self.edge_colors
+        scaled_edge_widths = self._scaled_edge_widths
+        hover_edge      = self.hover_edge_index
+        hover_node      = self.hover_index
+        node_surfaces   = self._node_surfaces
+        hover_surfaces  = self._hover_surfaces
+        scaled_radii    = self._scaled_radii
+        colors          = self.colors
+        labels          = self.labels
+        label_surfaces  = self.label_surfaces
+        zoom            = self.zoom_level
+        draw_line       = pygame.draw.line
+        blit            = screen.blit
+
+        # --- 1. Draw Edges ---
+        edge_u_list     = self._edge_u_list
+        edge_v_list     = self._edge_v_list
+
+        for i in visible_edge_indices:
+            color = edge_colors[i]
+            width = scaled_edge_widths[i]   # pre-scaled, see change #4
+
+            if i == hover_edge:
+                color = (255, 255, 200)
+                width += 2
+
+            draw_line(screen, color, draw_pos_list[edge_u_list[i]], draw_pos_list[edge_v_list[i]], width)
+
+        # --- 2. Draw Nodes (blit pre-rendered surfaces — no draw.circle in loop) ---
+        for i in visible_indices:
+            r = scaled_radii[i]
+            pos = draw_pos_list[i]
+            # blit rect top-left = center - (r+1) for the +1px border padding in surface
+            blit_x = pos[0] - r - 1
+            blit_y = pos[1] - r - 1
+
+            if i == hover_node:
+                hr = r + 2
+                hover_surf = hover_surfaces[r]
+                blit(hover_surf, (blit_x - 2, blit_y - 2))
+
+            blit(node_surfaces[(colors[i], r)], (blit_x, blit_y))
+
+        # --- 3. Draw Labels ---
         label_opacity = self._get_label_opacity()
-        if label_opacity > 0:  # Only draw labels if they have some opacity
-            for i in visible_nodes:
-                draw_x, draw_y = draw_pos[i]
-                scaled_radius = max(3, int(self.radii[i] * self.zoom_level))
-                
-                # Draw Label (use cached surface if available)
-                label = self.labels[i]
-                if label not in self.label_surfaces:
-                    self.label_surfaces[label] = font.render(label, True, constants.COLOR_TEXT)
-                
-                label_surf = self.label_surfaces[label]
-                # Apply opacity by creating a temporary surface with alpha
-                if label_opacity < 255:
-                    label_surf = label_surf.copy()
-                    label_surf.set_alpha(label_opacity)
-                
-                # Adjust label position to account for zoom
-                label_offset = int((scaled_radius + 10) * self.zoom_level)
-                label_rect = label_surf.get_rect(center=(draw_x, draw_y - label_offset))
-                screen.blit(label_surf, label_rect)
+        if label_opacity > 0:
+            label_rects = self._label_rects
+
+            for i in visible_indices:
+                pos = draw_pos_list[i]
+                label = labels[i]
+
+                cache_key = (label, label_opacity)
+                surf = label_surfaces.get(cache_key)
+                if surf is None:
+                    base = font.render(label, True, constants.COLOR_TEXT)
+                    if label_opacity < 255:
+                        base.set_alpha(label_opacity)
+                    label_surfaces[cache_key] = base
+                    surf = base
+
+                # Mutate pre-allocated Rect in place — no allocation
+                rect = label_rects[i]
+                rect.width  = surf.get_width()
+                rect.height = surf.get_height()
+                rect.centerx = pos[0]
+                rect.centery = pos[1] - scaled_radii[i] - 10
+                blit(surf, rect)
