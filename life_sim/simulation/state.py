@@ -23,6 +23,9 @@ class Agent:
         self.uid = str(uuid.uuid4())
         self.is_player = kwargs.get("is_player", False)
         
+        # Form attribute (single character string, default: None)
+        self.form = kwargs.get("form", None)
+        
         # Allow kwargs to override config defaults (for NPCs)
         # AGE CHANGE: Input is years, store as months
         initial_age_years = kwargs.get("age", agent_config.get("initial_age", 0))
@@ -170,6 +173,9 @@ class Agent:
         self.hair_color = random.choice(app_conf.get("hair_colors", ["Brown"]))
         self.skin_tone = random.choice(app_conf.get("skin_tones", ["Fair"]))
         
+        # Form attribute (single character string, default: None)
+        self.form = None
+        
         # 2. Height (Gaussian Distribution)
         genetics_config = app_conf.get("genetics", {})
         if self.gender == "Male":
@@ -230,6 +236,9 @@ class Agent:
 
         self.eye_color = inherit(father.eye_color, mother.eye_color, app_conf.get("eye_colors", []))
         self.hair_color = inherit(father.hair_color, mother.hair_color, app_conf.get("hair_colors", []))
+        
+        # Form attribute (single character string, default: None)
+        self.form = None
 
     def get_attr_value(self, name):
         """Helper to fetch attribute values by string name."""
@@ -509,7 +518,7 @@ class SimState:
         
         # Generate Classmates (if player is in school)
         if self.player.school:
-            self._populate_classmates()
+            self.populate_classmates()
         
         self.history = []
         
@@ -689,10 +698,18 @@ class SimState:
                 (looks_txt, constants.COLOR_TEXT),
                 (phys_txt, constants.COLOR_TEXT),
                 (pers_txt, constants.COLOR_TEXT),
-                (luck_txt, constants.COLOR_TEXT_DIM)
+                (luck_txt, constants.COLOR_TEXT)
             ],
             "expanded": True
         }
+
+    def _assign_form_to_student(self, student, index):
+        """
+        Helper function that returns "A", "B", "C", or "D" based on student position.
+        Index 0 (player) gets "A", then distribute evenly across all forms.
+        """
+        forms = ["A", "B", "C", "D"]
+        return forms[index % 4]
 
     def populate_classmates(self):
         """
@@ -702,10 +719,8 @@ class SimState:
         school_data = self.player.school
         if not school_data: return
         
-        # 1. Determine Capacity
-        capacity = 20 
-        if self.school_system and self.school_system.id == school_data["school_id"]:
-            capacity = self.school_system.class_capacity
+        # 1. Set capacity to 80 total students (player + 79 classmates)
+        total_capacity = 80
             
         # 2. Identify the Cohort (Player + Existing NPCs)
         cohort = [self.player]
@@ -717,9 +732,9 @@ class SimState:
                 cohort.append(npc)
 
         existing_count = len(cohort)
-        needed = capacity - existing_count
+        needed = total_capacity - existing_count
         
-        # 3. Generate New Students (if needed)
+        # 3. Generate New Students (if needed) - exactly 79 classmates total
         if needed > 0:
             self.logger = logging.getLogger(__name__)
             self.logger.info(f"Populating Class: Generating {needed} students for {school_data['year_label']} {school_data['form_label']}...")
@@ -745,8 +760,13 @@ class SimState:
                 }
                 
                 cohort.append(classmate)
+        
+        # 4. Assign Forms to All Students
+        # Player gets Form A, distribute remaining students evenly across Forms A, B, C, D
+        for i, student in enumerate(cohort):
+            student.form = self._assign_form_to_student(student, i)
 
-        # 4. Wire Relationships (The Mesh)
+        # 5. Wire Relationships (The Mesh)
         # We link every student in the cohort to every other student
         # This ensures Classmate A knows Classmate B, not just the Player.
         
@@ -768,7 +788,13 @@ class SimState:
                 elif aff_score < -20: rel_type = "Rival"
                 
                 # Link
-                self._link_agents(agent_a, agent_b, rel_type, rel_type)
+                # Check if students are in the same form and add modifier if needed
+                if agent_a.form == agent_b.form:
+                    # Add "Same Form" modifier (+10) for students in the same form
+                    self._link_agents(agent_a, agent_b, rel_type, rel_type, "Same Form", 10)
+                else:
+                    # Link without modifier for students in different forms
+                    self._link_agents(agent_a, agent_b, rel_type, rel_type)
 
     def _wire_classmate_relationship(self, classmate):
         """

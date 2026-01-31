@@ -47,6 +47,29 @@ class SocialGraphLayout:
         self.max_zoom = 5.0
         self.zoom_speed = 0.1
 
+    def _get_relationship_color(self, score):
+        """
+        Returns RGB color based on relationship score using gradient logic.
+        0 -> Light Gray (200,200,200)
+        +100 -> Bright Green (50, 255, 50)
+        -100 -> Deep Red (220, 20, 20)
+        """
+        if score >= 0:
+            # Green Interpolation (0 -> Light Gray, 100 -> Bright Green)
+            t = score / 100.0
+            # Light Gray (200,200,200) to Green (50, 255, 50)
+            r = int(200 * (1-t) + 50 * t)
+            g = int(200 * (1-t) + 255 * t)
+            b = int(200 * (1-t) + 50 * t)
+        else:
+            # Red Interpolation (0 -> Light Gray, -100 -> Deep Red)
+            t = abs(score) / 100.0
+            # Light Gray (200,200,200) to Red (220, 20, 20)
+            r = int(200 * (1-t) + 220 * t)
+            g = int(200 * (1-t) + 20 * t)
+            b = int(200 * (1-t) + 20 * t)
+        return (r, g, b)
+
     def handle_event(self, event, rel_mouse_pos):
         """
         Handles mouse events for the graph.
@@ -253,15 +276,10 @@ class SocialGraphLayout:
             # Determine Color based on Relationship
             rel = sim_state.player.relationships.get(uid)
             if rel:
-                val = rel.total_score
-                if val > 60:
-                    col = constants.COLOR_LOG_POSITIVE # Greenish
-                elif val < 40:
-                    col = constants.COLOR_LOG_NEGATIVE # Reddish
-                else:
-                    col = constants.COLOR_ACCENT # Blueish/Neutral
+                col = self._get_relationship_color(rel.total_score)
             else:
-                col = constants.COLOR_TEXT_DIM # Gray (Stranger)
+                # Neutral light gray for strangers
+                col = (200, 200, 200)
                 
             self.colors.append(col)
             self.radii.append(5)

@@ -481,24 +481,24 @@ class Renderer:
                 # Edge Tooltip
                 lines.append((f"{info['agent_a']} & {info['agent_b']}", constants.COLOR_ACCENT))
                 
-                # Total Score
+                # Total Score - use gradient color logic
                 total = info['total']
-                col_total = constants.COLOR_LOG_POSITIVE if total > 0 else constants.COLOR_LOG_NEGATIVE
+                col_total = self.social_graph._get_relationship_color(total)
                 lines.append((f"Total Score: {total}", col_total))
                 
                 lines.append(("--- Base Affinity ---", constants.COLOR_TEXT_DIM))
-                # Color code the base affinity itself
-                base_col = constants.COLOR_LOG_POSITIVE if info['score'] > 0 else constants.COLOR_LOG_NEGATIVE
+                # Color code the base affinity itself using gradient logic
+                base_col = self.social_graph._get_relationship_color(info['score'])
                 lines.append((f"Base: {info['score']}", base_col))
                 
                 for factor, val in info['affinity_breakdown']:
-                    col = constants.COLOR_LOG_POSITIVE if val > 0 else constants.COLOR_LOG_NEGATIVE
+                    col = self.social_graph._get_relationship_color(val)
                     lines.append((f"  {factor}: {val:+.1f}", col))
 
                 if info['modifiers']:
                     lines.append(("--- Active Modifiers ---", constants.COLOR_TEXT_DIM))
                     for mod_name, mod_val in info['modifiers']:
-                        col = constants.COLOR_LOG_POSITIVE if mod_val > 0 else constants.COLOR_LOG_NEGATIVE
+                        col = self.social_graph._get_relationship_color(mod_val)
                         lines.append((f"  {mod_name}: {mod_val:+.1f}", col))
                     
             else:
@@ -507,7 +507,7 @@ class Renderer:
                 lines.append((info['job'], constants.COLOR_TEXT_DIM))
                 if info['rel_type'] != "Self":
                     rel_txt = f"{info['rel_type']}: {info['rel_val']}/100"
-                    col = constants.COLOR_LOG_POSITIVE if info['rel_val'] > 50 else constants.COLOR_LOG_NEGATIVE
+                    col = self.social_graph._get_relationship_color(info['rel_val'])
                     lines.append((rel_txt, col))
             
             # Calculate Box Size

@@ -49,6 +49,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 **Core Identity & Biology**
 - Basic bio-data: name, gender, age (stored as months), country, city
 - Physical stats: health, happiness, IQ (Gaussian distribution), looks, money
+- **Form Assignment**: `form` attribute for school form tracking (A, B, C, D)
 - Genetic system: supports both procedurally generated "lineage heads" and inherited "descendants"
 
 **Extended Attributes**
@@ -60,7 +61,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 **Life Systems**
 - Academic: subject-based performance (Math, Science, Language Arts, History)
 - Economic: job status, salary, monthly income processing
-- Social: relationship network with affinity-based scoring
+- Social: relationship network with affinity-based scoring and modifiers
 - Time Management: Action Point (AP) system for daily activities
 
 **State Management**
@@ -69,7 +70,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - Age-based progression with growth, puberty, and senescence phases
 
 **Key Methods**
-- `__init__()`: Initialize agent with config or inherited traits
+- `__init__()`: Initialize agent with config or inherited traits, including optional `form` parameter
 - `_init_lineage_head()`: Generate traits for first-generation agents
 - `_init_descendant()`: Inherit traits from parents using genetic formulas
 - `_recalculate_max_health()`: Age-based health capacity calculation
@@ -87,6 +88,7 @@ The `SimState` class serves as the central container for the entire simulation w
 - **School System**: Manages educational institutions and enrollment
 - **Family Generation**: Creates multi-generational family trees
 - **Narrative Engine**: Generates contextual birth and life event stories
+- **Class Population**: Generates 80-student cohorts with form assignments
 
 **Key Attributes**
 - `player`: The main Agent controlled by the user
@@ -98,9 +100,13 @@ The `SimState` class serves as the central container for the entire simulation w
 - `config`: Reference to global configuration data
 
 **Key Methods**
+- `populate_classmates()`: Generates 79 classmates for total of 80 students with form assignments
+- `_assign_form_to_student()`: Helper function for form assignment (A, B, C, D)
+- `_link_agents()`: Creates bidirectional relationships with optional modifiers
+- `_setup_family_and_player()`: Generates multi-generational family trees
+- `_create_npc()`: Instantiates and registers new NPCs
+- `start_new_year()`: Archives current year and starts new one
 - `__init__()`: Initialize simulation world and generate family
-- `_setup_family_and_player()`: Create multi-generational family structure
-- `_populate_classmates()`: Generate NPC classmates when player enrolls
 - `add_log()`: Add events to the history buffer with color coding
 
 **Initialization Process**
@@ -300,9 +306,22 @@ These compare traits between two agents using the formula: `(Threshold - Delta) 
   - <-20: "Rival"
 
 **Social Graph Visualization** (`social_graph.py`)
-- **Hover Information**: Real-time affinity breakdown display
-- **Edge Visualization**: Color and thickness based on total relationship score
-- **Debug Support**: Detailed mathematical breakdown for relationship analysis
+- **Gradient Color System**: Node and edge colors use smooth gradient interpolation
+- **Form-Based Visualization**: Students in same form receive visual relationship bonuses
+- **Interactive Tooltips**: Real-time affinity breakdown with gradient-coded scores
+- **Advanced Navigation**: Pan, zoom, and drag interactions with physics simulation
+
+**Color Gradient System**
+- **Node Colors**: Light Gray (0) → Green (+100) for positive, Light Gray (0) → Red (-100) for negative
+- **Edge Colors**: Matching gradient system for visual consistency
+- **Tooltip Integration**: All relationship scores use same gradient logic
+- **Neutral Baseline**: Score of 0 displays as neutral light gray (200, 200, 200)
+
+**Form-Based Features**
+- **Same Form Visualization**: Students in same form show enhanced relationships
+- **Modifier Display**: "Same Form" (+10) modifiers shown in detailed tooltips
+- **Cohort Organization**: Visual grouping by form assignments
+- **Social Cohesion**: Enhanced visual feedback for form-based relationships
 
 ### Design Principles
 
@@ -344,13 +363,14 @@ The `social.py` module defines the data structures that manage social connection
 Represents temporary or permanent factors that affect relationship scores:
 
 **Key Attributes**
-- `name`: String identifier for the modifier (e.g., "Maternal Bond", "Marriage", "Argument")
+- `name`: String identifier for the modifier (e.g., "Maternal Bond", "Marriage", "Same Form", "Argument")
 - `value`: Numeric impact on relationship score (positive or negative)
 - `duration`: Time remaining in months (-1 for permanent modifiers)
 - `decay`: Monthly reduction rate for time-based modifiers
 
 **Use Cases**
 - **Permanent Bonds**: Marriage (+60), Maternal/Paternal Bond (+80)
+- **Form-Based**: "Same Form" (+10) for students in the same school form
 - **Temporary Effects**: "Recent Argument" (-20, duration: 3 months)
 - **Decaying Effects**: "New Romance" (+30, decay: -5 per month)
 
@@ -360,10 +380,11 @@ Represents a social connection between two agents with dynamic scoring:
 **Core Properties**
 - `owner_uid`: UUID of the agent who owns this relationship
 - `target_uid`: UUID of the agent this relationship points to
-- `rel_type`: Relationship category (Spouse, Friend, Rival, Classmate, etc.)
-- `base_affinity`: Initial psychometric compatibility score from affinity engine
-- `target_name`: Human-readable name for UI display
-- `is_alive`: Whether the target agent is still living
+- `rel_type`: Relationship type ("Friend", "Spouse", "Classmate", "Rival", etc.)
+- `target_name`: Human-readable name of the target agent
+- `is_alive`: Boolean indicating if target agent is still living
+- `base_affinity`: Natural psychometric compatibility score
+- `modifiers`: List of active Modifier objects
 
 **Dynamic Scoring System**
 - `modifiers`: List of active Modifier objects affecting the relationship
@@ -747,6 +768,105 @@ When debugging unexpected state changes:
 5. **Log all mutations**: Use `sim_state.add_log()` for state-changing operations
 
 This contract ensures predictable simulation behavior and helps engineers understand the full impact of their code changes on the simulation state.
+
+## 🏫 school.py Module Structure
+
+The `school.py` module manages the educational system, including school institutions, form assignments, and academic progression. It provides the infrastructure for organizing students into forms and tracking their educational journey.
+
+### School Class
+
+The `School` class represents an educational institution with form-based organization:
+
+**Core Properties**
+- `id`: Unique school identifier from configuration
+- `name`: School name (e.g., "Springfield High School")
+- `type`: School type (e.g., "High School", "Elementary")
+- `start_month`/`end_month`: Academic year calendar bounds
+- `forms_per_year`: Number of forms per grade level (typically 4: A, B, C, D)
+- `class_capacity`: Maximum students per form
+- `student_forms`: Dictionary tracking student_id → form_letter assignments
+
+**Key Methods**
+- `get_grade_info(index)`: Returns grade information by index
+- `get_random_form_label()`: Returns random form letter (A, B, C, D)
+- `enroll_student(student_id, form=None)`: Enrolls student in specific or random form
+- `get_form_students(form_letter)`: Returns list of student IDs in given form
+
+### Form Assignment System
+
+**Student Tracking**
+- **Central Registry**: `student_forms` dictionary maintains all student assignments
+- **Flexible Enrollment**: Students can be assigned to specific forms or random placement
+- **Query Support**: Easy retrieval of all students in a particular form
+
+**Form Distribution Logic**
+- **Even Allocation**: Students distributed across available forms
+- **Capacity Management**: Respects `forms_per_year` and `class_capacity` constraints
+- **Random Assignment**: When no specific form requested, uses weighted random selection
+
+### Academic System Integration
+
+**Monthly Processing** (`process_school_turn()`)
+- **Player & NPC Processing**: Handles all enrolled agents each month
+- **Academic Progress**: Updates subject grades based on natural aptitude
+- **Session Management**: Tracks school year start/end and enrollment periods
+
+**Enrollment Logic** (`_handle_school_start()`)
+- **Age-Based Enrollment**: Automatically enrolls eligible students at appropriate grade levels
+- **Form Assignment**: Assigns students to forms using school's random form selection
+- **Session Activation**: Starts academic sessions at beginning of school year
+
+**Academic Performance** (`_handle_school_end()`)
+- **Grade Evaluation**: Determines passing/failing based on performance threshold (>20)
+- **Progression Logic**: Advances students to next grade or handles graduation
+- **Form Preservation**: Students maintain their form assignment when advancing grades
+
+### School Year Calendar
+
+**Academic Timeline**
+- **Start Month**: Beginning of academic year (typically September)
+- **End Month**: End of academic year (typically June)
+- **Session Management**: `is_in_session` flag tracks active learning periods
+- **Summer Break**: Automatic session end with performance evaluation
+
+**Grade Structure**
+- **Multi-Stage Education**: Supports primary, secondary, and higher education stages
+- **Linear Progression**: Students advance through grades based on age and performance
+- **Form Consistency**: Students remain in same form throughout their time at the school
+
+### Integration Points
+
+**State Management** (`state.py`)
+- **Class Population**: `populate_classmates()` generates 80-student cohorts
+- **Form Assignment**: Uses school's form tracking system for student organization
+- **Academic Enrollment**: Automatic enrollment when players reach eligible age
+
+**Agent Education**
+- **Subject Performance**: Monthly grade updates based on natural aptitude
+- **Progress Tracking**: Monthly change tracking for performance visualization
+- **Form-Based Social Structure**: Students in same form receive relationship bonuses
+
+**Configuration System**
+- **School Definitions**: Loaded from `config.json` education section
+- **Structural Parameters**: Forms per year, class capacity, academic calendar
+- **Grade Progression**: Age-based grade level assignments and requirements
+
+### Design Principles
+
+**Modular Architecture**
+- **Separation of Concerns**: School logic isolated from agent state management
+- **Configuration-Driven**: School structure defined in external configuration files
+- **Extensible Design**: Easy to add new school types or academic systems
+
+**Deterministic Behavior**
+- **Reproducible Enrollment**: Same configuration produces identical form assignments
+- **Predictable Progression**: Academic advancement follows defined rules
+- **Consistent Calendar**: Academic year timing is fixed and reproducible
+
+**Performance Optimization**
+- **Efficient Lookups**: Dictionary-based form tracking for O(1) student queries
+- **Batch Processing**: Monthly updates process all enrolled students efficiently
+- **Minimal State**: Lightweight school objects with essential tracking data
 
 ## 🎨 Rendering Package Structure
 

@@ -27,6 +27,9 @@ class School:
         self.forms_per_year = data["structure"]["forms_per_year"]
         self.class_capacity = data["structure"]["class_capacity"]
         
+        # Track form assignments
+        self.student_forms = {}  # student_id -> form_letter
+        
         # Flatten hierarchy for linear progression logic
         self.grades = []
         for stage in data["stages"]:
@@ -45,6 +48,18 @@ class School:
     def get_random_form_label(self):
         """Returns a random form label (A, B, C...) based on forms_per_year."""
         return string.ascii_uppercase[random.randint(0, self.forms_per_year - 1)]
+    
+    def enroll_student(self, student_id, form=None):
+        """Enrolls a student in a specific form. If form is None, assigns randomly."""
+        if form is None:
+            form = self.get_random_form_label()
+        
+        self.student_forms[student_id] = form
+        return form
+    
+    def get_form_students(self, form_letter):
+        """Returns a list of student IDs for a given form."""
+        return [student_id for student_id, form in self.student_forms.items() if form == form_letter]
 
 def process_school_turn(sim_state):
     """
