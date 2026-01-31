@@ -670,6 +670,7 @@ The simulation advances in **1-month increments** when the player clicks "Age Up
 
 <details>
 <summary><strong>1. Global Time Advancement</strong></summary>
+
 - Increment month counter and handle year rollover
 - Update simulation date (Month/Year) for timeline tracking
 
@@ -677,6 +678,7 @@ The simulation advances in **1-month increments** when the player clicks "Age Up
 
 <details>
 <summary><strong>2. Agent Processing (Player & NPCs)</strong></summary>
+
 All agents (Player and NPCs) process the same monthly sequence:
 
 **A. Biological Updates**
@@ -702,6 +704,7 @@ All agents (Player and NPCs) process the same monthly sequence:
 
 <details>
 <summary><strong>3. NPC-Specific Processing</strong></summary>
+
 - Automated routine: NPCs auto-spend AP on mandatory tasks
 - Death notifications: Player informed when known NPCs die
 
@@ -709,6 +712,7 @@ All agents (Player and NPCs) process the same monthly sequence:
 
 <details>
 <summary><strong>4. Global System Updates</strong></summary>
+
 - **School System**: Academic progress, enrollment, graduation
 - Subject grades updated based on natural aptitude
 - Monthly change tracking for performance visualization
@@ -717,6 +721,7 @@ All agents (Player and NPCs) process the same monthly sequence:
 
 <details>
 <summary><strong>5. Mortality Check</strong></summary>
+
 - Health clamped to maximum capacity
 - Death condition: agents marked as deceased if health ≤ 0
 - Player death ends the simulation; NPC deaths trigger relationship updates
@@ -725,6 +730,7 @@ All agents (Player and NPCs) process the same monthly sequence:
 
 <details>
 <summary><strong>Key Design Principles</strong></summary>
+
 - **Unified Loop**: Player and NPCs share identical biological/economic rules
 - **Deterministic**: Same seed + actions = identical outcomes
 - **Order Preservation**: Critical for reproducible simulation results
