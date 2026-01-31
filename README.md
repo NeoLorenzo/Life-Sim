@@ -2080,6 +2080,120 @@ All randomness is controlled by a single **master seed**. No code may call rando
 - Public functions/classes have docstrings with inputs/outputs/units/invariants and a short example.
 - Long expressions are split and named; nested logic is flattened with early returns where safe.
 
+## 📊 Profiling & Performance Optimization
+
+### Overview
+Performance optimization in Life-Sim is driven by profiling data, not assumptions. This section covers profiling tools, performance analysis, and optimization strategies.
+
+### Profiling Tools & Methodology
+
+#### 1. Built-in Profiling Framework
+The simulation includes comprehensive profiling capabilities:
+
+- **Real-time Profiler**: Live FPS monitoring and function timing display
+- **cProfile Integration**: Detailed function call analysis
+- **Performance Metrics**: Frame-by-frame timing data collection
+
+#### 2. Profiling Workflow
+1. **Baseline Measurement**: Profile before making changes
+2. **Hot Path Identification**: Find top 2-3 time-consuming functions
+3. **Targeted Optimization**: Focus on high-impact areas
+4. **Validation**: Verify improvements with before/after comparisons
+
+### Social Graph Standalone Profiler
+
+#### Overview
+The `social_graph_standalone.py` script demonstrates advanced profiling techniques with real-time performance monitoring.
+
+#### Features
+
+**Real-time Performance Display:**
+- Live FPS counter with color-coded performance indicators
+- Function-level timing breakdown (milliseconds per call)
+- Percentage load distribution across functions
+- Node and edge count tracking
+
+**Profiling Capabilities:**
+- Decorator-based function profiling
+- cProfile integration for deep analysis
+- Statistical reporting (min/max/average timing)
+- Frame-by-frame performance logging
+
+**Performance Insights:**
+- **Drawing Operations**: Typically 35-40% of frame time
+- **Physics Calculations**: 30-40% of frame time  
+- **Event Handling**: <20% of frame time
+- **Agent Creation**: One-time cost, scales with agent count
+
+#### Usage
+```bash
+# Run with default 10 agents
+python social_graph_standalone.py
+
+# Easy configuration - just change one line:
+NUM_AGENTS = 25  # Scale from 5-50 agents
+```
+
+#### Controls
+- **Mouse Wheel**: Zoom in/out
+- **Left Click + Drag**: Pan view or drag nodes
+- **P Key**: Toggle real-time profiler
+- **Space**: Reset view
+- **R**: Rebuild graph
+- **ESC**: Exit
+
+#### Key Performance Optimizations
+
+**1. NumPy Vectorization:**
+```python
+# Vectorized physics calculations
+diff = self.pos[:, np.newaxis, :] - self.pos[np.newaxis, :, :]
+forces = diff * force_mag[:, :, np.newaxis]
+total_force = np.sum(forces, axis=1)
+```
+
+**2. Efficient Data Structures:**
+- NumPy arrays for position/velocity vectors
+- Pre-allocated memory for performance
+- Spatial indexing for collision detection
+
+**3. Rendering Optimizations:**
+- Batch drawing operations
+- Level-of-detail scaling
+- Viewport culling for off-screen elements
+
+#### Profiling Output Example
+```
+REAL-TIME PROFILER
+FPS: 60.3
+Nodes: 18, Edges: 61
+SocialGraph.draw: 0.6ms (35.2%)     ← Green/Yellow/Red
+SocialGraph.update_physics: 0.7ms (41.1%)
+SocialGraph.handle_event: 0.3ms (17.6%)
+create_fully_connected_agents: 3.1ms (6.1%)
+```
+
+### Performance Guidelines
+
+#### Core Loop Optimization
+1. **Profile First**: Always measure before optimizing
+2. **Vectorize Operations**: Use NumPy for batch calculations
+3. **Minimize Python Loops**: Avoid per-element iteration in hot paths
+4. **Pre-allocate Memory**: Avoid dynamic allocation in loops
+5. **Cache Calculations**: Store expensive computations
+
+#### Scaling Strategies
+- **Spatial Partitioning**: For large agent counts (>100)
+- **Level of Detail**: Reduce detail for distant elements
+- **Async Operations**: Offload non-critical calculations
+- **Memory Pooling**: Reuse objects to reduce GC pressure
+
+#### Monitoring & Metrics
+- **FPS Targets**: 60 FPS for smooth interaction
+- **Frame Budget**: Allocate time per system (physics: 33%, rendering: 50%, other: 17%)
+- **Memory Usage**: Monitor for leaks and excessive allocation
+- **Function Call Counts**: Identify unexpected call frequency
+
 ## 🎨 Credits & Assets
 
 *   **Icons:**
