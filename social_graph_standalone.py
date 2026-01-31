@@ -31,7 +31,7 @@ from life_sim.rendering.social_graph import SocialGraphLayout
 
 # Profiling setup
 profiler = cProfile.Profile()
-profile_stats = {}
+profile_stats = {}  # Will store (timestamp, execution_time) tuples
 
 # Real-time profiling display
 class RealTimeProfiler:
@@ -41,6 +41,7 @@ class RealTimeProfiler:
         self.max_frames = 60  # Track last 60 frames for FPS
         self.last_frame_time = time.perf_counter()
         self.enabled = True
+        self.time_window = 10.0  # Show stats from last 10 seconds only
         
     def update_frame_time(self):
         """Update frame timing for FPS calculation."""
@@ -67,22 +68,28 @@ class RealTimeProfiler:
         # Calculate FPS
         fps = self.get_fps()
         
-        # Calculate function statistics
+        # Get current time for filtering
+        current_time = time.perf_counter()
+        cutoff_time = current_time - self.time_window
+        
+        # Filter and calculate function statistics from last 10 seconds
         total_time = 0
         func_stats = []
         
-        for func_name, times in profile_stats.items():
-            if times:
-                avg_time = sum(times) / len(times)
+        for func_name, time_data in profile_stats.items():
+            # Filter out old data
+            recent_times = [t for timestamp, t in time_data if timestamp >= cutoff_time]
+            if recent_times:
+                avg_time = sum(recent_times) / len(recent_times)
                 total_time += avg_time
-                func_stats.append((func_name, avg_time, len(times)))
+                func_stats.append((func_name, avg_time, len(recent_times)))
         
         # Sort by time (descending)
         func_stats.sort(key=lambda x: x[1], reverse=True)
         
         # Position on right side of screen
         overlay_width = 450  # Increased from 350 to prevent truncation
-        overlay_height = 200
+        overlay_height = 220  # Increased height for time window info
         overlay_x = screen.get_width() - overlay_width - 10
         overlay_y = 10
         
@@ -97,7 +104,7 @@ class RealTimeProfiler:
         pygame.draw.rect(screen, (100, 100, 100), overlay_rect, 2)
         
         # Draw title
-        title_text = self.font.render("REAL-TIME PROFILER", True, (100, 255, 100))
+        title_text = self.font.render("REAL-TIME PROFILER (10s window)", True, (100, 255, 100))
         screen.blit(title_text, (overlay_x + 10, overlay_y + 5))
         
         # Draw FPS
@@ -134,7 +141,7 @@ class RealTimeProfiler:
         
         # Draw controls hint
         hint_text = self.font.render("Press P to toggle profiler", True, (150, 150, 150))
-        screen.blit(hint_text, (overlay_x + 10, overlay_y + 185))
+        screen.blit(hint_text, (overlay_x + 10, overlay_y + 205))
 
 # Global profiler instance
 real_time_profiler = None
@@ -149,7 +156,13 @@ def profile_function(func_name):
             
             if func_name not in profile_stats:
                 profile_stats[func_name] = []
-            profile_stats[func_name].append(end_time - start_time)
+            
+            # Store (timestamp, execution_time) tuple
+            profile_stats[func_name].append((end_time, end_time - start_time))
+            
+            # Clean old data to prevent memory leak (keep last 30 seconds)
+            cutoff_time = end_time - 30.0
+            profile_stats[func_name] = [(ts, t) for ts, t in profile_stats[func_name] if ts >= cutoff_time]
             
             return result
         return wrapper
@@ -161,21 +174,28 @@ def print_profile_stats():
     print("DETAILED PROFILING STATISTICS")
     print("="*80)
     
+    # Get current time for filtering
+    current_time = time.perf_counter()
+    cutoff_time = current_time - 10.0  # Last 10 seconds
+    
     # Function call statistics
-    print("\nFUNCTION CALL TIMING:")
+    print("\nFUNCTION CALL TIMING (Last 10 seconds):")
     print("-" * 50)
-    for func_name, times in profile_stats.items():
-        avg_time = sum(times) / len(times)
-        total_time = sum(times)
-        min_time = min(times)
-        max_time = max(times)
-        print(f"{func_name}:")
-        print(f"  Calls: {len(times)}")
-        print(f"  Total: {total_time:.4f}s")
-        print(f"  Average: {avg_time:.4f}s")
-        print(f"  Min: {min_time:.4f}s")
-        print(f"  Max: {max_time:.4f}s")
-        print()
+    for func_name, time_data in profile_stats.items():
+        # Filter out old data
+        recent_times = [t for timestamp, t in time_data if timestamp >= cutoff_time]
+        if recent_times:
+            avg_time = sum(recent_times) / len(recent_times)
+            total_time = sum(recent_times)
+            min_time = min(recent_times)
+            max_time = max(recent_times)
+            print(f"{func_name}:")
+            print(f"  Calls: {len(recent_times)}")
+            print(f"  Total: {total_time:.4f}s")
+            print(f"  Average: {avg_time:.4f}s")
+            print(f"  Min: {min_time:.4f}s")
+            print(f"  Max: {max_time:.4f}s")
+            print()
     
     # cProfile statistics
     print("\nCPROFILE STATISTICS:")
@@ -197,9 +217,79 @@ def load_config():
         print(f"CRITICAL: {constants.CONFIG_FILE} not found.")
         sys.exit(1)
 
+# Global variables for dynamic agent management
+current_agents = []  # Track current agents
+
+@profile_function("add_agent")
+def add_agent(sim_state, social_graph, bounds):
+    """Add a new agent to the simulation."""
+    global current_agents
+    
+    # Create new agent
+    new_agent = sim_state._create_npc()
+    current_agents.append(new_agent)
+    
+    # Create relationships with all existing agents
+    for existing_agent in current_agents:
+        if existing_agent.uid != new_agent.uid:
+            sim_state._link_agents(
+                new_agent, existing_agent,
+                "Acquaintance", "Acquaintance",
+                "Network_Connection", random.uniform(-20, 80)
+            )
+    
+    # Rebuild the graph
+    social_graph.build(sim_state, bounds)
+    
+    print(f"Added agent {new_agent.first_name} {new_agent.last_name}. Total agents: {len(current_agents)}")
+    return new_agent
+
+@profile_function("remove_agent")
+def remove_agent(sim_state, social_graph, bounds, agent_uid=None):
+    """Remove an agent from the simulation."""
+    global current_agents
+    
+    if not current_agents:
+        print("No agents to remove")
+        return None
+    
+    # If no specific agent specified, remove the last one added
+    if agent_uid is None:
+        agent_to_remove = current_agents[-1]
+    else:
+        # Find the agent with the specified UID
+        agent_to_remove = None
+        for agent in current_agents:
+            if agent.uid == agent_uid:
+                agent_to_remove = agent
+                break
+        
+        if agent_to_remove is None:
+            print(f"Agent with UID {agent_uid} not found")
+            return None
+    
+    # Remove relationships from other agents
+    for other_agent in current_agents:
+        if other_agent.uid != agent_to_remove.uid:
+            other_agent.relationships.pop(agent_to_remove.uid, None)
+    
+    # Remove from simulation state
+    sim_state.npcs.pop(agent_to_remove.uid, None)
+    
+    # Remove from current agents list
+    current_agents.remove(agent_to_remove)
+    
+    # Rebuild the graph
+    social_graph.build(sim_state, bounds)
+    
+    print(f"Removed agent {agent_to_remove.first_name} {agent_to_remove.last_name}. Total agents: {len(current_agents)}")
+    return agent_to_remove
+
 @profile_function("create_fully_connected_agents")
 def create_fully_connected_agents(sim_state, num_agents=None):
     """Create agents that all know each other."""
+    global current_agents
+    
     if num_agents is None:
         num_agents = NUM_AGENTS
     
@@ -210,6 +300,9 @@ def create_fully_connected_agents(sim_state, num_agents=None):
     for i in range(num_agents):
         agent = sim_state._create_npc()
         agents.append(agent)
+    
+    # Store in global variable
+    current_agents = agents
     
     # Create fully connected network
     print("Creating fully connected relationships...")
@@ -313,6 +406,21 @@ def main():
                 elif event.key == pygame.K_p:
                     # Toggle profiler
                     real_time_profiler.enabled = not real_time_profiler.enabled
+                elif event.key == pygame.K_a:
+                    # Add a new agent
+                    add_agent(sim_state, social_graph, bounds)
+                elif event.key == pygame.K_d:
+                    # Remove an agent
+                    remove_agent(sim_state, social_graph, bounds)
+                elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                    # Add multiple agents (5 at a time)
+                    for _ in range(5):
+                        add_agent(sim_state, social_graph, bounds)
+                elif event.key == pygame.K_MINUS:
+                    # Remove multiple agents (5 at a time)
+                    for _ in range(5):
+                        if len(current_agents) > 0:
+                            remove_agent(sim_state, social_graph, bounds)
         
         # Handle mouse events for the social graph
         mouse_pos = pygame.mouse.get_pos()
@@ -333,13 +441,17 @@ def main():
         
         # Draw UI text
         info_texts = [
-            f"Social Graph - {NUM_AGENTS} Fully Connected Agents",
+            f"Social Graph - {len(current_agents)} Fully Connected Agents",
             "Controls:",
             "  Mouse Wheel: Zoom in/out",
             "  Left Click + Drag: Pan view or drag nodes",
             "  Space: Reset view",
             "  R: Rebuild graph",
             "  P: Toggle profiler",
+            "  A: Add 1 agent",
+            "  D: Remove 1 agent",
+            "  +: Add 5 agents",
+            "  -: Remove 5 agents",
             "  ESC: Exit",
             f"Nodes: {social_graph.count}",
             f"Edges: {len(social_graph.edges)}",
