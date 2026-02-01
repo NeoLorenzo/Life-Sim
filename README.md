@@ -695,6 +695,49 @@ rel.add_modifier("New Friendship", 30, decay=5.0)  # Decays over time
 
 </details>
 
+<details>
+<summary><strong>📅 events.py - Event System</strong></summary>
+
+The `events.py` module manages the monthly event system, handling triggers, user choices, and effect application.
+
+### Data Contract
+- **Inputs**: `SimState` and `config.json` event definitions
+- **Outputs**: `EventInstance` objects for the UI, state mutations upon resolution
+- **Side Effects**: Modifies agent stats, relationships, flags, and history
+
+<details>
+<summary><strong>Core Components</strong></summary>
+
+**`EventManager` Class**
+- **Singleton Controller**: Manages the lifecycle of events from loading to resolution.
+- **Trigger Evaluation**: Checks age, month, stats, and flags against event definitions.
+- **Deterministic RNG**: Uses a seeded random instance derived from the master seed + total months lived.
+- **Resolution Logic**: Applies complex effects (stats, flags, school subjects) based on user choices.
+
+**`Event` & `EventInstance`**
+- **Event**: Static definition loaded from config (ID, title, requirements).
+- **EventInstance**: Runtime object representing an active event waiting for input.
+
+</details>
+
+<details>
+<summary><strong>Event Mechanics</strong></summary>
+
+**Triggering Flow**
+1.  **Age Up**: Player advances the month.
+2.  **Evaluation**: `EventManager` scans valid events for the new age/month.
+3.  **Priority**: Highest priority event wins (if multiple qualify).
+4.  **Blocking**: Simulation pauses, and the UI displays the `EventModal`.
+
+**Configuration Schema**
+- **Triggers**: `min_age`, `max_age`, `month`, `required_flags`, `required_stats`.
+- **UI Types**: `single_select` (Radio) or `multi_select` (Checkbox).
+- **Constraints**: `min_selections`, `max_selections` (e.g., for Subject Selection).
+- **Effects**: Modify stats, relationships, add flags, or set special data (e.g., school subjects).
+
+</details>
+</details>
+
 </details>
 
 ## Monthly Simulation Cycle
@@ -938,6 +981,16 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - `self.current_year_data["events"]` (adds event log entry)
 **Pure**: No - modifies event history
 
+#### `EventManager.apply_resolution()`
+**Location**: `events.py`
+**Trigger**: User confirms event choice
+**State Modifications**:
+- `sim_state.player.*` (Stats, Money, Relationships based on effects)
+- `sim_state.flags` (Adds new narrative flags)
+- `sim_state.event_history` (Logs event ID)
+- `sim_state.pending_event` (Clears active event)
+**Pure**: No - modifies player state and history
+
 </details>
 
 <details>
@@ -1154,6 +1207,13 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **LogPanel**: Scrollable, word-wrapped event history with collapsible year headers
 - **APBar**: 24-segment visual representation of daily Action Point budget
 
+**`modals.py` - Event System UI**
+- **EventModal**: A specialized overlay for handling multiple-choice events.
+    - **Dynamic Layout**: Automatically adjusts height based on description length and choice count.
+    - **Selection Logic**: Supports both single-select (radio) and multi-select (checkbox) paradigms.
+    - **Validation**: Enforces `min/max` selection constraints before enabling the "Confirm" button.
+    - **Visual Feedback**: Highlights selected options and displays effect previews (if configured).
+
 **Interactive Visualizations**
 - **FamilyTreeLayout**: Layered graph with pan/zoom, node interaction, and relationship-based positioning
 - **SocialGraphLayout**: Real-time force-directed physics simulation with filtering controls
@@ -1237,6 +1297,14 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
         *   **Shared Economy:** NPCs earn monthly salaries, accumulate wealth, and pay costs exactly like the player.
         *   **Automated Routine:** NPCs possess a simulated Action Point (AP) budget. A passive routine automatically "spends" their AP on mandatory obligations (Work, School, Sleep) to maintain a valid state for future AI decision-making.
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
+*   **Formative Years Event System:**
+    *   **Monthly Triggers:** Deterministic event checks occur immediately after aging up, pausing the simulation for user input.
+    *   **Configurable Content:** Events are fully defined in `config.json`, supporting complex triggers (Age, Month, Stats, Flags).
+    *   **Flexible UI:**
+        *   **Single Choice:** Standard life scenarios (e.g., "First Words").
+        *   **Multi-Choice:** Complex selections like **IGCSE Subject Selection** (Choose 6-8 subjects).
+    *   **Effect System:** Choices can modify stats (Happiness, Health), relationships, set persistent flags, or alter deep state (e.g., enrolling in specific school subjects).
+    *   **History Tracking:** Prevents "Once per Lifetime" events from repeating and enables chain events via flags.
 
 </details>
 
@@ -2040,7 +2108,8 @@ pip install pygame numpy
     python main.py
     ```
 
-## 📋 Development Rules & Standards
+<details>
+<summary><strong>📋 Development Rules & Standards</strong></summary>
 
 This project follows strict development rules to ensure code quality, maintainability, and scientific rigor. All contributors must adhere to these standards:
 
@@ -2116,12 +2185,15 @@ All randomness is controlled by a single **master seed**. No code may call rando
 - Public functions/classes have docstrings with inputs/outputs/units/invariants and a short example.
 - Long expressions are split and named; nested logic is flattened with early returns where safe.
 
+</details>
+
 ## 📊 Profiling & Performance Optimization
 
 ### Overview
 Performance optimization in Life-Sim is driven by profiling data, not assumptions. This section covers profiling tools, performance analysis, and optimization strategies.
 
-### Profiling Tools & Methodology
+<details>
+<summary><strong>Profiling Tools & Methodology</strong></summary>
 
 #### 1. Built-in Profiling Framework
 The simulation includes comprehensive profiling capabilities:
@@ -2136,7 +2208,10 @@ The simulation includes comprehensive profiling capabilities:
 3. **Targeted Optimization**: Focus on high-impact areas
 4. **Validation**: Verify improvements with before/after comparisons
 
-### Social Graph Standalone Profiler
+</details>
+
+<details>
+<summary><strong>Social Graph Standalone Profiler</strong></summary>
 
 #### Overview
 The `social_graph_standalone.py` script demonstrates advanced profiling techniques with real-time performance monitoring.
@@ -2221,7 +2296,10 @@ SocialGraph.handle_event: 0.3ms (17.6%)
 create_fully_connected_agents: 3.1ms (6.1%)
 ```
 
-### Performance Guidelines
+</details>
+
+<details>
+<summary><strong>Performance Guidelines</strong></summary>
 
 #### Core Loop Optimization
 1. **Profile First**: Always measure before optimizing
@@ -2241,6 +2319,8 @@ create_fully_connected_agents: 3.1ms (6.1%)
 - **Frame Budget**: Allocate time per system (physics: 33%, rendering: 50%, other: 17%)
 - **Memory Usage**: Monitor for leaks and excessive allocation
 - **Function Call Counts**: Identify unexpected call frequency
+
+</details>
 
 ## 🎨 Credits & Assets
 

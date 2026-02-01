@@ -522,6 +522,11 @@ class SimState:
         
         self.history = []
         
+        # Event System
+        self.pending_event = None  # Active event instance
+        self.event_history = []     # IDs of past events
+        self.flags = set()          # String flags for conditional logic
+        
         # --- Narrative Generation (Restored) ---
         # Generate Narrative Birth Message
         birth_month_name = constants.MONTHS[self.month_index]

@@ -1,3 +1,4 @@
+# life_sim/simulation/social.py
 """
 Social Simulation Module.
 Defines data structures for Relationships and Modifiers.

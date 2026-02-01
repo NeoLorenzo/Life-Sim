@@ -16,6 +16,7 @@ import numpy as np
 from life_sim import constants, logging_setup
 from life_sim.simulation.state import SimState
 from life_sim.simulation import logic
+from life_sim.simulation.events import EventManager
 from life_sim.rendering.renderer import Renderer
 
 def load_config():
@@ -44,6 +45,7 @@ def main():
     renderer = None
     try:
         sim_state = SimState(config)
+        event_manager = EventManager(config)
         renderer = Renderer()
         clock = pygame.time.Clock()
         
@@ -61,8 +63,25 @@ def main():
                 
                 if action_id:
                     logger.info(f"Action triggered: {action_id}")
-                    if action_id == "AGE_UP":
+                    
+                    # Handle tuple actions (like event resolution)
+                    if isinstance(action_id, tuple) and action_id[0] == "RESOLVE_EVENT":
+                        # Extract event and selected choices
+                        selected_choice_indices = action_id[1]
+                        event = sim_state.pending_event
+                        event_manager.apply_resolution(sim_state, event, selected_choice_indices)
+                        logger.info(f"Event resolved, player must click Age Up again to proceed")
+                    elif action_id == "AGE_UP":
+                        # First: Advance time
                         logic.process_turn(sim_state)
+                        
+                        # Second: Check if player is alive
+                        if sim_state.player.is_alive:
+                            # Third: Check for events after time advancement
+                            event = event_manager.evaluate_month(sim_state)
+                            if event:
+                                sim_state.pending_event = event
+                                logger.info(f"Event '{event.id}' pending - turn processing paused")
                     elif action_id == "FIND_JOB":
                         logic.find_job(sim_state)
                     elif action_id == "WORK":

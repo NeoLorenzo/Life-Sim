@@ -10,6 +10,7 @@ from .. import constants
 from .ui import Button, LogPanel, APBar
 from .family_tree import FamilyTreeLayout
 from .social_graph import SocialGraphLayout
+from .modals import EventModal
 
 class Renderer:
     """
@@ -44,6 +45,7 @@ class Renderer:
         )
         
         self.viewing_agent = None # None, or an Agent object
+        self.event_modal = None  # EventModal instance when event is active
         
         # Family Tree State
         self.viewing_family_tree_agent = None 
@@ -158,6 +160,14 @@ class Renderer:
         """
         Processes input events.
         """
+        # 0. Check Event Modal (Highest Priority - blocks all other UI)
+        if sim_state and sim_state.pending_event and self.event_modal:
+            modal_result = self.event_modal.handle_event(event)
+            if modal_result == "CONFIRM_EVENT":
+                # Return special action with selected choice data
+                return ("RESOLVE_EVENT", self.event_modal.selected_choices)
+            return None  # Block all other UI when event is pending
+        
         # 0d. Check Grade Tooltip Zones (Left Panel)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for rect, subject_name in self.tooltip_zones:
@@ -401,6 +411,27 @@ class Renderer:
             self.log_panel.draw(self.screen)
             
         self._draw_right_panel(sim_state)
+        
+        # Draw event modal on top of everything if active
+        if sim_state.pending_event:
+            if self.event_modal is None:
+                # Create modal with centered rectangle
+                modal_width = 600
+                # Double height for IGCSE event to accommodate all subject choices
+                if sim_state.pending_event.id == "EVT_IGCSE_SUBJECTS":
+                    modal_height = 800  # Double the regular height
+                else:
+                    modal_height = 400  # Regular height
+                
+                modal_x = (constants.SCREEN_WIDTH - modal_width) // 2
+                modal_y = (constants.SCREEN_HEIGHT - modal_height) // 2
+                modal_rect = pygame.Rect(modal_x, modal_y, modal_width, modal_height)
+                self.event_modal = EventModal(modal_rect, sim_state.pending_event)
+            
+            self.event_modal.draw(self.screen)
+        else:
+            # Clear modal when no pending event
+            self.event_modal = None
         
         # Draw tooltips on top of everything
         self._draw_grade_tooltips(sim_state)

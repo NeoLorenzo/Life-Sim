@@ -1,7 +1,7 @@
 {
     "seed": 42,
     "logging": {
-        "level": "INFO",
+        "level": "DEBUG",
         "save_to_file": true
     },
     "reproduction": {
@@ -14,7 +14,7 @@
         "cousin_prob_base": 0.5
     },
     "agent": {
-        "initial_age": 0,
+        "initial_age": 14,
         "initial_health": 100,
         "initial_happiness": 100,
         "iq_mean": 100,
@@ -71,6 +71,138 @@
             {"title": "Barista", "salary": 22000},
             {"title": "Teacher", "salary": 45000},
             {"title": "Software Engineer", "salary": 90000}
+        ]
+    },
+    "events": {
+        "definitions": [
+            {
+                "id": "EVT_TEST_01",
+                "title": "Test Event",
+                "description": "This is a test.",
+                "trigger": {
+                    "min_age": 0,
+                    "max_age": 100
+                },
+                "ui_type": "single_select",
+                "once_per_lifetime": true,
+                "choices": [
+                    {
+                        "text": "Option A",
+                        "effects": {
+                            "stats": {
+                                "happiness": 10,
+                                "health": -5
+                            }
+                        }
+                    },
+                    {
+                        "text": "Option B",
+                        "effects": {
+                            "stats": {
+                                "happiness": -10,
+                                "health": 10
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "EVT_IGCSE_SUBJECTS",
+                "title": "IGCSE Subject Selection",
+                "description": "Choose your IGCSE subjects. You must select between 6 and 8 subjects.",
+                "trigger": {
+                    "min_age": 14,
+                    "max_age": 15
+                },
+                "ui_type": "multi_select",
+                "ui_config": {
+                    "min_selections": 6,
+                    "max_selections": 8
+                },
+                "once_per_lifetime": true,
+                "choices": [
+                    {
+                        "text": "Mathematics",
+                        "effects": {
+                            "stats": {
+                                "happiness": -5
+                            }
+                        }
+                    },
+                    {
+                        "text": "Physics",
+                        "effects": {
+                            "stats": {
+                                "happiness": -3
+                            }
+                        }
+                    },
+                    {
+                        "text": "Chemistry",
+                        "effects": {
+                            "stats": {
+                                "happiness": -3
+                            }
+                        }
+                    },
+                    {
+                        "text": "Biology",
+                        "effects": {
+                            "stats": {
+                                "happiness": -2
+                            }
+                        }
+                    },
+                    {
+                        "text": "English Language",
+                        "effects": {
+                            "stats": {
+                                "happiness": -1
+                            }
+                        }
+                    },
+                    {
+                        "text": "History",
+                        "effects": {
+                            "stats": {
+                                "happiness": 2
+                            }
+                        }
+                    },
+                    {
+                        "text": "Geography",
+                        "effects": {
+                            "stats": {
+                                "happiness": 2
+                            }
+                        }
+                    },
+                    {
+                        "text": "Art & Design",
+                        "effects": {
+                            "stats": {
+                                "happiness": 5
+                            }
+                        }
+                    },
+                    {
+                        "text": "Computer Science",
+                        "effects": {
+                            "stats": {
+                                "happiness": 3
+                            }
+                        }
+                    },
+                    {
+                        "text": "Business Studies",
+                        "effects": {
+                            "stats": {
+                                "happiness": 4
+                            }
+                        }
+                    }
+                ]
+            }
         ]
     },
     "education": {
