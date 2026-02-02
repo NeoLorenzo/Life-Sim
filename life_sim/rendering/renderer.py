@@ -665,7 +665,7 @@ class Renderer:
                 # Color Logic
                 bar_col = constants.COLOR_ACCENT
                 # Check if this is a neuroticism-related stat
-                is_neuro = (name == "Neuroticism" or name in agent.personality.get("Neuroticism", {}))
+                is_neuro = (name == "Neuroticism" or (agent.personality and name in agent.personality.get("Neuroticism", {})))
                 
                 if is_neuro:
                     if value > (max_val * 0.75): bar_col = constants.COLOR_LOG_NEGATIVE
@@ -709,28 +709,49 @@ class Renderer:
                 
                 draw_card_at(x, y, attr, val, max_v)
                 y += card_h + gap_y
-            
+        
             y += 15 # Gap between groups
             col_y_offsets[col_idx] = y
 
         # --- Execute Layout ---
         
-        # Column 1: Vitals, Physical, Hidden
-        # Added "Money" to Vitals for verification
-        draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-        draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
-        draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
-        
-        # Column 2: Openness & Conscientiousness
-        draw_group(1, "Openness", list(agent.personality["Openness"].keys()), is_personality=True)
-        draw_group(1, "Conscientiousness", list(agent.personality["Conscientiousness"].keys()), is_personality=True)
-        
-        # Column 3: Extraversion & Agreeableness
-        draw_group(2, "Extraversion", list(agent.personality["Extraversion"].keys()), is_personality=True)
-        draw_group(2, "Agreeableness", list(agent.personality["Agreeableness"].keys()), is_personality=True)
-        
-        # Column 4: Neuroticism
-        draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
+        # Check if agent is an infant (age < 3)
+        if agent.age < 3:
+            # Infant Layout: Vitals + Temperament
+            # Column 1: Vitals, Physical, Hidden
+            draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
+            
+            # Columns 1-3: Temperament (3x3 grid layout)
+            temperament_traits = list(agent.temperament.keys())
+            for i in range(3):  # 3 columns
+                start_idx = i * 3
+                end_idx = start_idx + 3
+                col_traits = temperament_traits[start_idx:end_idx]
+                
+                # Draw temperament header for first column only
+                title = "Temperament" if i == 0 else None
+                draw_group(i + 1, title, col_traits)
+                
+        else:
+            # Adult Layout: Vitals + Big 5 Personality
+            # Column 1: Vitals, Physical, Hidden
+            # Added "Money" to Vitals for verification
+            draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
+            
+            # Column 2: Openness & Conscientiousness
+            draw_group(1, "Openness", list(agent.personality["Openness"].keys()), is_personality=True)
+            draw_group(1, "Conscientiousness", list(agent.personality["Conscientiousness"].keys()), is_personality=True)
+            
+            # Column 3: Extraversion & Agreeableness
+            draw_group(2, "Extraversion", list(agent.personality["Extraversion"].keys()), is_personality=True)
+            draw_group(2, "Agreeableness", list(agent.personality["Agreeableness"].keys()), is_personality=True)
+            
+            # Column 4: Neuroticism
+            draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
 
     def _draw_dashed_rect(self, surface, color, rect, width=2, dash_len=5):
         """Helper to draw a dashed rectangle."""

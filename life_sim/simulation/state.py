@@ -126,9 +126,21 @@ class Agent:
         self._recalculate_hormones()
         self._recalculate_physique()
         
-        # Personality (Big 5 Model)
-        # Structure: { "Main": { "Facet": Value, ... }, ... }
-        self.personality = self._generate_big_five(attr_config)
+        # Temperament System
+        if self.age < 3:
+            # Young children have temperament traits, no Big 5 personality yet
+            self.temperament = self._generate_infant_temperament()
+            self.plasticity = 1.0
+            self.is_personality_locked = False
+            self.personality = None
+        else:
+            # Age 3+ have Big 5 personality, no temperament
+            self.temperament = None
+            self.plasticity = 0.0
+            self.is_personality_locked = True
+            # Personality (Big 5 Model)
+            # Structure: { "Main": { "Facet": Value, ... }, ... }
+            self.personality = self._generate_big_five(attr_config)
         
         # --- Academic Subjects ---
         self.subjects = self._initialize_subjects()
@@ -260,13 +272,14 @@ class Agent:
         if name == "Genetic Libido": return self._genetic_libido_peak
         
         # Big 5 (Sums)
-        if name in self.personality:
+        if self.personality and name in self.personality:
             return self.get_personality_sum(name)
             
         # Big 5 (Facets) - Search inside the nested dicts
-        for trait, facets in self.personality.items():
-            if name in facets:
-                return facets[name]
+        if self.personality:
+            for trait, facets in self.personality.items():
+                if name in facets:
+                    return facets[name]
 
         # Hidden/Other
         if name == "Karma": return self.karma
@@ -276,6 +289,10 @@ class Agent:
         # Academic Subjects
         if name in self.subjects:
             return self.subjects[name]["current_grade"]
+        
+        # Temperament (for infants)
+        if self.temperament and name in self.temperament:
+            return self.temperament[name]
         
         return 0
 
@@ -340,17 +357,138 @@ class Agent:
             }
         }
 
+    def _generate_infant_temperament(self):
+        """Generates temperament traits for infants (age < 3)."""
+        temperament = {}
+        
+        # Simplified mapping from parent Big 5 traits to child temperament traits
+        # This is a basic mapping - could be made more sophisticated
+        parent_trait_mapping = {
+            "Activity": ["Extraversion"],
+            "Regularity": ["Conscientiousness"], 
+            "Approach_Withdrawal": ["Extraversion", "Neuroticism"],
+            "Adaptability": ["Openness", "Conscientiousness"],
+            "Threshold": ["Neuroticism"],
+            "Intensity": ["Extraversion", "Neuroticism"],
+            "Mood": ["Neuroticism"],
+            "Distractibility": ["Openness", "Neuroticism"],
+            "Persistence": ["Conscientiousness"]
+        }
+        
+        for trait in constants.TEMPERAMENT_TRAITS:
+            if self.parents:
+                # Child has parents - blend genetic and random factors
+                father, mother = self.parents
+                
+                # Get relevant parent Big 5 traits
+                parent_traits = parent_trait_mapping.get(trait, [])
+                parental_values = []
+                
+                for parent_trait in parent_traits:
+                    if father.personality and parent_trait in father.personality:
+                        father_sum = sum(father.personality[parent_trait].values())
+                        parental_values.append(father_sum / 6.0)  # Average of 6 facets (0-20 scale)
+                    
+                    if mother.personality and parent_trait in mother.personality:
+                        mother_sum = sum(mother.personality[parent_trait].values())
+                        parental_values.append(mother_sum / 6.0)  # Average of 6 facets (0-20 scale)
+                
+                # Calculate parental average (convert to 0-100 scale)
+                if parental_values:
+                    parental_avg = sum(parental_values) / len(parental_values) * 5.0  # Convert 0-20 to 0-100
+                else:
+                    parental_avg = 50.0
+                
+                # Generate random value with Gaussian distribution
+                random_val = random.gauss(50, 15)
+                random_val = max(0, min(100, random_val))
+                
+                # Blend parental and random values (70% genetic, 30% random)
+                final_value = (parental_avg * 0.7) + (random_val * 0.3)
+                final_value = max(0, min(100, final_value))
+                
+            else:
+                # No parents - pure random generation
+                final_value = random.gauss(50, 15)
+                final_value = max(0, min(100, final_value))
+            
+            temperament[trait] = round(final_value, 1)
+        
+        return temperament
+
+    def crystallize_personality(self):
+        """Converts temperament traits to Big 5 personality facets."""
+        if not self.temperament:
+            return
+        
+        # Initialize personality structure
+        attr_config = {}  # Use default config for random generation
+        personality = self._generate_big_five(attr_config)
+        
+        # Mapping from temperament traits to Big 5 facets
+        # Convert 0-100 temperament score to 0-20 facet score
+        temperament_to_facet_mapping = {
+            # Activity -> Extraversion['Activity']
+            "Activity": ("Extraversion", "Activity"),
+            # Regularity -> Conscientiousness['Order'] 
+            "Regularity": ("Conscientiousness", "Order"),
+            # Mood -> Extraversion['Positive Emotions']
+            "Mood": ("Extraversion", "Positive Emotions"),
+            # Adaptability -> Agreeableness['Compliance']
+            "Adaptability": ("Agreeableness", "Compliance"),
+            # Threshold -> Neuroticism['Vulnerability'] (Inverse mapping)
+            "Threshold": ("Neuroticism", "Vulnerability"),
+            # Additional mappings for more comprehensive conversion
+            "Intensity": ("Extraversion", "Excitement"),
+            "Persistence": ("Conscientiousness", "Self-Discipline"),
+            "Approach_Withdrawal": ("Extraversion", "Warmth"),
+            "Distractibility": ("Openness", "Ideas")
+        }
+        
+        # Apply temperament mappings to personality facets
+        for temp_trait, (big5_trait, facet) in temperament_to_facet_mapping.items():
+            if temp_trait in self.temperament:
+                temp_value = self.temperament[temp_trait]
+                
+                # Convert 0-100 to 0-20 scale
+                if temp_trait == "Threshold":
+                    # Inverse mapping: Low Threshold = High Vulnerability
+                    # Threshold 0-100 -> Vulnerability 20-0
+                    facet_value = 20 - int((temp_value / 100.0) * 20)
+                else:
+                    # Direct mapping: 0-100 -> 0-20
+                    facet_value = int((temp_value / 100.0) * 20)
+                
+                # Clamp to valid range
+                facet_value = max(1, min(20, facet_value))
+                
+                # Apply to personality
+                personality[big5_trait][facet] = facet_value
+        
+        # Set the new personality and clear temperament
+        self.personality = personality
+        self.temperament = None
+        self.is_personality_locked = True
+        self.plasticity = 0.0
+
     def get_personality_sum(self, trait):
         """Returns the sum (0-120) of a main trait."""
+        if not self.personality:
+            return 50  # Neutral fallback for young children without personality
         return sum(self.personality.get(trait, {}).values())
 
     def _initialize_subjects(self):
         """Initialize academic subjects with natural aptitude based on IQ and personality."""
         subjects = {}
         
-        # Get personality facets for calculations
-        openness = self.personality.get("Openness", {})
-        conscientiousness = self.personality.get("Conscientiousness", {})
+        # Get personality facets for calculations (handle None for young children)
+        if self.personality:
+            openness = self.personality.get("Openness", {})
+            conscientiousness = self.personality.get("Conscientiousness", {})
+        else:
+            # Default values for young children without Big 5 personality
+            openness = {"Ideas": 10, "Aesthetics": 10}
+            conscientiousness = {"Competence": 10}
         
         # Normalize IQ to 0-100 scale for calculations
         iq_normalized = (self.iq - 50) / 130.0 * 100  # IQ range 50-180 mapped to 0-100
@@ -555,14 +693,27 @@ class SimState:
             phys_txt = f"{pronoun} is a healthy size, weighing {self.player.weight_kg}kg."
 
         # 3. Personality/Behavior Reaction
-        # Map old attributes to new Big 5 Facets (Range 0-20)
-        if self.player.personality['Neuroticism']['Angry Hostility'] > 15:
-            pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
-        elif self.player.personality['Conscientiousness']['Self-Discipline'] > 15:
-            pers_txt = f"{pronoun} is unusually calm, observing the room silently."
-        elif self.player.iq > 120:
-            pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
+        # Handle young children with temperament vs older children with personality
+        if self.player.age < 3 and self.player.temperament:
+            # Use temperament for babies
+            if self.player.temperament.get("Intensity", 50) > 75:
+                pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
+            elif self.player.temperament.get("Regularity", 50) > 75:
+                pers_txt = f"{pronoun} is unusually calm, observing the room silently."
+            else:
+                pers_txt = f"{pronoun} is crying softly, looking for warmth."
+        elif self.player.personality:
+            # Use personality for older children
+            if self.player.personality['Neuroticism']['Angry Hostility'] > 15:
+                pers_txt = f"{pronoun} is screaming uncontrollably and thrashing around!"
+            elif self.player.personality['Conscientiousness']['Self-Discipline'] > 15:
+                pers_txt = f"{pronoun} is unusually calm, observing the room silently."
+            elif self.player.iq > 120:
+                pers_txt = f"{pronoun} seems to be focusing intensely on the doctor's face. Very alert."
+            else:
+                pers_txt = f"{pronoun} is crying softly, looking for warmth."
         else:
+            # Fallback
             pers_txt = f"{pronoun} is crying softly, looking for warmth."
 
         # 4. Luck/Karma Flavor
@@ -620,7 +771,7 @@ class SimState:
             # 3. The Mother's Moment
             if m.age < constants.MOTHER_YOUNG_AGE:
                 mom_txt = f"Your mother, {m.first_name} ({m.age}), looks terrified, clutching the bedsheets like she wants to run away."
-            elif m.personality['Openness']['Fantasy'] > 18 and m.personality['Neuroticism']['Anxiety'] > 15:
+            elif m.personality and m.personality.get('Openness', {}).get('Fantasy', 0) > 18 and m.personality.get('Neuroticism', {}).get('Anxiety', 0) > 15:
                 mom_txt = f"Your mother, {m.first_name}, is currently screaming at a nurse for trying to vaccinate you, insisting on a 'natural immunity' ritual instead."
             elif m.health < 40:
                 mom_txt = f"Your mother, {m.first_name}, is pale and trembling, too weak to hold you for more than a moment."
@@ -632,13 +783,13 @@ class SimState:
             # 4. The Father's Action
             if f.age > m.age + 20:
                 dad_txt = f"Your father, {f.first_name} ({f.age}), is leaning on his cane, looking proud but winded. A nurse mistakenly asks if he's the grandfather."
-            elif f.personality['Neuroticism']['Anxiety'] > 18 and f.personality['Openness']['Ideas'] > 15:
+            elif f.personality and f.personality.get('Neuroticism', {}).get('Anxiety', 0) > 18 and f.personality.get('Openness', {}).get('Ideas', 0) > 15:
                 dad_txt = f"Your father, {f.first_name}, is inspecting your fingers and toes, muttering about government tracking chips."
-            elif f.personality['Neuroticism']['Vulnerability'] > 18:
+            elif f.personality and f.personality.get('Neuroticism', {}).get('Vulnerability', 0) > 18:
                 dad_txt = f"Your father, {f.first_name}, is currently unconscious on the floor after fainting at the sight of the umbilical cord."
             elif f.job and f.job['title'] == "Software Engineer":
                 dad_txt = f"Your father, {f.first_name}, is already typing your birth weight into a spreadsheet on his laptop."
-            elif f.personality['Agreeableness']['Altruism'] > 18:
+            elif f.personality and f.personality.get('Agreeableness', {}).get('Altruism', 0) > 18:
                 dad_txt = f"Your father, {f.first_name}, has somehow managed to order pizza for the entire maternity ward."
             else:
                 dad_txt = f"Your father, {f.first_name} ({f.age}), stands awkwardly by the bedside, afraid he might break you if he touches you."

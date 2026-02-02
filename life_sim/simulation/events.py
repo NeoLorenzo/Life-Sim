@@ -128,7 +128,27 @@ class EventManager:
         for selected_choice in selected_choices:
             effects = selected_choice.get("effects", {})
             stats_effects = effects.get("stats", {})
+            temperament_effects = effects.get("temperament", {})
             
+            # Apply temperament effects (for infants)
+            if temperament_effects and sim_state.player.temperament:
+                player = sim_state.player
+                plasticity = player.plasticity
+                
+                for trait_name, trait_change in temperament_effects.items():
+                    if trait_name in player.temperament:
+                        current_value = player.temperament[trait_name]
+                        # Apply plasticity multiplier and clamp to 0-100 range
+                        new_value = current_value + (trait_change * plasticity)
+                        new_value = max(0, min(100, new_value))
+                        
+                        player.temperament[trait_name] = round(new_value, 1)
+                        logger.info(f"Player temperament {trait_name}: {current_value} -> {new_value} (change: {trait_change * plasticity:+.1f})")
+                        print(f"Temperament Change: {trait_name} {trait_change * plasticity:+.1f}")
+                    else:
+                        logger.warning(f"Unknown temperament trait: {trait_name}")
+            
+            # Apply regular stats effects
             if stats_effects:
                 player = sim_state.player
                 for stat_name, stat_change in stats_effects.items():

@@ -30,6 +30,11 @@ def get_affinity_breakdown(agent_a, agent_b):
         Tuple of (final_score: int, breakdown: list[tuple[str, float]]).
         breakdown contains one entry per effect that exceeded AFFINITY_LABEL_THRESHOLD.
     """
+    # Check if either agent is an infant (has temperament but no personality)
+    if agent_a.temperament is not None or agent_b.temperament is not None:
+        # Infants have neutral affinity - they don't form complex relationships yet
+        return 0, []
+    
     breakdown = []
     score = 0.0
 
@@ -125,6 +130,11 @@ def calculate_affinity(agent_a, agent_b):
     Returns:
         Integer compatibility score clamped to [AFFINITY_SCORE_MIN, AFFINITY_SCORE_MAX].
     """
+    # Check if either agent is an infant (has temperament but no personality)
+    if agent_a.temperament is not None or agent_b.temperament is not None:
+        # Infants have neutral affinity - they don't form complex relationships yet
+        return 0
+    
     score = 0.0
 
     # Actor effects

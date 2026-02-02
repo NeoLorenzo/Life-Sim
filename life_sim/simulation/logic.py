@@ -65,13 +65,22 @@ def _process_agent_monthly(sim_state, agent):
             sim_state.start_new_year(agent.age)
             sim_state.add_log("Happy Birthday!", constants.COLOR_ACCENT)
         
+        # Temperament to Personality Transition (Age 3)
+        # Check the new age after birthday
+        new_age = agent.age_months // 12
+        if new_age == 3 and agent.is_personality_locked == False:
+            # Crystallize temperament into permanent personality
+            agent.crystallize_personality()
+            if agent.is_player:
+                sim_state.add_log("Your temperament has crystallized into your permanent personality.", constants.COLOR_ACCENT)
+        
         # Annual Biological Updates
         old_cap = agent.max_health
         agent._recalculate_max_health()
         agent._recalculate_hormones()
         
         # Natural Entropy (Wear & Tear for Seniors)
-        if agent.age > 50:
+        if new_age > 50:
             damage = random.randint(0, 3)
             agent.health -= damage
 
@@ -88,12 +97,20 @@ def _process_agent_monthly(sim_state, agent):
     # C. Physique Update
     agent._recalculate_physique()
     
-    # D. Time Management (AP Reset)
+    # D. Plasticity Decay (for young children)
+    if agent.age < 3 and agent.age in constants.PLASTICITY_DECAY:
+        target_plasticity = constants.PLASTICITY_DECAY[agent.age]
+        if agent.plasticity != target_plasticity:
+            agent.plasticity = target_plasticity
+            if agent.is_player:
+                sim_state.add_log(f"Plasticity updated to {target_plasticity}", constants.COLOR_TEXT_DIM)
+    
+    # E. Time Management (AP Reset)
     agent.ap_used = 0
     time_conf = sim_state.config.get("time_management", {})
     agent._recalculate_ap_needs(time_conf)
     
-    # E. Economics (Salary)
+    # F. Economics (Salary)
     if agent.job:
         monthly_salary = int(agent.job['salary'] / 12)
         agent.money += monthly_salary

@@ -143,3 +143,13 @@ DOCTOR_RECOVERY_MAX = 20        # Maximum health recovery from doctor
 
 # Reproduction Ages
 MOTHER_YOUNG_AGE = 20           # Age threshold for "young mother" description
+
+# ---------------------------------------------------------------------------
+# Temperament System
+# ---------------------------------------------------------------------------
+TEMPERAMENT_TRAITS = ["Activity", "Regularity", "Approach_Withdrawal", "Adaptability", 
+                      "Threshold", "Intensity", "Mood", "Distractibility", "Persistence"]
+
+PLASTICITY_DECAY = {0: 1.0, 1: 0.6, 2: 0.3}
+
+TEMPERAMENT_DEFAULT_VALUE = 50.0

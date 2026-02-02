@@ -760,6 +760,8 @@ All agents (Player and NPCs) process the same monthly sequence:
 **A. Biological Updates**
 - Age increment (monthly aging)
 - Birthday check: annual biological recalculation (health capacity, hormones)
+- **Temperament-to-Personality Transition:** At age 3, temperament crystallizes into permanent Big 5 personality
+- **Plasticity Decay:** Infants (0-2) experience age-based plasticity reduction (100% → 60% → 30%)
 - Natural entropy: seniors (50+) experience random health decay
 
 **B. Physical Development**
@@ -1258,7 +1260,7 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 
 </details>
 
-## 🚀 Current Features (MVP 0.5)
+## 🚀 Current Features (MVP 0.1)
 
 <details>
 <summary><strong>Core Simulation & Architecture</strong></summary>
@@ -1303,7 +1305,15 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
     *   **Flexible UI:**
         *   **Single Choice:** Standard life scenarios (e.g., "First Words").
         *   **Multi-Choice:** Complex selections like **IGCSE Subject Selection** (Choose 6-8 subjects).
-    *   **Effect System:** Choices can modify stats (Happiness, Health), relationships, set persistent flags, or alter deep state (e.g., enrolling in specific school subjects).
+        *   **Infant-Specific Events:** Age-targeted events with temperament effects (e.g., "Strange Noise" for ages 0-2)
+    *   **Enhanced Effect System:** 
+        *   **Stats Effects:** Traditional modifications to Happiness, Health, etc.
+        *   **Temperament Effects:** Age 0-2 events can modify infant temperament traits directly
+        *   **Plasticity Scaling:** All temperament effects are multiplied by the agent's current plasticity value (100% → 60% → 30% → 0%)
+        *   **Range Clamping:** Temperament values automatically clamped to 0-100 range with decimal precision
+        *   **Developmental Impact:** Early choices shape personality formation through the crystallization process
+        *   **Logging Integration:** Detailed logging of temperament changes with before/after values
+        *   **Example Event:** "Strange Noise" (ages 0-2) offers choices like "Cry loudly" (+Intensity, -Mood) or "Investigate" (+Approach_Withdrawal)
     *   **History Tracking:** Prevents "Once per Lifetime" events from repeating and enables chain events via flags.
 
 </details>
@@ -1409,6 +1419,65 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
             *   *Impulsiveness:* Inability to control cravings and urges.
             *   *Vulnerability:* Inability to cope with stress; becoming dependent, hopeless, or panicked in difficult situations.
     *   **Hidden:** Karma, Luck, Sexuality (Hetero/Homo/Bi).
+*   **Infant Temperament System:**
+    *   **Developmental Psychology:** The simulation implements a scientifically-grounded temperament system for infants (age 0-2) that transitions to the Big 5 personality model at age 3.
+    *   **Age-Based Architecture:**
+        *   **Infants (0-2 years):** Possess **temperament traits** (9 traits, 0-100 scale) that represent early behavioral tendencies.
+        *   **Children (3+ years):** Develop **Big 5 personality** (30 facets, 0-20 scale) that becomes their permanent psychological profile.
+        *   **Age 3 Transition:** Temperament crystallizes into Big 5 personality through a sophisticated mapping process.
+    *   **Temperament Traits (0-100 Scale):**
+        *   **Activity:** General energy level and pace of behavior
+        *   **Regularity:** Consistency of biological functions (eating, sleeping)
+        *   **Approach_Withdrawal:** Tendency to approach vs. withdraw from new situations
+        *   **Adaptability:** Ease of adjusting to environmental changes
+        *   **Threshold:** Sensitivity to stimulation (inverse mapping to Neuroticism)
+        *   **Intensity:** Strength of emotional responses
+        *   **Mood:** General emotional disposition (positive/negative)
+        *   **Distractibility:** Ease of attention focus
+        *   **Persistence:** Ability to maintain effort despite difficulty
+    *   **Genetic Inheritance:**
+        *   **Parental Blending:** Infant temperament combines 70% parental Big 5 traits with 30% random variation
+        *   **Trait Mapping:** Specific temperament traits map to parental Big 5 traits (e.g., Activity → Extraversion)
+        *   **Pure Random:** Infants without parents receive purely random temperament (Gaussian distribution)
+        *   **Default Values:** Initial temperament traits start at `TEMPERAMENT_DEFAULT_VALUE` (50.0) before genetic blending
+    *   **Plasticity Decay System:**
+        *   **Age 0:** 100% plasticity (maximum susceptibility to change)
+        *   **Age 1:** 60% plasticity (moderate susceptibility)
+        *   **Age 2:** 30% plasticity (low susceptibility)
+        *   **Age 3+:** 0% plasticity (personality locked)
+    *   **Temperament-to-Personality Crystallization:**
+        *   **Comprehensive Mapping System:** Direct conversion from temperament traits to Big 5 facets
+        *   **Scale Conversion:** 0-100 temperament → 0-20 facet values
+        *   **Inverse Mapping:** Low Threshold → High Neuroticism Vulnerability (Threshold 0-100 → Vulnerability 20-0)
+        *   **Specific Trait Mappings:**
+            *   **Activity** → Extraversion['Activity'] (Energy level)
+            *   **Regularity** → Conscientiousness['Order'] (Organization)
+            *   **Mood** → Extraversion['Positive Emotions'] (Emotional disposition)
+            *   **Adaptability** → Agreeableness['Compliance'] (Flexibility)
+            *   **Threshold** → Neuroticism['Vulnerability'] (Sensitivity, inverse)
+            *   **Intensity** → Extraversion['Excitement'] (Emotional strength)
+            *   **Persistence** → Conscientiousness['Self-Discipline'] (Effort maintenance)
+            *   **Approach_Withdrawal** → Extraversion['Warmth'] (Social approach)
+            *   **Distractibility** → Openness['Ideas'] (Attention focus)
+        *   **State Transition:** `temperament` → None, `personality` → Big 5 structure, `plasticity` → 0.0
+    *   **Event Integration:**
+        *   **Infant-Specific Events:** Age 0-2 events can modify temperament traits directly
+        *   **Plasticity Scaling:** Event effects are multiplied by current plasticity value
+        *   **Range Clamping:** All temperament values remain within 0-100 bounds
+    *   **UI Adaptation:**
+        *   **Conditional Display:** Attributes modal shows temperament for infants, Big 5 for children
+        *   **3×3 Grid:** Infant temperament traits displayed in organized grid layout
+        *   **Seamless Transition:** UI automatically switches from temperament to personality at age 3
+    *   **Affinity System Integration:**
+        *   **Neutral Affinity:** Infants return neutral affinity scores (0) to prevent relationship errors
+        *   **Safe Access:** All systems properly handle agents without Big 5 personality
+        *   **Developmental Realism:** Infants don't form complex relationships until personality develops
+    *   **Enhanced Agent Class Methods:**
+        *   **`get_personality_sum()`**: Returns neutral fallback (50) for agents without Big 5 personality instead of 0
+        *   **`get_attr_value()`**: Enhanced to retrieve temperament values for infants, with proper trait name matching
+        *   **`_generate_infant_temperament()`**: Generates temperament traits with parental blending or pure random
+        *   **`crystallize_personality()`**: Converts temperament to Big 5 personality using comprehensive mapping system
+        *   **Age-Based Initialization**: Automatically chooses temperament vs. personality based on agent age
 *   **Derived Metrics (Physiology):**
     *   **Body Fat %:** Calculated dynamically based on Gender and Athleticism.
         *   *Formula:* `Base_BF (M:25/F:35) - (Athleticism% * 18) + Random_Variance(-3 to +5)`.
@@ -1434,7 +1503,12 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
     *   **Age Restriction:** Agents cannot apply for jobs until **Age 16**.
     *   **Income:** Salaries are distributed monthly (`Salary / 12`) during the `process_turn` phase, simulating realistic cash flow.
     *   **NPC Savings Initialization:** Upon generation, adult NPCs are assigned a starting cash balance calculated as `10% of Salary * Years Worked (Age - 18)`, simulating prior life savings.
-### Education System
+
+</details>
+
+<details>
+<summary><strong>Education System</strong></summary>
+
 *   **Comprehensive School Configuration:**
     *   **Detailed Structure:** Configurable forms per year (4 forms: A, B, C, D) with 20 students per form
     *   **Stage-Based Subjects:** Different subject lists for each educational stage:
@@ -1588,12 +1662,13 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 
 </details>
 
-<details>
-<summary><strong>🗺️ Roadmap (Planned Features)</strong></summary>
+## 🗺️ Roadmap (Planned Features)
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
-### Core Mechanics: Dynamic Action Point (AP) System
+<details>
+<summary><strong>Core Mechanics: Dynamic Action Point (AP) System</strong></summary>
+
 *   **Concept: "The Typical Day":**
     *   **Resource:** A budget of **24.0 Action Points (AP)** per turn, representing the "Average Daily Routine" for that month.
     *   **Granularity:** Supports fractional costs (e.g., 0.5 AP) for micro-tasks.
@@ -1615,13 +1690,21 @@ The following features are planned to expand the simulation depth into a compreh
     *   **The Day Bar:** A horizontal UI element showing Red (Locked), Blue (Sleep), and Green (Free) sections.
     *   **Dynamic Updates:** Clicking "Skip School" visually transforms Red segments into Green.
 
-### UX Polish & Advanced UI
+</details>
+
+<details>
+<summary><strong>UX Polish & Advanced UI</strong></summary>
+
 *   **Advanced Visualization:**
     *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
 *   **Dynamic Menus:**
     *   **Responsive Design:** Support for true full-screen resizing.
 
-### Genetics, Growth & Identity
+</details>
+
+<details>
+<summary><strong>Genetics, Growth & Identity</strong></summary>
+
 *   **Legal Identity & Transition:**
     *   **Name Changes:** Ability to visit the courthouse to legally change First or Last name (e.g., to evade a bad reputation or after marriage).
     *   **Gender Identity:** A dedicated identity tab to socially transition (Transgender/Non-Binary) independent of medical surgery. This affects pronouns in the log and relationship reactions from conservative family members.
@@ -1649,7 +1732,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Socialized Services:** Logic checking the `Country_ID`. If the agent is born in specific countries (e.g., UK, Canada, Norway), "Visit Doctor" and "University" actions are free (tax-funded). In others (USA), they incur high costs.
     *   **Royalty RNG:** In monarchies (Japan, UK, Saudi Arabia, etc.), a tiny RNG chance to be born into the Royal Family, overriding standard parents with Royal NPCs.
 
-### Social Web & Relationships
+</details>
+
+<details>
+<summary><strong>Social Web & Relationships</strong></summary>
+
 *   **Family Generation:** Procedural creation of parents, stepparents, and siblings.
 *   **Relationship Dynamics:**
     *   **Interactions:** Spend time, conversation, argue, insult, prank, rumor spreading.
@@ -1699,7 +1786,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **The Rumble:** A specific "Attack" option for Enemies. Unlike standard assaults, this is a mutual combat event.
     *   **Lethal Force:** The ability to attempt to murder an enemy directly (without a hitman). Success depends on Strength/Weapon, but carries the highest risk of prison.
 
-### Assets, Economy & Lifestyle
+</details>
+
+<details>
+<summary><strong>Assets, Economy & Lifestyle</strong></summary>
+
 *   **Real Estate & Landlord System:**
     *   **Market:** Dynamic housing market.
     *   **Ownership:** Mortgages, cash purchases, flipping.
@@ -1736,7 +1827,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Drive:** "Go for a Drive" action for owned vehicles. Increases Happiness but carries a risk of "Car Accident" events (Health damage/Lawsuits).
     *   **Play:** Specific interaction for pets (e.g., "Play with Dog") distinct from walking, essential for maintaining the Pet Relationship bar.
 
-### Education, Career & Fame
+</details>
+
+<details>
+<summary><strong>Education, Career & Fame</strong></summary>
+
 *   **Education System:**
     *   **Primary/Secondary:** Public vs. Private, study habits, extracurriculars.
     *   **Academic Authority:** Specific interactions with Teachers/Professors (Suck up, Flirt, Insult). Poor relationships lead to bad grades or suspension.
@@ -1786,7 +1881,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Side Hustles:** Adults can work "Freelance" apps (Ride Share, Food Delivery) alongside their full-time job.
     *   **Risk:** High stress accumulation and random events (e.g., "Passenger vomited in your car").
 
-### Activities, Crime & Health
+</details>
+
+<details>
+<summary><strong>Activities, Crime & Health</strong></summary>
+
 *   **Health & Wellness:**
     *   **Specific Pathology:** Instead of generic "Health Low," agents contract specific ailments (High Blood Pressure, Bunions, Cancer, Erectile Dysfunction) requiring specific treatments.
     *   **Medical:** Plastic surgery, fertility, gender reassignment.
@@ -1851,7 +1950,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Political Asylum:** If the agent lives in a country with low "Stability" or is being persecuted, they can apply for Asylum in another country (bypassing financial requirements).
     *   **Deportation:** If an agent emigrates illegally or commits crimes on a Visa, they are forcibly returned to their spawn country.
 
-### Legacy & Meta-Game
+</details>
+
+<details>
+<summary><strong>Legacy & Meta-Game</strong></summary>
+
 *   **End of Life Protocols:**
     *   **Funeral Planning:** Selecting method (Burial vs. Cremation), casket type, and location.
     *   **Attendees:** Logic determining who shows up based on Relationship stats (e.g., "Your ungrateful son didn't attend").
@@ -1868,7 +1971,11 @@ The following features are planned to expand the simulation depth into a compreh
     *   **God Mode (NPC Editor):** An interface to edit the stats of existing NPCs (e.g., lowering a Boss's "Professionalism" or a Spouse's "Willpower").
     *   **Surrender:** A menu option to end the current life immediately (Suicide), triggering the End of Life sequence without waiting for natural death.
 
-### Psychology, Scenarios & Genetics
+</details>
+
+<details>
+<summary><strong>Psychology, Scenarios & Genetics</strong></summary>
+
 *   **The "Nature vs. Nurture" Architecture:**
     *   **Genotype (The Reaction Range):** At birth, agents are not assigned a static value for Big 5 traits. Instead, they are assigned a **Genetic Range** (e.g., Extraversion Potential: 8-16). This is heavily influenced by parental heritability (approx. 40-60% correlation).
     *   **Phenotype (The Realized Self):** The current, visible attribute value. It starts at the midpoint of the Genetic Range and drifts based on environmental choices and "Core Memories."
@@ -1925,7 +2032,11 @@ The following features are planned to expand the simulation depth into a compreh
         *   *Extreme Low Agreeableness:* Anti-Social Personality Disorder (Sociopathy).
     *   **Therapy:** Actions to mitigate these extremes, moving the stats back toward the mean.
 
-### Special Careers & Organizations
+</details>
+
+<details>
+<summary><strong>Special Careers & Organizations</strong></summary>
+
 *   **Royalty:**
     *   **Titles:** Baron to King/Queen.
     *   **Duties:** Public service, laws, executions.
@@ -1947,7 +2058,11 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Street Hustler:**
     *   **Streets:** Busking, panhandling, scams.
 
-### Interactive Systems & Mini-Games
+</details>
+
+<details>
+<summary><strong>Interactive Systems & Mini-Games</strong></summary>
+
 *   **Skill-Based Challenges:**
     *   **Burglary:** Maze-based stealth game.
     *   **Prison Escape:** Grid-based puzzle.
