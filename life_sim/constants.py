@@ -153,3 +153,10 @@ TEMPERAMENT_TRAITS = ["Activity", "Regularity", "Approach_Withdrawal", "Adaptabi
 PLASTICITY_DECAY = {0: 1.0, 1: 0.6, 2: 0.3}
 
 TEMPERAMENT_DEFAULT_VALUE = 50.0
+
+# ---------------------------------------------------------------------------
+# Cognitive Aptitude System
+# ---------------------------------------------------------------------------
+APTITUDES = ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"]
+APTITUDE_MIN = 0
+APTITUDE_MAX = 180

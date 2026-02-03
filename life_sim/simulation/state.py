@@ -39,12 +39,6 @@ class Agent:
         self.max_health = constants.HEALTH_PRIME_VALUE # Capacity starts at 100
         self.happiness = kwargs.get("happiness", agent_config.get("initial_happiness", 50))
         
-        # IQ Initialization (Gaussian)
-        mean = agent_config.get("iq_mean", 100)
-        sd = agent_config.get("iq_sd", 15)
-        val = int(random.gauss(mean, sd))
-        self.iq = max(50, min(180, val)) # Clamp to realistic bounds
-        
         self.looks = kwargs.get("looks", agent_config.get("initial_looks", 50))
         self.money = kwargs.get("money", agent_config.get("initial_money", 0))
         
@@ -76,6 +70,9 @@ class Agent:
         # --- Appearance & Genetics ---
         self.parents = kwargs.get("parents", None) # Tuple (Father, Mother) or None
         app_conf = agent_config.get("appearance", {})
+        
+        # Aptitudes Initialization (moved after parents are set)
+        self._init_aptitudes(agent_config)
         
         if self.parents:
             self._init_descendant(app_conf)
@@ -148,8 +145,6 @@ class Agent:
         self.religiousness = self._rand_attr(attr_config, "religiousness")
         
         # Hidden
-        self.karma = self._rand_attr(attr_config, "karma")
-        self.luck = self._rand_attr(attr_config, "luck")
         self.sexuality = random.choice(["Heterosexual", "Homosexual", "Bisexual"]) # Simplified for MVP
 
         # --- Skills ---
@@ -177,6 +172,46 @@ class Agent:
         ]
 
         self.logger.info(f"Agent initialized ({'Player' if self.is_player else 'NPC'}): {self.first_name} {self.last_name} ({self.gender}) Age {self.age}")
+        
+        # Recalculate aptitudes based on age development curves
+        self._recalculate_aptitudes()
+
+    def _init_aptitudes(self, agent_config):
+        """Initialize aptitudes with proper heritability from parents or random generation."""
+        self.aptitudes = {}
+        
+        # Get heritability standard deviation from config
+        heritability_sd = agent_config.get('aptitudes', {}).get('heritability_sd', 10)
+        
+        if self.parents is None:
+            # Lineage Head: Random generation
+            for aptitude in constants.APTITUDES:
+                val = int(random.gauss(100, 15))  # mean 100, sd 15
+                val = max(constants.APTITUDE_MIN, min(constants.APTITUDE_MAX, val))  # Clamp to bounds
+                self.aptitudes[aptitude] = {
+                    "genotype": val,
+                    "phenotype": val,
+                    "plasticity": 1.0
+                }
+        else:
+            # Descendant: Inherit from parents with variance
+            father, mother = self.parents
+            
+            for aptitude in constants.APTITUDES:
+                # Calculate mid-parent genotype
+                mid_parent = (father.aptitudes[aptitude]['genotype'] + mother.aptitudes[aptitude]['genotype']) / 2
+                
+                # Add heritability variance
+                genotype = mid_parent + random.gauss(0, heritability_sd)
+                
+                # Clamp to valid range
+                genotype = max(constants.APTITUDE_MIN, min(constants.APTITUDE_MAX, genotype))
+                
+                self.aptitudes[aptitude] = {
+                    "genotype": int(genotype),
+                    "phenotype": int(genotype),  # Set phenotype to genotype for now
+                    "plasticity": 1.0
+                }
 
     def _init_lineage_head(self, app_conf):
         """Generates traits stochastically (First Generation)."""
@@ -262,6 +297,10 @@ class Agent:
         if name == "Looks": return self.looks
         if name == "Money": return self.money
         
+        # Aptitudes
+        if name in constants.APTITUDES:
+            return self.aptitudes[name]["phenotype"]
+        
         # Physical
         if name == "Energy": return self.endurance
         if name == "Fitness": return self.athleticism
@@ -282,8 +321,6 @@ class Agent:
                     return facets[name]
 
         # Hidden/Other
-        if name == "Karma": return self.karma
-        if name == "Luck": return self.luck
         if name == "Religiousness": return self.religiousness
         
         # Academic Subjects
@@ -300,6 +337,19 @@ class Agent:
     def age(self):
         """Returns age in years (integer)."""
         return self.age_months // 12
+
+    @property
+    def iq(self):
+        """Returns the integer average of all aptitude phenotype values."""
+        if not hasattr(self, 'aptitudes') or not self.aptitudes:
+            return 100  # Fallback for agents without aptitudes
+        total = sum(apt_data["phenotype"] for apt_data in self.aptitudes.values())
+        return int(total / len(self.aptitudes))
+    
+    @iq.setter
+    def iq(self, value):
+        """Prevent direct setting of IQ - legacy compatibility only."""
+        pass  # Do nothing - IQ is now derived from aptitudes
 
     def _recalculate_max_health(self):
         """
@@ -322,6 +372,70 @@ class Agent:
         # Ensure current health never exceeds the new cap
         if self.health > self.max_health:
             self.health = self.max_health
+        
+        # Recalculate aptitudes based on age development curves
+        self._recalculate_aptitudes()
+
+    def _recalculate_aptitudes(self):
+        """Recalculate aptitude phenotypes based on age and development curves."""
+        # Safety check - if aptitudes don't exist yet, skip
+        if not hasattr(self, 'aptitudes') or not self.aptitudes:
+            return
+        # Load development curves from config (using a default if not available)
+        # For now, we'll use hardcoded curves since this is called during Agent initialization
+        # before we have access to the full config. This will be improved later.
+        development_curves = {
+            "fluid": [[0, 0.2], [10, 0.8], [20, 1.0], [60, 0.9], [90, 0.7]],
+            "crystallized": [[0, 0.1], [15, 0.6], [30, 0.9], [50, 1.0], [90, 0.95]]
+        }
+        
+        # Map aptitudes to their development curve types
+        aptitude_curves = {
+            "ANA": "fluid",      # Analytical reasoning
+            "VER": "crystallized", # Verbal abilities  
+            "SPA": "fluid",      # Spatial abilities
+            "MEM_W": "fluid",    # Working memory
+            "MEM_L": "crystallized", # Long-term memory
+            "SEC": "crystallized"  # Secondary cognitive abilities
+        }
+        
+        def interpolate_curve(curve, age):
+            """Interpolate multiplier from age-based development curve."""
+            if not curve:
+                return 1.0
+            
+            # Find the two points to interpolate between
+            for i in range(len(curve) - 1):
+                age_point, multiplier = curve[i]
+                next_age, next_multiplier = curve[i + 1]
+                
+                if age <= age_point:
+                    return multiplier
+                elif age < next_age:
+                    # Linear interpolation between points
+                    progress = (age - age_point) / (next_age - age_point)
+                    return multiplier + progress * (next_multiplier - multiplier)
+            
+            # If age is beyond the last point, return the last multiplier
+            return curve[-1][1]
+        
+        # Update each aptitude's phenotype based on development curve
+        for aptitude, data in self.aptitudes.items():
+            genotype = data["genotype"]
+            curve_type = aptitude_curves.get(aptitude, "fluid")
+            curve = development_curves.get(curve_type, [])
+            
+            # Get age multiplier
+            multiplier = interpolate_curve(curve, self.age)
+            
+            # Calculate target phenotype
+            target_phenotype = int(genotype * multiplier)
+            
+            # Clamp to valid range
+            target_phenotype = max(constants.APTITUDE_MIN, min(constants.APTITUDE_MAX, target_phenotype))
+            
+            # Update phenotype
+            self.aptitudes[aptitude]["phenotype"] = target_phenotype
 
     def _rand_attr(self, config, name):
         """Helper to get random attribute within config range."""
@@ -716,15 +830,7 @@ class SimState:
             # Fallback
             pers_txt = f"{pronoun} is crying softly, looking for warmth."
 
-        # 4. Luck/Karma Flavor
-        if self.player.luck > 90:
-            luck_txt = "A double rainbow appeared outside the hospital window just now."
-        elif self.player.luck < 20:
-            luck_txt = "The hospital power flickered right as {pronoun} was delivered."
-        else:
-            luck_txt = f"Welcome to the world, {self.player.first_name}."
-
-        # 5. Family Flavor
+        # 4. Family Flavor
         parents_txt = "You are an orphan."
         father_id = next((uid for uid, rel in self.player.relationships.items() if rel["type"] == "Father"), None)
         mother_id = next((uid for uid, rel in self.player.relationships.items() if rel["type"] == "Mother"), None)
@@ -853,8 +959,7 @@ class SimState:
                 (f"Nurse: \"It's a {self.player.gender}!\"", constants.COLOR_LOG_POSITIVE),
                 (looks_txt, constants.COLOR_TEXT),
                 (phys_txt, constants.COLOR_TEXT),
-                (pers_txt, constants.COLOR_TEXT),
-                (luck_txt, constants.COLOR_TEXT)
+                (pers_txt, constants.COLOR_TEXT)
             ],
             "expanded": True
         }

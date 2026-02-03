@@ -16,6 +16,8 @@
   - [Monthly Cycle](#monthly-simulation-cycle)
   - [State Mutation Contracts](#state-mutation-contracts)
 - [Current Features](#-current-features-mvp-05)
+- [Cognitive Aptitude System](#-cognitive-aptitude-system)
+- [Development Tools & Settings](#️-development-tools--settings)
 - [Planned Features](#-roadmap-planned-features)
 - [Design Philosophy](#-design-philosophy--abstractions)
 - [Architecture Decisions](#-key-architectural-decisions--trade-offs)
@@ -88,7 +90,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - Physical: strength, athleticism, endurance
 - Personality: Big Five model (OCEAN) with 5 main traits and 30 sub-facets
 - Hormonal curves: fertility and libido with genotype/phenotype separation
-- Hidden traits: karma, luck, sexuality
+- Hidden traits: sexuality
 
 </details>
 
@@ -1418,7 +1420,7 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
             *   *Self-Consciousness:* Sensitivity to criticism and feelings of inferiority; shyness or social anxiety.
             *   *Impulsiveness:* Inability to control cravings and urges.
             *   *Vulnerability:* Inability to cope with stress; becoming dependent, hopeless, or panicked in difficult situations.
-    *   **Hidden:** Karma, Luck, Sexuality (Hetero/Homo/Bi).
+    *   **Hidden:** Sexuality (Hetero/Homo/Bi).
 *   **Infant Temperament System:**
     *   **Developmental Psychology:** The simulation implements a scientifically-grounded temperament system for infants (age 0-2) that transitions to the Big 5 personality model at age 3.
     *   **Age-Based Architecture:**
@@ -1662,6 +1664,125 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 
 </details>
 
+## 🧠 Cognitive Aptitude System
+
+<details>
+<summary><strong>Advanced Cognitive Modeling</strong></summary>
+
+The simulation now features a sophisticated cognitive aptitude system that replaces the simple IQ attribute with a multi-dimensional model of intelligence based on established cognitive psychology research.
+
+### Core Architecture
+
+*   **Six Cognitive Domains:** Each agent has six distinct aptitudes that model different aspects of intelligence:
+    *   **ANA (Analytical Reasoning):** Logical deduction, problem-solving, mathematical thinking
+    *   **VER (Verbal Abilities):** Language comprehension, vocabulary, verbal fluency
+    *   **SPA (Spatial Abilities):** Mental rotation, visualization, spatial reasoning
+    *   **MEM_W (Working Memory):** Short-term memory, cognitive capacity, attention
+    *   **MEM_L (Long-term Memory):** Knowledge retention, recall, learning
+    *   **SEC (Secondary Cognitive):** General cognitive abilities, processing speed
+
+*   **Genotype vs. Phenotype Model:**
+    *   **Genotype:** Inherited cognitive potential (0-180 scale)
+    *   **Phenotype:** Currently expressed cognitive ability (0-180 scale)
+    *   **Plasticity:** Neural adaptability factor for future learning systems
+
+### Developmental Psychology Integration
+
+*   **Fluid vs. Crystallized Intelligence:**
+    *   **Fluid Aptitudes** (ANA, SPA, MEM_W): Peak in early adulthood (age 20-30), then decline
+    *   **Crystallized Aptitudes** (VER, MEM_L, SEC): Increase slowly throughout life, maintain longer
+
+*   **Age-Based Development Curves:**
+    *   **Infancy (0-2):** Very low expression (10-20% of potential)
+    *   **Childhood (3-12):** Rapid development, reaching 60-80% of potential
+    *   **Adolescence (13-19):** Final maturation, reaching 90-100% of potential
+    *   **Adulthood (20-50):** Peak performance with gradual changes
+    *   **Maturity (50-90):** Differential decline based on fluid/crystallized nature
+
+### Heritability & Genetics
+
+*   **Lineage Head Generation:** First-generation agents receive random aptitude scores (Gaussian distribution, μ=100, σ=15)
+*   **Inheritance Model:** Descendants inherit aptitudes through mid-parent genotype averaging:
+    *   Child's genotype = (Father's genotype + Mother's genotype) / 2 + Gaussian variance
+    *   Configurable heritability standard deviation (default: 10)
+    *   Values clamped to valid range (0-180)
+
+### UI Integration
+
+*   **Cognitive Profile Column:** New 5th column in attributes modal displaying all six aptitudes
+*   **Visual Progress Bars:** Color-coded indicators showing current aptitude levels
+*   **Age-Appropriate Display:** Values reflect developmental stage of the agent
+*   **IQ Integration:** Legacy IQ property calculated as average of all aptitude phenotypes
+
+### Configuration
+
+```json
+{
+    "aptitudes": {
+        "definitions": {
+            "ANA": {"mean": 100, "sd": 15},
+            "VER": {"mean": 100, "sd": 15},
+            "SPA": {"mean": 100, "sd": 15},
+            "MEM_W": {"mean": 100, "sd": 15},
+            "MEM_L": {"mean": 100, "sd": 15},
+            "SEC": {"mean": 100, "sd": 15}
+        },
+        "heritability_sd": 10,
+        "development_curves": {
+            "fluid": [[0, 0.2], [10, 0.8], [20, 1.0], [60, 0.9], [90, 0.7]],
+            "crystallized": [[0, 0.1], [15, 0.6], [30, 0.9], [50, 1.0], [90, 0.95]]
+        },
+        "personality_modifiers": {
+            "SEC": {"Extraversion": 0.1, "Agreeableness": 0.1}
+        }
+    }
+}
+```
+
+</details>
+
+## 🛠️ Development Tools & Settings
+
+<details>
+<summary><strong>Development Configuration Options</strong></summary>
+
+The simulation includes development-focused configuration options to facilitate testing and debugging.
+
+### Event System Control
+
+*   **Development Mode:** Configurable setting to disable all events for uninterrupted testing
+*   **Usage:** Set `"disable_events": true` in the development section of config.json
+*   **Benefits:**
+    *   Uninterrupted aging and development testing
+    *   Observe cognitive development across different ages
+    *   Performance testing without event system overhead
+    *   Rapid iteration on features
+
+### Configuration Structure
+
+```json
+{
+    "development": {
+        "disable_events": true  // Set to false to enable events for normal gameplay
+    }
+}
+```
+
+### Debug Logging
+
+*   **Event Disabled Message:** Debug log entry when events are disabled
+*   **Normal Operation:** Standard event processing when disabled is false
+*   **Non-Intrusive:** Setting doesn't affect other game systems
+
+### Testing Scenarios
+
+*   **Aptitude Development:** Age through multiple years to observe cognitive changes
+*   **Performance Testing:** Test game mechanics without event interruptions
+*   **Feature Validation:** Verify new systems work without event interference
+*   **Quick Iteration:** Rapidly test changes without waiting for event resolutions
+
+</details>
+
 ## 🗺️ Roadmap (Planned Features)
 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
@@ -1713,7 +1834,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Social Consequences:** While on HRT but pre-surgery, family relationship stats fluctuate based on their "Religiousness" and "Generosity."
 *   **Dietary System:**
     *   **Diet Plans:** Selectable lifestyles with monthly costs and stat impacts:
-        *   *Vegan/Vegetarian:* Increases Karma/Health, slight relationship friction with certain NPCs.
+        *   *Vegan/Vegetarian:* Increases Health, slight relationship friction with certain NPCs.
         *   *Keto/Mediterranean:* High cost, boosts Health and Looks.
         *   *Junk Food/Hot Cheetos:* Low cost, rapid Health decay, increases Happiness temporarily.
     *   **Consequences:** Random events triggered by diet (e.g., "Your tapeworm cured your high blood pressure" or "You developed scurvy").
@@ -1724,7 +1845,6 @@ The following features are planned to expand the simulation depth into a compreh
 *   **Random Scenario Engine (The "Pop-up" System):**
     *   **Moral Dilemmas:** A procedural event generator that presents the player with A/B/C choices (e.g., "You found a wallet," "A bully insulted you").
     *   **Stat-Based Outcomes:** Choices are not guaranteed to succeed. Trying to "Attack" a bully calculates the winner based on the *Strength* and *Martial Arts* stats of both parties.
-    *   **Karma Integration:** Decisions feed directly into the hidden Karma stat, influencing future luck.
 *   **Identity Services:**
     *   **Legal Name Change:** Ability to visit the courthouse to change First or Last name (requires fee and no criminal record).
     *   **Gender Identity:** A dedicated identity tab allowing agents to socially transition (pronouns/identity) independent of medical reassignment surgery.
@@ -1908,7 +2028,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Hobbies:** Instruments, reading, clubbing, cinema.
 *   **Dietary System:**
     *   **Diet Plans:** Selectable lifestyle choices with monthly costs and stat modifiers.
-        *   *Examples:* Vegan (High Health/Karma), Keto (Weight Loss), Liquid Diet (High Risk), "Hot Cheetos" Diet (Health decay).
+        *   *Examples:* Vegan (High Health), Keto (Weight Loss), Liquid Diet (High Risk), "Hot Cheetos" Diet (Health decay).
     *   **Consequences:** Diets can trigger specific medical events (e.g., Tapeworm from unwashed veggies, Heart Attack from high fat).
 *   **Specific Pathology:**
     *   **Disease Library:** Instead of generic "Sick," agents contract specific ailments (Flu, Bunions, Erectile Dysfunction, Cancer, Dementia).
@@ -2107,7 +2227,7 @@ To maintain playability and focus on emergent storytelling, **Life-Sim** deliber
 *   **Constraint:** No supernatural, paranormal, or sci-fi elements (e.g., Ghosts, Aliens, Cryptids, Hauntings).
 *   **Abstraction:** The simulation is grounded in **Deterministic Realism**.
     *   Events are strictly biological, sociological, or statistical.
-    *   "Luck" is a mathematical probability modifier, not a magical force.
+    *   Random chance mechanics are not implemented as the simulation focuses on deterministic realism.
     *   *Reasoning:* Excluding paranormal logic reduces code complexity (no need for "Exorcism" mechanics or "Ghost Encounter" RNG) and maintains a consistent, grounded tone focused on real-life simulation.
 
 ### 6. Progression: Sandbox over Gamification
@@ -2222,6 +2342,28 @@ pip install pygame numpy
     ```bash
     python main.py
     ```
+
+### Development Mode
+
+For testing and development, you can disable events to allow uninterrupted aging and feature testing:
+
+1.  **Open `config.json`**
+2.  **Set development mode:**
+    ```json
+    {
+        "development": {
+            "disable_events": true
+        }
+    }
+    ```
+3.  **Run simulation** - Events will be disabled, allowing continuous aging without interruptions
+
+**Note:** The current configuration has events disabled for development. Set `"disable_events": false` to enable normal gameplay with events.
+
+**Benefits:**
+- Test aptitude development across different ages
+- Performance testing without event overhead
+- Rapid feature iteration without event interruptions
 
 <details>
 <summary><strong>📋 Development Rules & Standards</strong></summary>

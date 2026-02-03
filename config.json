@@ -1,5 +1,8 @@
 {
     "seed": 42,
+    "development": {
+        "disable_events": true
+    },
     "logging": {
         "level": "DEBUG",
         "save_to_file": true
@@ -51,9 +54,25 @@
             
             "facet_min": 1, "facet_max": 20,
             
-            "religiousness_min": 0, "religiousness_max": 100,
-            "karma_min": 40, "karma_max": 60,
-            "luck_min": 0, "luck_max": 100
+            "religiousness_min": 0, "religiousness_max": 100
+        }
+    },
+    "aptitudes": {
+        "definitions": {
+            "ANA": {"mean": 100, "sd": 15},
+            "VER": {"mean": 100, "sd": 15},
+            "SPA": {"mean": 100, "sd": 15},
+            "MEM_W": {"mean": 100, "sd": 15},
+            "MEM_L": {"mean": 100, "sd": 15},
+            "SEC": {"mean": 100, "sd": 15}
+        },
+        "heritability_sd": 10,
+        "development_curves": {
+            "fluid": [[0, 0.2], [10, 0.8], [20, 1.0], [60, 0.9], [90, 0.7]],
+            "crystallized": [[0, 0.1], [15, 0.6], [30, 0.9], [50, 1.0], [90, 0.95]]
+        },
+        "personality_modifiers": {
+            "SEC": {"Extraversion": 0.1, "Agreeableness": 0.1}
         }
     },
     "time_management": {

@@ -77,11 +77,14 @@ def main():
                         
                         # Second: Check if player is alive
                         if sim_state.player.is_alive:
-                            # Third: Check for events after time advancement
-                            event = event_manager.evaluate_month(sim_state)
-                            if event:
-                                sim_state.pending_event = event
-                                logger.info(f"Event '{event.id}' pending - turn processing paused")
+                            # Third: Check for events after time advancement (unless disabled for development)
+                            if not config.get("development", {}).get("disable_events", False):
+                                event = event_manager.evaluate_month(sim_state)
+                                if event:
+                                    sim_state.pending_event = event
+                                    logger.info(f"Event '{event.id}' pending - turn processing paused")
+                            else:
+                                logger.debug("Events disabled via development config")
                     elif action_id == "FIND_JOB":
                         logic.find_job(sim_state)
                     elif action_id == "WORK":

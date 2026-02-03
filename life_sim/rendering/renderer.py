@@ -621,8 +621,8 @@ class Renderer:
         start_x = self.rect_center.x + 20
         start_y = bio_y + 90 
         
-        # 4 Columns
-        col_count = 4
+        # 5 Columns (added Cognitive Profile)
+        col_count = 5
         col_w = (self.rect_center.width - 40) // col_count
         card_w = col_w - 10
         card_h = 40 # Compact height
@@ -721,7 +721,7 @@ class Renderer:
             # Column 1: Vitals, Physical, Hidden
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
             draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
-            draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
+            draw_group(0, "Hidden", ["Religiousness"])
             
             # Columns 1-3: Temperament (3x3 grid layout)
             temperament_traits = list(agent.temperament.keys())
@@ -733,6 +733,9 @@ class Renderer:
                 # Draw temperament header for first column only
                 title = "Temperament" if i == 0 else None
                 draw_group(i + 1, title, col_traits)
+            
+            # Column 4: Cognitive Profile (Aptitudes) - also show for infants
+            draw_group(4, "Cognitive Profile", ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"])
                 
         else:
             # Adult Layout: Vitals + Big 5 Personality
@@ -740,7 +743,7 @@ class Renderer:
             # Added "Money" to Vitals for verification
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
             draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
-            draw_group(0, "Hidden", ["Karma", "Luck", "Religiousness"])
+            draw_group(0, "Hidden", ["Religiousness"])
             
             # Column 2: Openness & Conscientiousness
             draw_group(1, "Openness", list(agent.personality["Openness"].keys()), is_personality=True)
@@ -752,6 +755,9 @@ class Renderer:
             
             # Column 4: Neuroticism
             draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
+            
+            # Column 5: Cognitive Profile (Aptitudes)
+            draw_group(4, "Cognitive Profile", ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"])
 
     def _draw_dashed_rect(self, surface, color, rect, width=2, dash_len=5):
         """Helper to draw a dashed rectangle."""
