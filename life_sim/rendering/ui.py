@@ -117,9 +117,9 @@ class LogPanel:
             if event.button == 1 and self.rect.collidepoint(event.pos):
                 visible_height = self.rect.height
                 if self.total_content_height < visible_height:
-                    start_y = self.rect.y
+                    start_y = self.rect.y + constants.LOG_PADDING_TOP
                 else:
-                    start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
+                    start_y = self.rect.y + constants.LOG_PADDING_TOP + visible_height - self.total_content_height + self.scroll_offset
                 
                 click_y = event.pos[1]
                 clicked_index = int((click_y - start_y) // constants.LOG_LINE_HEIGHT)
@@ -130,15 +130,20 @@ class LogPanel:
                         sim_state.toggle_year(item["index"])
 
     def draw(self, screen):
-        pygame.draw.rect(screen, constants.COLOR_LOG_BG, self.rect)
+        # Draw transparent background
+        s = pygame.Surface((self.rect.width, self.rect.height))
+        s.set_alpha(constants.UI_OPACITY_CENTER)
+        s.fill((20, 20, 20))  # Dark grey background
+        screen.blit(s, (self.rect.x, self.rect.y))
+        
         old_clip = screen.get_clip()
         screen.set_clip(self.rect)
         
         visible_height = self.rect.height
         if self.total_content_height < visible_height:
-            start_y = self.rect.y
+            start_y = self.rect.y + constants.LOG_PADDING_TOP
         else:
-            start_y = self.rect.y + visible_height - self.total_content_height + self.scroll_offset
+            start_y = self.rect.y + constants.LOG_PADDING_TOP + visible_height - self.total_content_height + self.scroll_offset
 
         y = start_y
         for item in self.render_lines:

@@ -281,5 +281,9 @@
                 ]
             }
         }
+    },
+    "visuals": {
+        "enable_dynamic_backgrounds": true,
+        "debug_draw_bounds": false
     }
 }

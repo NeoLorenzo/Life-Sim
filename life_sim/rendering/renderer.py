@@ -11,6 +11,7 @@ from .ui import Button, LogPanel, APBar
 from .family_tree import FamilyTreeLayout
 from .social_graph import SocialGraphLayout
 from .modals import EventModal
+from .background import BackgroundManager
 
 class Renderer:
     """
@@ -99,6 +100,9 @@ class Renderer:
         self._init_ui_structure()
         
         self.logger.info("Renderer initialized (Pygame) with 3-panel layout.")
+        
+        # Initialize Background Manager
+        self.background_manager = BackgroundManager()
 
     def _init_ui_structure(self):
         """Creates Tabs and Action Buttons."""
@@ -155,6 +159,19 @@ class Renderer:
                 btn = Button(start_x, current_y, btn_w, btn_h, text, action_id, self.font_main)
                 self.buttons[cat].append(btn)
                 current_y += btn_h + gap
+
+    def _draw_panel_background(self, rect, alpha):
+        """
+        Draw a transparent panel background.
+        
+        Args:
+            rect: pygame.Rect defining the panel area
+            alpha: Alpha transparency value (0-255)
+        """
+        s = pygame.Surface((rect.width, rect.height))
+        s.set_alpha(alpha)
+        s.fill((20, 20, 20))  # Dark grey background
+        self.screen.blit(s, (rect.x, rect.y))
 
     def handle_event(self, event, sim_state=None):
         """
@@ -392,7 +409,9 @@ class Renderer:
         if self.viewing_social_graph:
             self.social_graph.update_physics()
         
-        self.screen.fill(constants.COLOR_BG)
+        # Update and draw background
+        self.background_manager.update(sim_state)
+        self.background_manager.draw(self.screen)
         
         # Update Log Panel Content
         self.log_panel.update_logs(sim_state.get_flat_log_for_rendering())
@@ -453,7 +472,7 @@ class Renderer:
     def _draw_social_graph_modal(self, sim_state):
         """Draws the Social Map overlay."""
         # Background
-        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
         
         # Clip to center panel
         old_clip = self.screen.get_clip()
@@ -579,15 +598,9 @@ class Renderer:
         self.modal_click_zones = []
         
         # Draw Background
-        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
-        # Close Button
-        close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
-        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
-        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
-        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
-
         agent = self.viewing_agent
         is_player = (agent == sim_state.player)
         
@@ -797,7 +810,7 @@ class Renderer:
             self.ft_offset_y = 0
 
         # 2. Draw Background
-        pygame.draw.rect(self.screen, constants.COLOR_BG, self.rect_center)
+        self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
         
         # 3. Setup Clipping
         old_clip = self.screen.get_clip()
@@ -960,7 +973,7 @@ class Renderer:
         self.ft_buttons.append((rect, agent))
 
     def _draw_left_panel(self, sim_state):
-        pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_left)
+        self._draw_panel_background(self.rect_left, constants.UI_OPACITY_PANEL)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
         
         player = sim_state.player
@@ -1132,7 +1145,7 @@ class Renderer:
                     break  # Only show one tooltip at a time
 
     def _draw_right_panel(self, sim_state):
-        pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, self.rect_right)
+        self._draw_panel_background(self.rect_right, constants.UI_OPACITY_PANEL)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_right, 1)
         
         # Draw Tabs

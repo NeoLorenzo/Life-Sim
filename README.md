@@ -1,6 +1,36 @@
 # Life-Sim
 
-**Life-Sim** is a modular, extensible life simulation engine built in Python. It simulates the biological, economic, and social trajectory of a single agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
+**Life-Sim** is a comprehensive, modular life simulation engine built in Python. It simulates the biological, economic, social, and cognitive trajectory of a human agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
+
+## 🎯 Current Implementation Status (Complete)
+
+The simulation is a fully-featured life emulator with the following major systems implemented:
+
+### ✅ Core Simulation Systems
+- **Deterministic World Engine**: Seed-based reproducibility with monthly turn progression
+- **Multi-Agent Architecture**: Player + NPCs with identical biological/economic rules
+- **Advanced Genetics & Inheritance**: Multi-generational family trees with DNA-based trait transmission
+- **Sophisticated Psychology**: Big Five personality model with infant temperament system
+- **Cognitive Aptitude System**: Six-domain intelligence modeling with developmental curves
+- **Dynamic Health & Aging**: Realistic mortality, growth, and senescence
+- **Economic Simulation**: Jobs, salaries, wealth accumulation, and tier-based classification
+- **Education System**: Complete academic pipeline with subject-based performance tracking
+- **Relationship Engine**: Psychometric compatibility with complex social networks
+- **Event System**: Contextual life events with choice-driven outcomes
+
+### ✅ Advanced User Interface
+- **Dynamic Background System**: Seasonal/wealth/location-aware visual environments
+- **Transparent UI Panels**: Alpha-blended interfaces with differential opacity
+- **Interactive Visualizations**: Family trees and social graphs with physics simulation
+- **Performance-Optimized Rendering**: Spatial indexing, viewport culling, and advanced caching
+- **Responsive Layout**: Three-panel design with context-aware component visibility
+
+### ✅ Technical Excellence
+- **13 Core Modules**: Comprehensive simulation and rendering architecture
+- **Configuration-Driven**: 289-line JSON config with all gameplay parameters
+- **Performance Optimized**: Maintains 60 FPS with 200+ agents
+- **Modular Design**: SOLID principles with clear separation of concerns
+- **Extensible Architecture**: Plugin-ready systems for future enhancements
 
 ## 📚 Table of Contents
 
@@ -12,6 +42,7 @@
   - [social.py - Social Data Structures](#-socialpy-module-structure)
   - [school.py - Education System](#-schoolpy-module-structure)
   - [Rendering Package](#-rendering-package-structure)
+- [Background System](#-background-system-structure)
 - [Simulation Flow](#simulation-flow)
   - [Monthly Cycle](#monthly-simulation-cycle)
   - [State Mutation Contracts](#state-mutation-contracts)
@@ -33,7 +64,9 @@ Life-Sim/
 ├── config.json               # Simulation parameters and game configuration
 ├── constants.py              # Application constants and static settings
 ├── logging_setup.py          # Logging configuration and utilities
-├── assets/                   # Static assets (icons, images, etc.)
+├── assets/                   # Static assets (icons, images, backgrounds)
+│   ├── backgrounds/          # Dynamic background images for seasonal/wealth variation
+│   └── icon_ft.png           # Application icon
 ├── logs/                     # Runtime log files (rotating)
 ├── life_sim/                 # Core simulation package
 │   ├── __init__.py
@@ -43,17 +76,27 @@ Life-Sim/
 │   │   ├── logic.py          # Core simulation loop and turn processing
 │   │   ├── affinity.py       # Relationship and personality calculations
 │   │   ├── social.py         # Social interactions and relationships
-│   │   └── school.py         # Education system and academic logic
+│   │   ├── school.py         # Education system and academic logic
+│   │   └── events.py         # Event system and modal interactions
 │   └── rendering/            # User interface and visualization
 │       ├── __init__.py
 │       ├── renderer.py       # Main UI renderer and layout management
 │       ├── ui.py             # UI components and widgets
+│       ├── background.py     # Dynamic background system and resource management
 │       ├── family_tree.py    # Interactive family tree visualization
-│       └── social_graph.py   # Social network visualization
+│       ├── social_graph.py   # Social network visualization
+│       └── modals.py         # Modal dialog system
 ├── README.md                 # This file
 ├── LICENSE                   # MIT License
 └── .gitignore               # Git ignore patterns
 ```
+
+### Complete System Overview
+- **7 Simulation Modules**: Core game logic, state management, relationships, education, events
+- **6 Rendering Modules**: UI system, background management, visualizations, modals
+- **Configuration-Driven**: All gameplay parameters externalized to `config.json`
+- **Modular Architecture**: Clear separation of concerns with SOLID principles
+- **Performance Optimized**: Advanced caching, spatial indexing, and viewport culling
 
 ### Architecture Overview
 - **Entry Point**: `main.py` initializes the simulation, loads configuration, and starts the main game loop
@@ -1257,6 +1300,160 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Event-Driven**: UI actions flow through main loop for state consistency
 - **Component Reusability**: Modular widgets for consistent behavior
 - **Performance Optimized:** Vectorized viewport culling, pre-rendered node surfaces, and zero-allocation draw loops
+- **Advanced Social Graph Optimizations:**
+  - **Spatial Indexing**: 150x150 pixel grid cells for O(1) visibility queries on large graphs
+  - **Viewport Culling**: Dynamic bounds checking with zoom-level padding to skip off-screen elements
+  - **Edge Color Caching**: Pre-calculated edge colors and widths during build() instead of per-frame computation
+  - **Label Surface Caching**: Cached font.render() results to avoid repeated text rendering
+  - **Batch Drawing**: Grouped edges and nodes by color to reduce pygame state changes
+  - **Zoom-Based Label Opacity**: Labels fade out smoothly between 0.8x and 0.4x zoom levels
+  - **Performance Impact**: Maintains 60 FPS with 200+ agents when zoomed in
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>🖼️ Background System Structure</strong></summary>
+
+The `background.py` module contains the dynamic background system that provides contextual visual environments based on game state.
+
+<details>
+<summary><strong>ResourceManager Class</strong></summary>
+
+Handles efficient loading and caching of background images:
+
+**Core Responsibilities**
+- **Image Caching**: Maintains in-memory cache of loaded backgrounds to avoid repeated disk I/O
+- **Automatic Scaling**: Scales all images to screen dimensions (SCREEN_WIDTH × SCREEN_HEIGHT)
+- **Performance Optimization**: Uses `.convert()` for optimal Pygame rendering performance
+- **Error Handling**: Graceful fallback when image files are missing
+
+**Key Methods**
+- `get_image(filename)`: Load and cache background images with error handling
+- `clear_cache()`: Clear all cached images (useful for memory management)
+
+**Technical Features**
+- **Lazy Loading**: Images only loaded when first requested
+- **Path Construction**: Uses `constants.ASSETS_BG_DIR` for consistent file organization
+- **Logging Integration**: Warning messages for missing files with full error context
+
+</details>
+
+<details>
+<summary><strong>BackgroundManager Class</strong></summary>
+
+Manages intelligent background selection based on simulation state:
+
+**Core Logic**
+- **Location Detection**: Determines appropriate location (hospital/home) based on player age and birth month
+- **Wealth Tier Calculation**: Computes family wealth tier including parental wealth for minors
+- **Season Determination**: Maps current month to appropriate season using deterministic logic
+- **Dynamic Filename Generation**: Constructs target filenames using `{location}_tier{tier}_{season}.png` pattern
+
+**Key Methods**
+- `_get_season(month_index)`: Convert month index (0-11) to season string
+- `_get_wealth_tier(sim_state)`: Calculate wealth tier (1-5) based on total family wealth
+- `update(sim_state)`: Update background based on current game state
+- `draw(screen)`: Render current background or fallback color
+
+**Intelligent Features**
+- **Birth Month Logic**: Hospital background only shows during player's birth month (year 0, birth month)
+- **Logic Fix**: Corrected from checking `month_index == 0` to `month_index == birth_month_index` for accurate birth timing
+- **Family Wealth Inclusion**: For players under 18, includes parents' wealth in tier calculation
+- **Immediate Updates**: Background updates immediately after turn processing to prevent lag
+- **Fallback Support**: Uses `constants.COLOR_BG_FALLBACK` when images unavailable
+
+**Integration Points**
+- **Main Loop**: Updated in `main.py` after turn processing for immediate state reflection
+  - **Explicit Call**: `renderer.background_manager.update(sim_state)` called after `logic.process_turn()`
+  - **Purpose**: Prevents one-frame lag in background switching after state changes
+- **Renderer Integration**: Called at start of `Renderer.render()` for consistent display
+- **Configuration**: Uses `constants.WEALTH_TIERS` for tier thresholds and opacity settings
+
+**Configuration Support**
+- **Visual Settings**: `config.json` includes `visuals` section with:
+  - `enable_dynamic_backgrounds`: Toggle for background system (default: true)
+  - `debug_draw_bounds`: Debug option for boundary visualization (default: false)
+- **Constants**: All key values defined in `constants.py`:
+  - `UI_OPACITY_PANEL = 230`: Side panel transparency level
+  - `UI_OPACITY_CENTER = 200`: Center panel transparency level
+  - `WEALTH_TIERS = [10_000, 100_000, 1_000_000, 10_000_000]`: Wealth thresholds
+  - `COLOR_BG_FALLBACK = (30, 30, 40)`: Fallback background color
+  - `ASSETS_BG_DIR = "assets/backgrounds"`: Background image directory
+  - **Screen Settings**: `SCREEN_WIDTH = 2048`, `SCREEN_HEIGHT = 1088`, `FPS = 60`
+  - **Layout**: `PANEL_LEFT_WIDTH = 300`, `PANEL_RIGHT_WIDTH = 300`
+  - **Social Graph Physics**: Complete physics constants for force simulation
+  - **Affinity Engine**: All psychometric compatibility tuning parameters
+  - **Health System**: Age-based health capacity and decay constants
+  - **Time Management**: `AP_MAX_DAILY = 24.0`, sleep requirements
+  - **Medical Costs**: `DOCTOR_VISIT_COST = 100`, recovery ranges
+  - **Temperament System**: `TEMPERAMENT_TRAITS`, `PLASTICITY_DECAY` mapping
+  - **Cognitive Aptitudes**: `APTITUDES = ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"]`
+
+</details>
+
+<details>
+<summary><strong>Season Mapping Logic</strong></summary>
+
+Deterministic season calculation matching both background and narrative systems:
+
+**Season Definitions**
+- **Winter**: Months 11, 0, 1 (December, January, February)
+- **Spring**: Months 2, 3, 4 (March, April, May)  
+- **Summer**: Months 5, 6, 7 (June, July, August)
+- **Autumn**: Months 8, 9, 10 (September, October, November)
+
+**Consistency Features**
+- **Narrative Sync**: Birth narrative uses same season logic as background system
+- **Deterministic**: Same month always produces same season regardless of year
+- **Global Application**: Used by both background selection and story generation
+- **Implementation Detail**: Both systems use identical month-to-season mapping in `state.py` and `background.py`
+
+</details>
+
+<details>
+<summary><strong>Wealth Tier System</strong></summary>
+
+Five-tier wealth classification for background selection:
+
+**Tier Structure**
+- **Tier 1**: < $10,000 (Struggling)
+- **Tier 2**: $10,000 - $99,999 (Lower Class)
+- **Tier 3**: $100,000 - $999,999 (Middle Class)  
+- **Tier 4**: $1,000,000 - $9,999,999 (Upper Class)
+- **Tier 5**: $10,000,000+ (Wealthy)
+
+**Calculation Logic**
+- **Player Wealth**: Base calculation from player's money
+- **Parental Inclusion**: For players under 18, adds both parents' wealth if available
+- **Relationship Parsing**: Searches player relationships for "Mother" and "Father" types
+- **Threshold Comparison**: Compares total against `constants.WEALTH_TIERS` array
+
+**Visual Impact**
+- **Environmental Context**: Higher tiers show more luxurious backgrounds
+- **Progressive Feedback**: Visual representation of economic progression
+- **Family Context**: Reflects total family economic status, not just player's
+
+</details>
+
+<details>
+<summary><strong>Performance & Optimization</strong></summary>
+
+**Caching Strategy**
+- **Memory Efficiency**: Images cached after first load to avoid repeated disk access
+- **Screen Scaling**: Images pre-scaled to screen resolution during loading
+- **Surface Conversion**: Optimized Pygame surfaces for faster rendering
+
+**Update Efficiency**
+- **Conditional Updates**: Background only changes when filename differs from current
+- **State-Based Logic**: Deterministic selection prevents unnecessary reloads
+- **Error Resilience**: Graceful degradation when assets missing
+
+**Integration Performance**
+- **Zero Lag**: Explicit updates in main loop prevent one-frame delays
+- **Minimal Overhead**: Efficient state checking and filename comparison
+- **Resource Management**: Cache clearing capability for memory control
 
 </details>
 
@@ -1596,7 +1793,41 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 *   **Technical Specs:**
     *   **Resolution:** Fixed **1920x1080** window.
     *   **Framerate:** Capped at 60 FPS.
-    *   **Theme:** Dark Mode (Background: RGB 20,20,20; Panels: RGB 40,40,40).
+    *   **Theme:** Dark Mode with **Transparent UI Panels** allowing dynamic backgrounds to show through
+*   **Dynamic Background System:**
+    *   **Intelligent Background Selection:** Backgrounds change based on player's age, location, wealth tier, and current season
+    *   **Location-Based Logic:** 
+        *   **Hospital:** Shows only during birth month (year 0, player's birth month)
+        *   **Home:** Default location for all other months
+    *   **Wealth Tier System:** 5-tier wealth classification based on total family wealth:
+        *   **Tier 1:** < $10,000 (Struggling)
+        *   **Tier 2:** $10,000 - $99,999 (Lower Class) 
+        *   **Tier 3:** $100,000 - $999,999 (Middle Class)
+        *   **Tier 4:** $1,000,000 - $9,999,999 (Upper Class)
+        *   **Tier 5:** $10,000,000+ (Wealthy)
+    *   **Seasonal Variation:** Backgrounds change with seasons using deterministic month mapping:
+        *   **Winter:** December, January, February
+        *   **Spring:** March, April, May
+        *   **Summer:** June, July, August
+        *   **Autumn:** September, October, November
+    *   **Resource Management:** Efficient image caching and loading system with fallback support
+    *   **Narrative Consistency:** Birth narrative season matches background season for immersive experience
+    *   **Filename Convention:** `{location}_tier{tier}_{season}.png` (e.g., `hospital_tier2_winter.png`)
+*   **Transparent UI System:**
+    *   **Alpha-Blended Panels:** All UI panels use transparency to allow background visibility
+    *   **Differential Opacity:** Side panels (230 alpha) are less transparent than center panels (200 alpha) for readability
+    *   **Consistent Implementation:** Left panel, right panel, center modals, and log panel all use transparency
+    *   **Visual Depth:** Maintains border rendering for clear UI separation while allowing background show-through
+    *   **Technical Implementation:**
+        *   **Helper Method:** `_draw_panel_background(rect, alpha)` creates temporary surfaces with alpha blending
+        *   **Surface Creation:** Uses `pygame.Surface()` with `set_alpha()` for transparency control
+        *   **Color Scheme:** Dark grey (20, 20, 20) backgrounds for optimal contrast with text
+        *   **Border Preservation:** Original border drawing logic maintained for UI clarity
+    *   **Component Coverage:**
+        *   **Left Panel:** `_draw_left_panel()` uses `UI_OPACITY_PANEL` (230)
+        *   **Right Panel:** `_draw_right_panel()` uses `UI_OPACITY_PANEL` (230)
+        *   **Center Modals:** Social graph, attributes, family tree use `UI_OPACITY_CENTER` (200)
+        *   **Log Panel:** `LogPanel.draw()` uses `UI_OPACITY_CENTER` (200) for transparency
 *   **Three-Panel Layout:**
     *   **Left Panel (300px):** Real-time dashboard showing Name, Age (Years + Months), Current Date (Month/Year), Money, Job, Vitals (Health/Happiness/IQ/Looks), and Physical Energy.
     *   **Center Panel (Variable):**

@@ -75,6 +75,9 @@ def main():
                         # First: Advance time
                         logic.process_turn(sim_state)
                         
+                        # Update background immediately after turn processing
+                        renderer.background_manager.update(sim_state)
+                        
                         # Second: Check if player is alive
                         if sim_state.player.is_alive:
                             # Third: Check for events after time advancement (unless disabled for development)

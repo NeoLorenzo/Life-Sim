@@ -846,15 +846,17 @@ class SimState:
                 
             household_wealth = m.money + f.money
             
-            # 1. The Setting (Weather + City Vibe)
-            weather = random.choice([
-                "a torrential downpour rattling the hospital windows",
-                "a sweltering afternoon where the AC is barely working",
-                "a quiet, snowy morning",
-                "a chaotic night with sirens wailing in the distance",
-                "a crisp, golden autumn dawn"
-            ])
-            intro = f"You enter the world in {self.player.city} during {weather}."
+            # 1. The Setting (Season + City)
+            # Use same season logic as background system
+            if self.month_index in [11, 0, 1]:
+                season = "a quiet, snowy morning"
+            elif self.month_index in [2, 3, 4]:
+                season = "a quiet, spring morning"
+            elif self.month_index in [5, 6, 7]:
+                season = "a quiet, summer morning"
+            else:  # [8, 9, 10]
+                season = "a quiet, autumn morning"
+            intro = f"You enter the world in {self.player.city} during {season}."
             
             # 2. The Room Atmosphere (Wealth x Love Matrix)
             if household_wealth < 1000:

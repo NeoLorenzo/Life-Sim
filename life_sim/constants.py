@@ -5,8 +5,8 @@ Static values that do not change between simulation runs.
 """
 
 # Window Settings
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+SCREEN_WIDTH = 2048
+SCREEN_HEIGHT = 1088
 WINDOW_TITLE = "Life-Sim MVP 0.5"
 FPS = 60
 
@@ -33,12 +33,19 @@ COLOR_LOG_HEADER = (100, 200, 255)
 COLOR_BTN_IDLE = (60, 60, 60)
 COLOR_BTN_HOVER = (80, 80, 80)
 COLOR_BTN_CLICK = (100, 100, 100)
+COLOR_BG_FALLBACK = (30, 30, 40)
 
 # UI Settings
 FONT_SIZE_MAIN = 20
 FONT_SIZE_HEADER = 24
 FONT_SIZE_LOG = 18
 LOG_LINE_HEIGHT = 24
+LOG_PADDING_TOP = 20  # Padding from top of panel to first log entry
+UI_OPACITY_PANEL = 230
+UI_OPACITY_CENTER = 200
+
+# Wealth Tiers
+WEALTH_TIERS = [10_000, 100_000, 1_000_000, 10_000_000]
 
 # Time Settings
 START_YEAR = 2025
@@ -50,6 +57,7 @@ LOG_DIR = "logs"
 CONFIG_FILE = "config.json"
 ASSETS_DIR = "assets"
 ICON_FT_FILENAME = "icon_ft.png"
+ASSETS_BG_DIR = "assets/backgrounds"
 
 # Social Graph Physics
 GRAPH_REPULSION = 500.0  # Strength of nodes pushing apart
