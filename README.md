@@ -19,11 +19,12 @@ The simulation is a fully-featured life emulator with the following major system
 - **Event System**: Contextual life events with choice-driven outcomes
 
 ### ✅ Advanced User Interface
-- **Dynamic Background System**: Seasonal/wealth/location-aware visual environments
+- **Dynamic Background System**: Seasonal/wealth/location-aware visual environments with aspect-ratio-preserving scaling
 - **Transparent UI Panels**: Alpha-blended interfaces with differential opacity
 - **Interactive Visualizations**: Family trees and social graphs with physics simulation
 - **Performance-Optimized Rendering**: Spatial indexing, viewport culling, and advanced caching
 - **Responsive Layout**: Three-panel design with context-aware component visibility
+- **Fully Resizable Window**: Dynamic window resizing with automatic UI adaptation and background scaling
 
 ### ✅ Technical Excellence
 - **13 Core Modules**: Comprehensive simulation and rendering architecture
@@ -1244,15 +1245,18 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 <summary><strong>UI Architecture</strong></summary>
 
 **Main Renderer (`renderer.py`)**
-- **Three-Panel Layout**: Fixed 1920x1080 window with Left (300px), Center (variable), Right (300px) panels
+- **Resizable Window**: Dynamic window resizing with `pygame.RESIZABLE` flag and automatic UI adaptation
+- **Three-Panel Layout**: Responsive layout with Left (300px), Center (variable), Right (300px) panels
+- **Layout Management**: Real-time panel recalculation on window resize events
 - **Event Hub**: Central event handling with priority-based modal system
 - **State Management**: Tracks viewing modes (agent attributes, family tree, social graph)
 - **UI Initialization**: Creates tabs, buttons, and manages dynamic visibility rules
 
 **Core UI Components (`ui.py`)**
 - **Button**: Interactive buttons with hover states and action IDs
-- **LogPanel**: Scrollable, word-wrapped event history with collapsible year headers
+- **LogPanel**: Scrollable, word-wrapped event history with collapsible year headers and responsive resizing
 - **APBar**: 24-segment visual representation of daily Action Point budget
+- **Responsive Design**: All UI components adapt to window size changes with proper validation
 
 **`modals.py` - Event System UI**
 - **EventModal**: A specialized overlay for handling multiple-choice events.
@@ -1456,6 +1460,63 @@ Five-tier wealth classification for background selection:
 - **Resource Management**: Cache clearing capability for memory control
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>🖥️ Window Resizing</strong></summary>
+
+The application features a comprehensive window resizing system that provides a professional, responsive user experience:
+
+### Core Features
+
+**Dynamic Window Management**
+- **Resizable Window**: Enabled via `pygame.RESIZABLE` flag in display initialization
+- **Real-time Resize Events**: Handles `pygame.VIDEORESIZE` events for immediate UI adaptation
+- **Layout Recalculation**: Automatic panel positioning updates on window dimension changes
+- **Component Rebuilding**: Smart rebuilding of UI elements only when necessary
+
+**Background Scaling System**
+- **Aspect Ratio Preservation**: Maintains original image proportions during scaling
+- **Cover Mode**: Scales images to fill entire window without letterboxing (no black bars)
+- **Centered Positioning**: Images are always centered regardless of aspect ratio differences
+- **Smart Cropping**: Automatically crops excess portions while preserving important content
+- **Performance Caching**: Dimension-specific image caching for optimal performance
+
+**UI Component Adaptation**
+- **Panel Layout**: Three-panel design with fixed side panels (300px) and responsive center panel
+- **Button Management**: Automatic clearing and recreation of buttons on resize to prevent duplication
+- **Social Graph**: Dynamic rebuilding with new center panel bounds and automatic recentering
+- **Log Panel**: Responsive text wrapping and position updates for new dimensions
+- **Modal Positioning**: All modals automatically center based on current window size
+
+### Technical Implementation
+
+**Event Handling Flow**
+1. `pygame.VIDEORESIZE` event triggers `_handle_resize(w, h)`
+2. Updates display mode with new dimensions: `pygame.display.set_mode((w, h), pygame.RESIZABLE)`
+3. Calls `_update_layout()` to recalculate all panel positions
+4. Sets rebuild flags for components that need regeneration (social graph, UI structure)
+5. Components automatically rebuild in next render cycle
+
+**Layout Management**
+- **Dynamic Center Panel**: Width/height calculated as `screen_width - left_panel - right_panel`
+- **Fixed Side Panels**: Left and right panels maintain 300px width but adjust height
+- **Minimum Validation**: Prevents invalid surface creation with dimension bounds checking
+- **Smart Rebuilding**: Only rebuilds components when actually needed for performance
+
+**Background Scaling Algorithm**
+- **Ratio Calculation**: `scale_ratio = max(width_ratio, height_ratio)` for cover mode
+- **Dimension Scaling**: `new_width = original_width * scale_ratio`, `new_height = original_height * scale_ratio`
+- **Center Cropping**: Crop from `(new_width-screen_width)//2, (new_height-screen_height)//2`
+- **Letterbox Elimination**: No black bars regardless of window proportions
+
+### Performance Optimizations
+
+- **Conditional Rebuilding**: UI elements only rebuild when dimensions actually change
+- **Smart Caching**: Background images cached with dimension-specific keys
+- **Flag System**: Prevents unnecessary rebuilds with boolean flags
+- **Minimal Overhead**: Resize operations are lightweight and non-blocking
 
 </details>
 
@@ -1791,9 +1852,9 @@ Five-tier wealth classification for background selection:
 <summary><strong>User Interface & Visualization</strong></summary>
 
 *   **Technical Specs:**
-    *   **Resolution:** Fixed **1920x1080** window.
-    *   **Framerate:** Capped at 60 FPS.
-    *   **Theme:** Dark Mode with **Transparent UI Panels** allowing dynamic backgrounds to show through
+    *   **Resolution**: Fully resizable window with dynamic UI adaptation
+    *   **Framerate**: Capped at 60 FPS
+    *   **Theme**: Dark Mode with **Transparent UI Panels** allowing dynamic backgrounds to show through
 *   **Dynamic Background System:**
     *   **Intelligent Background Selection:** Backgrounds change based on player's age, location, wealth tier, and current season
     *   **Location-Based Logic:** 
@@ -1811,8 +1872,10 @@ Five-tier wealth classification for background selection:
         *   **Summer:** June, July, August
         *   **Autumn:** September, October, November
     *   **Resource Management:** Efficient image caching and loading system with fallback support
-    *   **Narrative Consistency:** Birth narrative season matches background season for immersive experience
-    *   **Filename Convention:** `{location}_tier{tier}_{season}.png` (e.g., `hospital_tier2_winter.png`)
+    *   **Aspect Ratio Preservation**: Cover mode scaling eliminates letterboxing by filling entire window
+    *   **Smart Cropping**: Images are centered and cropped to maintain proportions while filling screen
+    *   **Narrative Consistency**: Birth narrative season matches background season for immersive experience
+    *   **Filename Convention**: `{location}_tier{tier}_{season}.png` (e.g., `hospital_tier2_winter.png`)
 *   **Transparent UI System:**
     *   **Alpha-Blended Panels:** All UI panels use transparency to allow background visibility
     *   **Differential Opacity:** Side panels (230 alpha) are less transparent than center panels (200 alpha) for readability
@@ -1857,7 +1920,9 @@ Five-tier wealth classification for background selection:
                     *   **Left-Click:** Refocus the tree on the clicked relative.
                     *   **Right-Click:** Close tree and open the **Attribute Modal** for the clicked relative.
             *   **Interactive Social Map (Modal):**
-                *   **Advanced Physics Engine:** A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
+                *   **Advanced Physics Engine**: A real-time **Force-Directed Graph** simulation using NumPy with dynamic force scaling.
+                *   **Responsive Layout**: Automatically rebuilds and recenters when window is resized
+                *   **Dynamic Bounds**: Adapts to new center panel dimensions without user intervention
                     *   **Attraction Scaling:** The spring force between nodes is weighted by relationship strength using tiered multipliers (Weak: 0.5x-2.0x, Moderate: 2.0x-6.0x, Strong: 6.0x-10.0x), causing close-knit families and spouses to snap together into tight clusters.
                     *   **Hostile Repulsion:** Negative relationships (Enemies) act as active repulsors. The engine transforms the spring force into a repulsive force, ensuring that rivals and enemies actively push away from each other on the canvas.
                     *   **Balanced Forces:** Carefully tuned repulsion (50.0) and attraction (2.0) constants ensure relationship-based forces have meaningful impact without overwhelming the physics.

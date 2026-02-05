@@ -52,6 +52,16 @@ class LogPanel:
         self.logs = [] # List of dicts from get_flat_log_for_rendering
         self.total_content_height = 0
 
+    def update_position(self, x, y, w, h):
+        """Update the panel's position and size."""
+        # Ensure minimum valid dimensions
+        w = max(w, 1)
+        h = max(h, 1)
+        self.rect = pygame.Rect(x, y, w, h)
+        # Re-process logs with new width
+        if self.logs:
+            self.update_logs(self.logs)
+
     def update_logs(self, logs):
         """
         Processes raw logs into wrapped render lines.
@@ -60,7 +70,7 @@ class LogPanel:
         self.render_lines = []
         
         # Width available for text (rect width - padding)
-        max_width = self.rect.width - 20
+        max_width = max(self.rect.width - 20, 1)  # Ensure minimum width
         space_w = self.font.size(' ')[0]
         
         for item in logs:

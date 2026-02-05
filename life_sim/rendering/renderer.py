@@ -21,8 +21,12 @@ class Renderer:
         self.logger = logging.getLogger(__name__)
         
         pygame.init()
-        self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT), pygame.RESIZABLE)
         pygame.display.set_caption(constants.WINDOW_TITLE)
+        
+        # Track current screen dimensions
+        self.screen_width = constants.SCREEN_WIDTH
+        self.screen_height = constants.SCREEN_HEIGHT
         
         # Fonts
         self.font_main = pygame.font.SysFont("Arial", constants.FONT_SIZE_MAIN)
@@ -30,11 +34,7 @@ class Renderer:
         self.font_log = pygame.font.SysFont("Consolas", constants.FONT_SIZE_LOG)
         
         # Layout Calculation
-        self.rect_left = pygame.Rect(0, 0, constants.PANEL_LEFT_WIDTH, constants.SCREEN_HEIGHT)
-        self.rect_right = pygame.Rect(constants.SCREEN_WIDTH - constants.PANEL_RIGHT_WIDTH, 0, constants.PANEL_RIGHT_WIDTH, constants.SCREEN_HEIGHT)
-        
-        center_w = constants.SCREEN_WIDTH - constants.PANEL_LEFT_WIDTH - constants.PANEL_RIGHT_WIDTH
-        self.rect_center = pygame.Rect(constants.PANEL_LEFT_WIDTH, 0, center_w, constants.SCREEN_HEIGHT)
+        self._update_layout()
         
         # Initialize UI Elements
         self.log_panel = LogPanel(
@@ -103,9 +103,16 @@ class Renderer:
         
         # Initialize Background Manager
         self.background_manager = BackgroundManager()
+        
+        # Flag to track when social graph needs rebuild due to resize
+        self._social_graph_needs_rebuild = False
 
     def _init_ui_structure(self):
         """Creates Tabs and Action Buttons."""
+        # Clear existing UI elements before recreating
+        self.tabs.clear()
+        self.buttons.clear()
+        
         # 1. Init Tabs
         tab_names = ["Main", "School", "Social", "Assets"]
         tab_w = constants.PANEL_RIGHT_WIDTH // len(tab_names)
@@ -173,10 +180,44 @@ class Renderer:
         s.fill((20, 20, 20))  # Dark grey background
         self.screen.blit(s, (rect.x, rect.y))
 
+    def _update_layout(self):
+        """Update panel layout based on current screen dimensions."""
+        self.rect_left = pygame.Rect(0, 0, constants.PANEL_LEFT_WIDTH, self.screen_height)
+        self.rect_right = pygame.Rect(self.screen_width - constants.PANEL_RIGHT_WIDTH, 0, constants.PANEL_RIGHT_WIDTH, self.screen_height)
+        
+        center_w = self.screen_width - constants.PANEL_LEFT_WIDTH - constants.PANEL_RIGHT_WIDTH
+        self.rect_center = pygame.Rect(constants.PANEL_LEFT_WIDTH, 0, center_w, self.screen_height)
+        
+        # Update log panel if it exists
+        if hasattr(self, 'log_panel'):
+            self.log_panel.update_position(self.rect_center.x, self.rect_center.y, self.rect_center.width, self.rect_center.height)
+        
+        # Rebuild UI structure with new dimensions
+        if hasattr(self, 'tabs') and self.tabs:
+            self._init_ui_structure()
+        
+        # Rebuild social graph if it's currently visible and has been built
+        if hasattr(self, 'viewing_social_graph') and self.viewing_social_graph:
+            if hasattr(self, 'social_graph') and self.social_graph.bounds is not None:
+                # We need sim_state to rebuild, but we don't have it here
+                # Mark for rebuild in the next render cycle
+                self._social_graph_needs_rebuild = True
+
+    def _handle_resize(self, w, h):
+        self.screen = pygame.display.set_mode((w, h), pygame.RESIZABLE)
+        self.screen_width = w
+        self.screen_height = h
+        self._update_layout()
+
     def handle_event(self, event, sim_state=None):
         """
         Processes input events.
         """
+        # Handle window resize events
+        if event.type == pygame.VIDEORESIZE:
+            self._handle_resize(event.w, event.h)
+            return None
+        
         # 0. Check Event Modal (Highest Priority - blocks all other UI)
         if sim_state and sim_state.pending_event and self.event_modal:
             modal_result = self.event_modal.handle_event(event)
@@ -410,7 +451,7 @@ class Renderer:
             self.social_graph.update_physics()
         
         # Update and draw background
-        self.background_manager.update(sim_state)
+        self.background_manager.update(sim_state, self.screen_width, self.screen_height)
         self.background_manager.draw(self.screen)
         
         # Update Log Panel Content
@@ -442,8 +483,8 @@ class Renderer:
                 else:
                     modal_height = 400  # Regular height
                 
-                modal_x = (constants.SCREEN_WIDTH - modal_width) // 2
-                modal_y = (constants.SCREEN_HEIGHT - modal_height) // 2
+                modal_x = (self.screen.get_width() - modal_width) // 2
+                modal_y = (self.screen.get_height() - modal_height) // 2
                 modal_rect = pygame.Rect(modal_x, modal_y, modal_width, modal_height)
                 self.event_modal = EventModal(modal_rect, sim_state.pending_event)
             
@@ -471,6 +512,11 @@ class Renderer:
 
     def _draw_social_graph_modal(self, sim_state):
         """Draws the Social Map overlay."""
+        # Rebuild social graph if needed due to resize
+        if self._social_graph_needs_rebuild:
+            self.social_graph.build(sim_state, self.rect_center)
+            self._social_graph_needs_rebuild = False
+        
         # Background
         self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
         
@@ -578,9 +624,9 @@ class Renderer:
             bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
             
             # Keep tooltip on screen
-            if bg_rect.right > constants.SCREEN_WIDTH:
+            if bg_rect.right > self.screen.get_width():
                 bg_rect.x -= box_w + 30
-            if bg_rect.bottom > constants.SCREEN_HEIGHT:
+            if bg_rect.bottom > self.screen.get_height():
                 bg_rect.y -= box_h + 30
                 
             pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
@@ -1127,9 +1173,9 @@ class Renderer:
                     bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
                     
                     # Keep tooltip on screen
-                    if bg_rect.right > constants.SCREEN_WIDTH:
+                    if bg_rect.right > self.screen_width:
                         bg_rect.x -= box_w + 30
-                    if bg_rect.bottom > constants.SCREEN_HEIGHT:
+                    if bg_rect.bottom > self.screen_height:
                         bg_rect.y -= box_h + 30
                     
                     # Draw tooltip background and border
