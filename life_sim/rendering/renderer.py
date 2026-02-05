@@ -1,7 +1,7 @@
 # life_sim/rendering/renderer.py
 """
-Renderer Module.
-Handles Pygame initialization and drawing.
+Main Game Renderer.
+Handles all drawing operations and UI rendering.
 """
 import pygame
 import logging
@@ -794,7 +794,7 @@ class Renderer:
                 draw_group(i + 1, title, col_traits)
             
             # Column 4: Cognitive Profile (Aptitudes) - also show for infants
-            draw_group(4, "Cognitive Profile", ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"])
+            draw_group(4, "Cognitive Profile", ["Analytical Reasoning", "Verbal Abilities", "Spatial Abilities", "Working Memory", "Long-term Memory", "Secondary Cognitive"])
                 
         else:
             # Adult Layout: Vitals + Big 5 Personality
@@ -816,7 +816,7 @@ class Renderer:
             draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
             
             # Column 5: Cognitive Profile (Aptitudes)
-            draw_group(4, "Cognitive Profile", ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"])
+            draw_group(4, "Cognitive Profile", ["Analytical Reasoning", "Verbal Abilities", "Spatial Abilities", "Working Memory", "Long-term Memory", "Secondary Cognitive"])
 
     def _draw_dashed_rect(self, surface, color, rect, width=2, dash_len=5):
         """Helper to draw a dashed rectangle."""

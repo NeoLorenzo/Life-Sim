@@ -165,6 +165,6 @@ TEMPERAMENT_DEFAULT_VALUE = 50.0
 # ---------------------------------------------------------------------------
 # Cognitive Aptitude System
 # ---------------------------------------------------------------------------
-APTITUDES = ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"]
+APTITUDES = ["Analytical Reasoning", "Verbal Abilities", "Spatial Abilities", "Working Memory", "Long-term Memory", "Secondary Cognitive"]
 APTITUDE_MIN = 0
 APTITUDE_MAX = 180

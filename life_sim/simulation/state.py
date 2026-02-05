@@ -391,12 +391,12 @@ class Agent:
         
         # Map aptitudes to their development curve types
         aptitude_curves = {
-            "ANA": "fluid",      # Analytical reasoning
-            "VER": "crystallized", # Verbal abilities  
-            "SPA": "fluid",      # Spatial abilities
-            "MEM_W": "fluid",    # Working memory
-            "MEM_L": "crystallized", # Long-term memory
-            "SEC": "crystallized"  # Secondary cognitive abilities
+            "Analytical Reasoning": "fluid",      # Analytical reasoning
+            "Verbal Abilities": "crystallized", # Verbal abilities  
+            "Spatial Abilities": "fluid",      # Spatial abilities
+            "Working Memory": "fluid",    # Working memory
+            "Long-term Memory": "crystallized", # Long-term memory
+            "Secondary Cognitive": "crystallized"  # Secondary cognitive abilities
         }
         
         def interpolate_curve(curve, age):

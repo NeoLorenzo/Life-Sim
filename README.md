@@ -1970,12 +1970,12 @@ The simulation now features a sophisticated cognitive aptitude system that repla
 ### Core Architecture
 
 *   **Six Cognitive Domains:** Each agent has six distinct aptitudes that model different aspects of intelligence:
-    *   **ANA (Analytical Reasoning):** Logical deduction, problem-solving, mathematical thinking
-    *   **VER (Verbal Abilities):** Language comprehension, vocabulary, verbal fluency
-    *   **SPA (Spatial Abilities):** Mental rotation, visualization, spatial reasoning
-    *   **MEM_W (Working Memory):** Short-term memory, cognitive capacity, attention
-    *   **MEM_L (Long-term Memory):** Knowledge retention, recall, learning
-    *   **SEC (Secondary Cognitive):** General cognitive abilities, processing speed
+    *   **Analytical Reasoning:** Logical deduction, problem-solving, mathematical thinking
+    *   **Verbal Abilities:** Language comprehension, vocabulary, verbal fluency
+    *   **Spatial Abilities:** Mental rotation, visualization, spatial reasoning
+    *   **Working Memory:** Short-term memory, cognitive capacity, attention
+    *   **Long-term Memory:** Knowledge retention, recall, learning
+    *   **Secondary Cognitive:** General cognitive abilities, processing speed
 
 *   **Genotype vs. Phenotype Model:**
     *   **Genotype:** Inherited cognitive potential (0-180 scale)
@@ -1985,8 +1985,8 @@ The simulation now features a sophisticated cognitive aptitude system that repla
 ### Developmental Psychology Integration
 
 *   **Fluid vs. Crystallized Intelligence:**
-    *   **Fluid Aptitudes** (ANA, SPA, MEM_W): Peak in early adulthood (age 20-30), then decline
-    *   **Crystallized Aptitudes** (VER, MEM_L, SEC): Increase slowly throughout life, maintain longer
+    *   **Fluid Aptitudes** (Analytical Reasoning, Spatial Abilities, Working Memory): Peak in early adulthood (age 20-30), then decline
+    *   **Crystallized Aptitudes** (Verbal Abilities, Long-term Memory, Secondary Cognitive): Increase slowly throughout life, maintain longer
 
 *   **Age-Based Development Curves:**
     *   **Infancy (0-2):** Very low expression (10-20% of potential)
@@ -2016,12 +2016,12 @@ The simulation now features a sophisticated cognitive aptitude system that repla
 {
     "aptitudes": {
         "definitions": {
-            "ANA": {"mean": 100, "sd": 15},
-            "VER": {"mean": 100, "sd": 15},
-            "SPA": {"mean": 100, "sd": 15},
-            "MEM_W": {"mean": 100, "sd": 15},
-            "MEM_L": {"mean": 100, "sd": 15},
-            "SEC": {"mean": 100, "sd": 15}
+            "Analytical Reasoning": {"mean": 100, "sd": 15},
+            "Verbal Abilities": {"mean": 100, "sd": 15},
+            "Spatial Abilities": {"mean": 100, "sd": 15},
+            "Working Memory": {"mean": 100, "sd": 15},
+            "Long-term Memory": {"mean": 100, "sd": 15},
+            "Secondary Cognitive": {"mean": 100, "sd": 15}
         },
         "heritability_sd": 10,
         "development_curves": {
@@ -2029,7 +2029,7 @@ The simulation now features a sophisticated cognitive aptitude system that repla
             "crystallized": [[0, 0.1], [15, 0.6], [30, 0.9], [50, 1.0], [90, 0.95]]
         },
         "personality_modifiers": {
-            "SEC": {"Extraversion": 0.1, "Agreeableness": 0.1}
+            "Secondary Cognitive": {"Extraversion": 0.1, "Agreeableness": 0.1}
         }
     }
 }

@@ -59,12 +59,12 @@
     },
     "aptitudes": {
         "definitions": {
-            "ANA": {"mean": 100, "sd": 15},
-            "VER": {"mean": 100, "sd": 15},
-            "SPA": {"mean": 100, "sd": 15},
-            "MEM_W": {"mean": 100, "sd": 15},
-            "MEM_L": {"mean": 100, "sd": 15},
-            "SEC": {"mean": 100, "sd": 15}
+            "Analytical Reasoning": {"mean": 100, "sd": 15},
+            "Verbal Abilities": {"mean": 100, "sd": 15},
+            "Spatial Abilities": {"mean": 100, "sd": 15},
+            "Working Memory": {"mean": 100, "sd": 15},
+            "Long-term Memory": {"mean": 100, "sd": 15},
+            "Secondary Cognitive": {"mean": 100, "sd": 15}
         },
         "heritability_sd": 10,
         "development_curves": {
@@ -72,7 +72,7 @@
             "crystallized": [[0, 0.1], [15, 0.6], [30, 0.9], [50, 1.0], [90, 0.95]]
         },
         "personality_modifiers": {
-            "SEC": {"Extraversion": 0.1, "Agreeableness": 0.1}
+            "Secondary Cognitive": {"Extraversion": 0.1, "Agreeableness": 0.1}
         }
     },
     "time_management": {
