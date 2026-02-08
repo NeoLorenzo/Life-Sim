@@ -2,37 +2,6 @@
 
 **Life-Sim** is a comprehensive, modular life simulation engine built in Python. It simulates the biological, economic, social, and cognitive trajectory of a human agent within a deterministic, configuration-driven world. The project emphasizes statistical realism, emergent behavior, and strict separation of concerns between simulation logic and visualization.
 
-## 🎯 Current Implementation Status (Complete)
-
-The simulation is a fully-featured life emulator with the following major systems implemented:
-
-### ✅ Core Simulation Systems
-- **Deterministic World Engine**: Seed-based reproducibility with monthly turn progression
-- **Multi-Agent Architecture**: Player + NPCs with identical biological/economic rules
-- **Advanced Genetics & Inheritance**: Multi-generational family trees with DNA-based trait transmission
-- **Sophisticated Psychology**: Big Five personality model with infant temperament system
-- **Cognitive Aptitude System**: Six-domain intelligence modeling with developmental curves
-- **Dynamic Health & Aging**: Realistic mortality, growth, and senescence
-- **Economic Simulation**: Jobs, salaries, wealth accumulation, and tier-based classification
-- **Education System**: Complete academic pipeline with subject-based performance tracking
-- **Relationship Engine**: Psychometric compatibility with complex social networks
-- **Event System**: Contextual life events with choice-driven outcomes
-
-### ✅ Advanced User Interface
-- **Dynamic Background System**: Seasonal/wealth/location-aware visual environments with aspect-ratio-preserving scaling
-- **Transparent UI Panels**: Alpha-blended interfaces with differential opacity
-- **Interactive Visualizations**: Family trees and social graphs with physics simulation
-- **Performance-Optimized Rendering**: Spatial indexing, viewport culling, and advanced caching
-- **Responsive Layout**: Three-panel design with context-aware component visibility
-- **Fully Resizable Window**: Dynamic window resizing with automatic UI adaptation and background scaling
-
-### ✅ Technical Excellence
-- **13 Core Modules**: Comprehensive simulation and rendering architecture
-- **Configuration-Driven**: 289-line JSON config with all gameplay parameters
-- **Performance Optimized**: Maintains 60 FPS with 200+ agents
-- **Modular Design**: SOLID principles with clear separation of concerns
-- **Extensible Architecture**: Plugin-ready systems for future enhancements
-
 ## 📚 Table of Contents
 
 - [Project Structure](#-project-structure)
@@ -357,6 +326,10 @@ Processes medical care for health restoration:
 - **Action Mapping**: UI actions mapped to logic functions via action IDs
 - **State Updates**: Functions directly modify `sim_state` object
 - **Logging**: All actions generate appropriate log entries
+- **Schedule Management**: Handles `UPDATE_SCHEDULE` actions from UI controls:
+    - **Event Listening**: Monitors for schedule control interactions from NumberStepper widgets
+    - **State Synchronization**: Calls `sim_state.player.set_schedule(sleep=sleep, attendance=attendance)` 
+    - **Real-Time Updates**: Schedule changes immediately affect AP calculations and UI display
 
 **Deterministic Behavior**
 - **No Randomness in Core Logic**: All randomization uses seeded RNG
@@ -1390,7 +1363,7 @@ Manages intelligent background selection based on simulation state:
   - **Social Graph Physics**: Complete physics constants for force simulation
   - **Affinity Engine**: All psychometric compatibility tuning parameters
   - **Health System**: Age-based health capacity and decay constants
-  - **Time Management**: `AP_MAX_DAILY = 24.0`, sleep requirements
+  - **Time Management**: `AP_MAX_DAILY = 24.0`, sleep requirements, `AP_GRANULARITY = 0.5`, `MIN_SLEEP_PERMITTED = 0.5`
   - **Medical Costs**: `DOCTOR_VISIT_COST = 100`, recovery ranges
   - **Temperament System**: `TEMPERAMENT_TRAITS`, `PLASTICITY_DECAY` mapping
   - **Cognitive Aptitudes**: `APTITUDES = ["ANA", "VER", "SPA", "MEM_W", "MEM_L", "SEC"]`
@@ -1934,6 +1907,7 @@ The application features a comprehensive window resizing system that provides a 
                 *   **Network Visualization:**
                     *   **Nodes:** Represent agents. The Player is distinct (White), while NPCs use a continuous color gradient based on relationship score: Light Gray at 0 (neutral/stranger), interpolating to Bright Green at +100 (closest bonds) and Deep Red at -100 (enemies).
                     *   **Edges:** Dynamic lines representing relationships. **Thickness** scales linearly with relationship intensity from 1px (weak) to 4px (strong). **Color** uses linear interpolation between Gray (Neutral), Bright Green (Best Friend), and Deep Red (Nemesis).
+                    *   **Unconstrained Movement:** Nodes are no longer bounded by hard boundaries, allowing free movement across the entire canvas for more natural social network visualization.
                 *   **Filters & Controls:**
                     *   **Population Toggle:** Switch between "Show Known" (Player's immediate circle) and "Show All" (The entire simulation population).
                     *   **Network Toggle:** Switch between "Direct Links" (Only Player connections) and "All Links" (Visualizing the complete web of NPC-NPC relationships).
@@ -2009,6 +1983,30 @@ The simulation now features a sophisticated cognitive aptitude system that repla
 *   **Visual Progress Bars:** Color-coded indicators showing current aptitude levels
 *   **Age-Appropriate Display:** Values reflect developmental stage of the agent
 *   **IQ Integration:** Legacy IQ property calculated as average of all aptitude phenotypes
+
+### Cognitive Penalty System
+
+*   **Dynamic Performance Modifiers:** Cognitive abilities are affected by temporary penalties based on life circumstances
+*   **Sleep Deprivation Penalties:** When biological sleep needs exceed target sleep, agents receive cumulative penalties:
+    *   **Health Impact:** Reduced health regeneration and increased stress
+    *   **Happiness Impact:** Mood degradation from chronic sleep deficit
+    *   **Cognitive Impact:** Temporary reduction in effective aptitude scores
+*   **Effective Aptitude Calculation:** The `get_effective_aptitude()` method applies percentage-based penalties:
+    *   **Base Aptitude:** Natural genetic potential modified by developmental curves
+    *   **Penalty Application:** Current aptitude × (1.0 - penalty_percentage)
+    *   **UI Integration:** Attribute modal displays both base and effective values when penalties are active
+*   **Configuration-Driven Penalties:** All penalty values are configurable via `config.json`:
+    ```json
+    {
+        "time_management": {
+            "penalties": {
+                "sleep_deficit_health_penalty": 2.0,
+                "sleep_deficit_happiness_penalty": 3.0,
+                "sleep_deficit_cognitive_penalty": 0.15
+            }
+        }
+    }
+    ```
 
 ### Configuration
 
@@ -2116,6 +2114,20 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
 *   **Dynamic Menus:**
     *   **Responsive Design:** Support for true full-screen resizing.
+*   **Schedule Management System:**
+    *   **Interactive Controls:** Dedicated "Schedule" button in Left Panel toggles visibility of schedule preference controls.
+    *   **NumberStepper Widgets:** Custom UI components for precise numeric input with increment/decrement buttons.
+    *   **Target Sleep Control:** Allows users to set desired sleep hours with 0.5-hour granularity.
+    *   **Attendance Rate Control:** Enables setting school/work attendance percentage (0.0-1.0) with 0.1 precision.
+    *   **Age-Based Validation:** Sleep automatically capped at 12 hours for agents age 3+, unlimited for infants.
+    *   **Context-Aware UI:** Attendance controls are hidden when player is not enrolled in school.
+    *   **Real-Time Preview:** "Free AP" display instantly updates based on current schedule settings.
+*   **Enhanced AP Bar Visualization:**
+    *   **Dual Sleep Metrics:** Distinguishes between biological sleep requirement (`ap_sleep`) and user target (`target_sleep_hours`).
+    *   **Attendance-Based Rendering:** Shows attended school hours (red) vs total obligation (red hatched overlay for truancy).
+    *   **Sleep Deficit Indicator:** Red hatched overlay appears when biological need exceeds user target.
+    *   **Truancy Visualization:** Green hatched overlay shows skipped school/work time that becomes risky free time.
+    *   **Dynamic State Updates:** AP bar properly resets when player graduates from school (red sections disappear).
 
 </details>
 

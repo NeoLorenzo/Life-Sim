@@ -21,17 +21,28 @@ def process_turn(sim_state: SimState):
     if not player.is_alive:
         return
 
-    # 1. Advance Global Time
+    # 1. Store current age bracket before processing
+    time_conf = sim_state.config.get("time_management", {})
+    old_bracket = _get_age_bracket(player.age, time_conf.get("sleep_requirements", {}))
+
+    # 2. Advance Global Time
     sim_state.month_index += 1
     if sim_state.month_index > 11:
         sim_state.month_index = 0
         sim_state.year += 1
         sim_state.add_log(f"Happy New Year {sim_state.year}!", constants.COLOR_TEXT_DIM)
     
-    # 2. Process Player (The Hero)
+    # 3. Process Player (The Hero)
     _process_agent_monthly(sim_state, player)
     
-    # 3. Process NPCs (The Population)
+    # 4. Check for Life Stage change and reset schedule if needed
+    new_bracket = _get_age_bracket(player.age, time_conf.get("sleep_requirements", {}))
+    if old_bracket != new_bracket:
+        player.target_sleep_hours = player.ap_sleep
+        player.attendance_rate = 1.0
+        sim_state.add_log("Life Stage: Schedule reset to defaults.", constants.COLOR_ACCENT)
+    
+    # 5. Process NPCs (The Population)
     for uid, npc in sim_state.npcs.items():
         if not npc.is_alive:
             continue
@@ -47,10 +58,28 @@ def process_turn(sim_state: SimState):
                 sim_state.add_log(f"Your {rel.rel_type}, {npc.first_name}, died at age {npc.age}.", constants.COLOR_DEATH)
                 player.happiness = max(0, player.happiness - 30)
 
-    # 4. Global Systems
+    # 6. Global Systems
     school.process_school_turn(sim_state)
     
     logger.info(f"Turn processed: {sim_state.month_index}/{sim_state.year}. Player Age: {player.age}")
+
+def _get_age_bracket(age, sleep_requirements):
+    """Determine the age bracket for a given age based on sleep requirements."""
+    if not sleep_requirements:
+        return "default"
+    
+    # Sort by max_age to find the correct bracket
+    sorted_reqs = sorted(sleep_requirements.values(), key=lambda x: x["max_age"])
+    
+    for req in sorted_reqs:
+        if age <= req["max_age"]:
+            return req.get("max_age", "default")
+    
+    # Fallback for oldest age
+    if sorted_reqs:
+        return sorted_reqs[-1].get("max_age", "default")
+    
+    return "default"
 
 def _process_agent_monthly(sim_state, agent):
     """Applies biological and economic updates to a single agent."""
@@ -110,7 +139,48 @@ def _process_agent_monthly(sim_state, agent):
     time_conf = sim_state.config.get("time_management", {})
     agent._recalculate_ap_needs(time_conf)
     
-    # F. Economics (Salary)
+    # F. Sleep Penalties
+    sleep_deficit = max(0, agent.ap_sleep - agent.target_sleep_hours)
+    if sleep_deficit > 0:
+        penalties = time_conf.get("penalties", {})
+        health_loss = sleep_deficit * penalties.get("health_loss_per_hour_missed", 2)
+        happiness_loss = sleep_deficit * penalties.get("happiness_loss_per_hour_missed", 3)
+        cognitive_penalty = sleep_deficit * penalties.get("cognitive_penalty_per_hour", 0.05)
+        
+        agent.health = max(0, agent.health - health_loss)
+        agent.happiness = max(0, agent.happiness - happiness_loss)
+        agent._temp_cognitive_penalty = cognitive_penalty
+        
+        if agent.is_player:
+            sim_state.add_log(f"Sleep Deprived: Health -{health_loss:.0f}, Cognitive -{cognitive_penalty*100:.0f}%", constants.COLOR_LOG_NEGATIVE)
+    else:
+        agent._temp_cognitive_penalty = 0.0
+    
+    # G. Truancy Logic
+    skipped_hours = agent.ap_locked * (1.0 - agent.attendance_rate)
+    if skipped_hours > 0:
+        penalties = time_conf.get("penalties", {})
+        risk = skipped_hours * penalties.get("truancy_base_risk", 0.10)
+        
+        if random.random() < risk:
+            # Caught skipping - apply performance penalty
+            performance_penalty = penalties.get("truancy_performance_penalty", 10)
+            
+            if agent.school and 'performance' in agent.school:
+                agent.school['performance'] = max(0, agent.school['performance'] - performance_penalty)
+                if agent.is_player:
+                    sim_state.add_log("Caught skipping! Performance penalized.", constants.COLOR_LOG_NEGATIVE)
+            elif agent.job:
+                # Job performance isn't fully tracked yet, so just log it
+                if agent.is_player:
+                    sim_state.add_log("Caught skipping work! Performance penalized.", constants.COLOR_LOG_NEGATIVE)
+                else:
+                    logger.debug(f"NPC {agent.first_name} caught skipping work")
+        else:
+            # Skipped undetected
+            logger.debug(f"{agent.first_name} skipped {skipped_hours:.1f}h undetected")
+    
+    # H. Economics (Salary)
     if agent.job:
         monthly_salary = int(agent.job['salary'] / 12)
         agent.money += monthly_salary

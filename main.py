@@ -97,6 +97,13 @@ def main():
                     elif action_id == "TOGGLE_ATTR":
                         # Default to player when clicking the main menu button
                         renderer.toggle_attributes(target=sim_state.player)
+                    elif isinstance(action_id, tuple) and action_id[0] == "UPDATE_SCHEDULE":
+                        # Handle schedule updates from UI
+                        schedule_data = action_id[1]
+                        sleep = schedule_data.get("sleep")
+                        attendance = schedule_data.get("attendance")
+                        sim_state.player.set_schedule(sleep=sleep, attendance=attendance)
+                        logger.info(f"Schedule updated: sleep={sleep}, attendance={attendance}")
                     else:
                         # Handle placeholders
                         sim_state.add_log(f"Feature {action_id} coming soon!", constants.COLOR_TEXT_DIM)

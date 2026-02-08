@@ -180,42 +180,121 @@ class APBar:
         # Background
         pygame.draw.rect(screen, (20, 20, 20), self.rect)
         
-        # Calculate segment counts (rounded to nearest segment for visualization)
-        # Note: We use ceil/floor logic or simple rounding. 
-        # For visual clarity, we map float AP to integer segments.
+        # Calculate segment counts
+        bio_sleep_segs = int(round(agent.ap_sleep))  # Biological sleep requirement
+        target_sleep_segs = int(round(agent.target_sleep_hours))  # User's target sleep
+        locked_segs = int(round(agent.ap_locked))  # Total obligation (school/work)
+        attended_segs = int(round(agent.ap_locked * agent.attendance_rate))  # Actually attended
+        used_segs = int(round(agent.ap_used))  # Used for activities
         
-        locked_segs = int(round(agent.ap_locked))
-        used_segs = int(round(agent.ap_used))
-        sleep_segs = int(round(agent.ap_sleep))
+        # Calculate deficits
+        sleep_deficit_segs = max(0, bio_sleep_segs - target_sleep_segs)
+        truancy_segs = max(0, locked_segs - attended_segs)
         
-        # Draw Segments
+        # Draw base segments
         for i in range(self.segments):
             seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
             
             color = constants.COLOR_LOG_POSITIVE # Default Green (Free)
             
-            # Logic for coloring
-            # 1. Locked (Left aligned)
-            if i < locked_segs:
-                color = constants.COLOR_DEATH # Red
-            # 2. Used (After Locked)
-            elif i < locked_segs + used_segs:
-                color = constants.COLOR_BTN_IDLE # Gray
-            # 3. Sleep (Right aligned)
-            elif i >= self.segments - sleep_segs:
-                color = (100, 150, 255) # Blue
+            # Base coloring logic
+            # 1. Attended (Left aligned) - Red
+            if i < attended_segs:
+                color = constants.COLOR_DEATH
+            # 2. Used (After Attended) - Gray
+            elif i < attended_segs + used_segs:
+                color = constants.COLOR_BTN_IDLE
+            # 3. Target Sleep (Right aligned) - Blue
+            elif i >= self.segments - target_sleep_segs:
+                color = (100, 150, 255)
             
             # Draw fill
             pygame.draw.rect(screen, color, seg_rect)
             
             # Draw grid line
             pygame.draw.line(screen, (0, 0, 0), seg_rect.topright, seg_rect.bottomright)
-
+        
+        # Draw hatched overlays
+        # Sleep Deficit (Hatched Red) - shows biological need not being met
+        if sleep_deficit_segs > 0:
+            deficit_start = self.segments - bio_sleep_segs
+            for i in range(deficit_start, deficit_start + sleep_deficit_segs):
+                seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
+                self._draw_hatched(screen, seg_rect, (200, 50, 50))  # Red hatched
+        
+        # Truancy (Hatched Green) - shows skipped school/work time
+        if truancy_segs > 0:
+            truancy_start = attended_segs
+            for i in range(truancy_start, truancy_start + truancy_segs):
+                seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
+                self._draw_hatched(screen, seg_rect, (100, 255, 100))  # Green hatched
+        
         # Border
         pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
         
         # Text Label
         font = pygame.font.SysFont("Arial", 14)
-        txt = f"Time: {agent.free_ap:.1f}h Free / {agent.ap_sleep:.1f}h Sleep"
+        txt = f"Time: {agent.free_ap:.1f}h Free / {agent.target_sleep_hours:.1f}h Sleep"
         txt_surf = font.render(txt, True, constants.COLOR_TEXT_DIM)
         screen.blit(txt_surf, (self.rect.x, self.rect.y - 18))
+    
+    def _draw_hatched(self, screen, rect, color):
+        """Draw hatched pattern overlay on a rectangle."""
+        # Draw diagonal lines for hatched effect
+        for i in range(0, rect.width + rect.height, 3):
+            start_x = rect.x + max(0, i - rect.height)
+            start_y = rect.y + min(i, rect.height)
+            end_x = rect.x + min(i, rect.width)
+            end_y = rect.y + max(0, i - rect.width)
+            pygame.draw.line(screen, color, (start_x, start_y), (end_x, end_y), 1)
+
+class NumberStepper:
+    """A numeric input widget with increment/decrement buttons."""
+    def __init__(self, x, y, w, h, value, min_val, max_val, step, label_font):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.value = value
+        self.min_val = min_val
+        self.max_val = max_val
+        self.step = step
+        self.label_font = label_font
+        
+        # Create buttons for [-] and [+]
+        button_w = h  # Square buttons
+        button_h = h
+        
+        self.minus_btn = Button(x, y, button_w, button_h, "-", "STEPPER_MINUS", label_font)
+        self.plus_btn = Button(x + w - button_w, y, button_w, button_h, "+", "STEPPER_PLUS", label_font)
+        
+        # Calculate text display area (between buttons)
+        self.text_area = pygame.Rect(x + button_w, y, w - (button_w * 2), h)
+        
+    def handle_event(self, event):
+        """Handle button clicks and return step changes."""
+        # Handle button hover states
+        self.minus_btn.handle_event(event)
+        self.plus_btn.handle_event(event)
+        
+        # Check for button clicks
+        result = self.minus_btn.handle_event(event)
+        if result == "STEPPER_MINUS":
+            self.value = max(self.min_val, self.value - self.step)
+            return ("STEP_CHANGE", self.value)
+            
+        result = self.plus_btn.handle_event(event)
+        if result == "STEPPER_PLUS":
+            self.value = min(self.max_val, self.value + self.step)
+            return ("STEP_CHANGE", self.value)
+            
+        return None
+        
+    def draw(self, screen):
+        """Draw the stepper component."""
+        # Draw buttons
+        self.minus_btn.draw(screen)
+        self.plus_btn.draw(screen)
+        
+        # Draw value text centered between buttons
+        value_text = str(self.value)
+        text_surf = self.label_font.render(value_text, True, constants.COLOR_TEXT)
+        text_rect = text_surf.get_rect(center=self.text_area.center)
+        screen.blit(text_surf, text_rect)

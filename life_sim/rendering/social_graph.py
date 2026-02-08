@@ -558,12 +558,6 @@ class SocialGraphLayout:
         self.vel *= constants.GRAPH_FRICTION # Damping
         self.pos += self.vel
 
-        # 4. Hard Boundary Constraint (Bounce)
-        # Left/Right
-        np.clip(self.pos[:, 0], self.bounds.left + constants.GRAPH_BOUNDARY_PADDING, self.bounds.right - constants.GRAPH_BOUNDARY_PADDING, out=self.pos[:, 0])
-        # Top/Bottom
-        np.clip(self.pos[:, 1], self.bounds.top + constants.GRAPH_BOUNDARY_PADDING, self.bounds.bottom - constants.GRAPH_BOUNDARY_PADDING, out=self.pos[:, 1])
-
     # --- Call this once in build(), and again whenever zoom changes ---
     def _rebuild_node_surfaces(self):
         """

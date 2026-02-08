@@ -162,6 +162,11 @@ class Agent:
         self.ap_locked = 0.0 # School/Work
         self.ap_sleep = constants.AP_SLEEP_DEFAULT  # Default
         
+        # Schedule Preferences
+        self.target_sleep_hours = self.ap_sleep
+        self.attendance_rate = 1.0
+        self._temp_cognitive_penalty = 0.0
+        
         # Calculate initial sleep needs if config provided
         time_config = kwargs.get("time_config", {})
         self._recalculate_ap_needs(time_config)
@@ -297,9 +302,9 @@ class Agent:
         if name == "Looks": return self.looks
         if name == "Money": return self.money
         
-        # Aptitudes
+        # Aptitudes (with cognitive penalties)
         if name in constants.APTITUDES:
-            return self.aptitudes[name]["phenotype"]
+            return self.get_effective_aptitude(name)
         
         # Physical
         if name == "Energy": return self.endurance
@@ -332,6 +337,15 @@ class Agent:
             return self.temperament[name]
         
         return 0
+
+    def get_effective_aptitude(self, name):
+        """Get aptitude value with cognitive penalties applied."""
+        if name not in self.aptitudes:
+            return 0
+        
+        base = self.aptitudes[name]["phenotype"]
+        effective = base * (1.0 - self._temp_cognitive_penalty)
+        return int(effective)
 
     @property
     def age(self):
@@ -737,16 +751,36 @@ class Agent:
         for r in sorted_reqs:
             if self.age <= r["max_age"]:
                 self.ap_sleep = r["hours"]
+                # Keep target_sleep_hours in sync with calculated requirements
+                self.target_sleep_hours = self.ap_sleep
                 return
         
         # Fallback for oldest age
         if sorted_reqs:
             self.ap_sleep = sorted_reqs[-1]["hours"]
+            self.target_sleep_hours = self.ap_sleep
 
     @property
     def free_ap(self):
         """Returns available AP."""
-        return max(0.0, self.ap_max - self.ap_locked - self.ap_sleep - self.ap_used)
+        locked_ap = self.ap_locked * self.attendance_rate
+        sleep_ap = self.target_sleep_hours
+        return max(0.0, self.ap_max - locked_ap - sleep_ap - self.ap_used)
+
+    def set_schedule(self, sleep=None, attendance=None):
+        """Set schedule preferences with validation and rounding."""
+        if sleep is not None:
+            # Apply age-based cap: max 12 hours after age 3
+            max_sleep = 12.0 if self.age >= 3 else 24.0
+            
+            # Clamp between minimum permitted and age-based max, then round to granularity
+            sleep = max(constants.MIN_SLEEP_PERMITTED, min(max_sleep, sleep))
+            self.target_sleep_hours = round(sleep / constants.AP_GRANULARITY) * constants.AP_GRANULARITY
+        
+        if attendance is not None:
+            # Clamp between 0.0 and 1.0, then round to nearest decimal place
+            attendance = max(0.0, min(1.0, attendance))
+            self.attendance_rate = round(attendance, 1)
 
 class SimState:
     """

@@ -7,7 +7,7 @@ import pygame
 import logging
 import os
 from .. import constants
-from .ui import Button, LogPanel, APBar
+from .ui import Button, LogPanel, APBar, NumberStepper
 from .family_tree import FamilyTreeLayout
 from .social_graph import SocialGraphLayout
 from .modals import EventModal
@@ -106,6 +106,15 @@ class Renderer:
         
         # Flag to track when social graph needs rebuild due to resize
         self._social_graph_needs_rebuild = False
+        
+        # Schedule Controls
+        self.show_schedule_controls = False
+        self.schedule_btn = None
+        self.sleep_stepper = None
+        self.attendance_stepper = None
+        
+        # Initialize schedule controls after all layout is set up
+        self._init_schedule_controls()
 
     def _init_ui_structure(self):
         """Creates Tabs and Action Buttons."""
@@ -166,6 +175,34 @@ class Renderer:
                 btn = Button(start_x, current_y, btn_w, btn_h, text, action_id, self.font_main)
                 self.buttons[cat].append(btn)
                 current_y += btn_h + gap
+        
+        # Schedule controls are now initialized in __init__ to ensure they appear on startup
+
+    def _init_schedule_controls(self):
+        """Initialize schedule button and steppers for the left panel."""
+        # Schedule button positioned below AP bar area
+        btn_x = self.rect_left.x + 20
+        btn_y = self.rect_left.y + 200  # Approximate position below AP bar
+        btn_w = self.rect_left.width - 40
+        btn_h = 30
+        
+        self.schedule_btn = Button(btn_x, btn_y, btn_w, btn_h, "Schedule", "TOGGLE_SCHEDULE", self.font_main)
+        
+        # Number steppers (positioned when shown)
+        stepper_x = self.rect_left.x + 20
+        stepper_y = btn_y + btn_h + 10
+        stepper_w = self.rect_left.width - 40
+        stepper_h = 25
+        
+        self.sleep_stepper = NumberStepper(
+            stepper_x, stepper_y, stepper_w, stepper_h,
+            8.0, constants.MIN_SLEEP_PERMITTED, 24.0, 0.5, self.font_main
+        )
+        
+        self.attendance_stepper = NumberStepper(
+            stepper_x, stepper_y + stepper_h + 25, stepper_w, stepper_h,
+            1.0, 0.0, 1.0, 0.1, self.font_main
+        )
 
     def _draw_panel_background(self, rect, alpha):
         """
@@ -392,6 +429,25 @@ class Renderer:
                         self.social_graph.build(sim_state, self.rect_center)
                         return None
                     return action
+
+        # 2a. Check Schedule Button (Left Panel)
+        if self.schedule_btn:
+            action = self.schedule_btn.handle_event(event)
+            if action == "TOGGLE_SCHEDULE":
+                self.show_schedule_controls = not self.show_schedule_controls
+                return None
+
+        # 2b. Check Schedule Steppers (if visible)
+        if self.show_schedule_controls and self.sleep_stepper and self.attendance_stepper:
+            # Handle sleep stepper
+            result = self.sleep_stepper.handle_event(event)
+            if result and result[0] == "STEP_CHANGE":
+                return ("UPDATE_SCHEDULE", {"sleep": result[1]})
+            
+            # Handle attendance stepper  
+            result = self.attendance_stepper.handle_event(event)
+            if result and result[0] == "STEP_CHANGE":
+                return ("UPDATE_SCHEDULE", {"attendance": result[1]})
 
         # 3. Check Dynamic Relationship Buttons (Social Tab)
         if self.active_tab == "Social" and sim_state:
@@ -1058,6 +1114,36 @@ class Renderer:
         y += 45 # Bar height + padding + text offset
         
         y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
+        
+        # Schedule Button
+        if self.schedule_btn:
+            self.schedule_btn.draw(self.screen)
+            y = self.schedule_btn.rect.y + self.schedule_btn.rect.height + 10
+        
+        # Schedule Controls (if shown)
+        if self.show_schedule_controls and self.sleep_stepper and self.attendance_stepper:
+            # Update stepper values with current player settings
+            self.sleep_stepper.value = player.target_sleep_hours
+            self.attendance_stepper.value = player.attendance_rate
+            
+            # Draw labels and steppers
+            y += draw_text("Target Sleep:", color=constants.COLOR_TEXT_DIM)
+            self.sleep_stepper.draw(self.screen)
+            
+            y = self.sleep_stepper.rect.y + self.sleep_stepper.rect.height + 10
+            
+            # Only show attendance controls if enrolled in school
+            if player.school:
+                y += draw_text("Attendance %:", color=constants.COLOR_TEXT_DIM)
+                self.attendance_stepper.draw(self.screen)
+                
+                # Draw preview line
+                y = self.attendance_stepper.rect.y + self.attendance_stepper.rect.height + 15
+                free_ap = player.free_ap
+                y += draw_text(f"Free AP: {free_ap:.1f}h", color=constants.COLOR_ACCENT)
+            else:
+                # Draw preview line without attendance stepper
+                y += draw_text(f"Free AP: {player.free_ap:.1f}h", color=constants.COLOR_ACCENT)
         
         # Job / School Display
         if player.school:

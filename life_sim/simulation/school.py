@@ -117,6 +117,9 @@ def _handle_school_start(sim_state, agent, school_sys):
     if agent.school:
         agent.school["is_in_session"] = True
         
+        # Set AP locked time for school session (7 hours per day)
+        agent.ap_locked = 7.0
+        
         # Update display labels
         grade_info = school_sys.get_grade_info(agent.school["year_index"])
         if grade_info:
@@ -153,6 +156,9 @@ def _handle_school_start(sim_state, agent, school_sys):
             "is_in_session": True
         }
         
+        # Set AP locked time for school (7 hours per day)
+        agent.ap_locked = 7.0
+        
         if agent.is_player:
             sim_state.add_log(f"Enrolled in {grade_data['name']} at {school_sys.name}.", constants.COLOR_LOG_POSITIVE)
             # TRIGGER POPULATION HERE
@@ -182,6 +188,7 @@ def _handle_school_end(sim_state, agent, school_sys):
                 sim_state.add_log(f"Graduated from {school_sys.name}!", constants.COLOR_LOG_POSITIVE)
             
             agent.school = None # Left school
+            agent.ap_locked = 0.0 # Reset locked time after graduation
             agent.happiness = min(100, agent.happiness + 20)
         else:
             # Advance to next grade for next year

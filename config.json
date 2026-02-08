@@ -82,6 +82,13 @@
             "teen": {"max_age": 17, "hours": 9},
             "adult": {"max_age": 64, "hours": 8},
             "senior": {"max_age": 200, "hours": 9}
+        },
+        "penalties": {
+            "health_loss_per_hour_missed": 2,
+            "happiness_loss_per_hour_missed": 3,
+            "cognitive_penalty_per_hour": 0.05,
+            "truancy_base_risk": 0.10,
+            "truancy_performance_penalty": 10
         }
     },
     "economy": {

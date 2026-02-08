@@ -143,6 +143,8 @@ HEALTH_SENESCENCE_DIVISOR = 25  # Divisor for senescence decay calculation
 # Time Management
 AP_MAX_DAILY = 24.0             # Maximum action points per day
 AP_SLEEP_DEFAULT = 8.0           # Default sleep hours required
+AP_GRANULARITY = 0.5             # Action point granularity for scheduling
+MIN_SLEEP_PERMITTED = 4.0        # Minimum sleep hours allowed
 
 # Medical Costs
 DOCTOR_VISIT_COST = 100         # Cost to visit doctor
