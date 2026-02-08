@@ -1493,7 +1493,7 @@ The application features a comprehensive window resizing system that provides a 
 
 </details>
 
-## 🚀 Current Features (MVP 0.1)
+## 🚀 Current Features (MVP 0.6)
 
 <details>
 <summary><strong>Core Simulation & Architecture</strong></summary>
@@ -1516,13 +1516,20 @@ The application features a comprehensive window resizing system that provides a 
         *   **Maintenance AP:** Reserved for biological needs (Sleep).
         *   **Free AP:** The calculated remainder (`24.0 - Locked - Maintenance - Used`) available for player agency.
     *   **Visual Dashboard (`APBar` Widget):**
-        *   **24-Segment Grid:** A dedicated UI element in the Left Panel visualizes the 24-hour day as distinct blocks.
-        *   **Color-Coded Allocation:**
-            *   **Blue (Right-Aligned):** Sleep/Maintenance hours.
-            *   **Red (Left-Aligned):** Locked obligations (School/Work).
-            *   **Gray:** Time already spent on voluntary actions.
-            *   **Green:** The remaining "Free" budget available for gameplay.
-        *   **Feedback:** A text label dynamically updates to show exact availability (e.g., *"Time: 7.0h Free / 9.0h Sleep"*).
+            *   **48-Segment Grid:** Enhanced visualization with **half-hour precision** (24 hours × 2) for detailed time tracking
+            *   **Vertical Orientation:** Reoriented from horizontal to vertical layout within expanded left panel
+            *   **Integrated Design:** AP bar positioned within left panel area for unified appearance
+            *   **Color-Coded Allocation:**
+                *   **Blue (Bottom-Aligned):** Sleep/maintenance hours
+                *   **Red (Top-Aligned):** Locked obligations (School/Work) 
+                *   **Gray:** Time already spent on voluntary actions
+                *   **Green:** The remaining "Free" budget available for gameplay
+                *   **Enhanced Visuals:** Gradients, rounded corners, improved color palette
+                *   **Hatched Overlays:** Visual patterns for sleep deficit and truancy
+                *   **Time Markers:** Hour indicators on right side with 6-hour intervals
+            *   **Configurable Height:** `AP_BAR_HEIGHT_PERCENTAGE` constant (60% of screen height)
+            *   **Bottom Snapping:** Always extends to screen bottom with configurable height percentage
+            *   **Zero Text Display:** Clean visual interface without text labels
 *   **Configuration-Driven Design:**
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
     *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) and Time settings (Start Year, Month Names) are decoupled in `constants.py`.

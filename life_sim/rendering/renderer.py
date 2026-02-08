@@ -182,7 +182,7 @@ class Renderer:
         """Initialize schedule button and steppers for the left panel."""
         # Schedule button positioned below AP bar area
         btn_x = self.rect_left.x + 20
-        btn_y = self.rect_left.y + 200  # Approximate position below AP bar
+        btn_y = self.rect_left.y + 170
         btn_w = self.rect_left.width - 40
         btn_h = 30
         
@@ -190,18 +190,18 @@ class Renderer:
         
         # Number steppers (positioned when shown)
         stepper_x = self.rect_left.x + 20
-        stepper_y = btn_y + btn_h + 10
+        stepper_y = btn_y + btn_h + 40
         stepper_w = self.rect_left.width - 40
         stepper_h = 25
         
         self.sleep_stepper = NumberStepper(
             stepper_x, stepper_y, stepper_w, stepper_h,
-            8.0, constants.MIN_SLEEP_PERMITTED, 24.0, 0.5, self.font_main
+            8.0, constants.MIN_SLEEP_PERMITTED, 24.0, 0.5, self.font_main, "Target Sleep"
         )
         
         self.attendance_stepper = NumberStepper(
-            stepper_x, stepper_y + stepper_h + 25, stepper_w, stepper_h,
-            1.0, 0.0, 1.0, 0.1, self.font_main
+            stepper_x, stepper_y + stepper_h + 40, stepper_w, stepper_h,
+            1.0, 0.0, 1.0, 0.1, self.font_main, "Attendance %"
         )
 
     def _draw_panel_background(self, rect, alpha):
@@ -219,11 +219,20 @@ class Renderer:
 
     def _update_layout(self):
         """Update panel layout based on current screen dimensions."""
-        self.rect_left = pygame.Rect(0, 0, constants.PANEL_LEFT_WIDTH, self.screen_height)
+        self.rect_left = pygame.Rect(0, 0, constants.PANEL_LEFT_WIDTH + constants.AP_BAR_WIDTH, self.screen_height)
         self.rect_right = pygame.Rect(self.screen_width - constants.PANEL_RIGHT_WIDTH, 0, constants.PANEL_RIGHT_WIDTH, self.screen_height)
         
-        center_w = self.screen_width - constants.PANEL_LEFT_WIDTH - constants.PANEL_RIGHT_WIDTH
-        self.rect_center = pygame.Rect(constants.PANEL_LEFT_WIDTH, 0, center_w, self.screen_height)
+        # AP bar positioned within left panel area
+        ap_bar_height = int(self.screen_height * constants.AP_BAR_HEIGHT_PERCENTAGE)
+        self.rect_ap_bar = pygame.Rect(
+            constants.PANEL_LEFT_WIDTH,  # At the edge of expanded left panel
+            self.screen_height - ap_bar_height - 20,  # Snap to bottom (with 20 pixels of padding)
+            constants.AP_BAR_WIDTH, 
+            ap_bar_height
+        )
+        
+        center_w = self.screen_width - constants.PANEL_LEFT_WIDTH - constants.AP_BAR_WIDTH - constants.PANEL_RIGHT_WIDTH
+        self.rect_center = pygame.Rect(constants.PANEL_LEFT_WIDTH + constants.AP_BAR_WIDTH, 0, center_w, self.screen_height)
         
         # Update log panel if it exists
         if hasattr(self, 'log_panel'):
@@ -237,7 +246,7 @@ class Renderer:
         if hasattr(self, 'viewing_social_graph') and self.viewing_social_graph:
             if hasattr(self, 'social_graph') and self.social_graph.bounds is not None:
                 # We need sim_state to rebuild, but we don't have it here
-                # Mark for rebuild in the next render cycle
+                # Mark for rebuild in next render cycle
                 self._social_graph_needs_rebuild = True
 
     def _handle_resize(self, w, h):
@@ -515,6 +524,7 @@ class Renderer:
         
         # Draw Panels
         self._draw_left_panel(sim_state)
+        self._draw_vertical_ap_bar(sim_state)
         
         # Center Panel Logic
         if self.viewing_social_graph:
@@ -1074,6 +1084,19 @@ class Renderer:
         # Register Interaction
         self.ft_buttons.append((rect, agent))
 
+    def _draw_vertical_ap_bar(self, sim_state):
+        """Draw vertical AP bar within the expanded left panel area."""
+        # Calculate dynamic height and create AP bar
+        ap_bar_height = int(self.screen_height * constants.AP_BAR_HEIGHT_PERCENTAGE)
+        ap_bar = APBar(
+            self.rect_ap_bar.x, 
+            self.rect_ap_bar.y, 
+            self.rect_ap_bar.width, 
+            ap_bar_height,  # Use calculated height
+            vertical=True
+        )
+        ap_bar.draw(self.screen, sim_state.player)
+
     def _draw_left_panel(self, sim_state):
         self._draw_panel_background(self.rect_left, constants.UI_OPACITY_PANEL)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_left, 1)
@@ -1107,12 +1130,7 @@ class Renderer:
         # Age Display
         y += draw_text(f"Age: {player.age} ({player.age_months % 12} mos)")
         
-        # AP Bar
-        y += 5
-        ap_bar = APBar(x, y + 15, self.rect_left.width - 40, 20)
-        ap_bar.draw(self.screen, player)
-        y += 45 # Bar height + padding + text offset
-        
+        # Money Display
         y += draw_text(f"Money: ${player.money}", color=constants.COLOR_ACCENT)
         
         # Schedule Button

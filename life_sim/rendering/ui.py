@@ -168,78 +168,276 @@ class LogPanel:
 
 class APBar:
     """
-    Visualizes the 24-hour Action Point budget.
+    Visualizes the 24-hour Action Point budget with enhanced visuals.
+    Can be oriented horizontally or vertically.
     Segments: Locked (Red) -> Used (Gray) -> Free (Green) <- Sleep (Blue)
     """
-    def __init__(self, x, y, w, h):
+    def __init__(self, x, y, w, h, vertical=False):
         self.rect = pygame.Rect(x, y, w, h)
-        self.segments = 24
-        self.seg_w = w / self.segments
+        self.vertical = vertical
+        self.segments = 48  # 24 hours * 2 for half-hour steps
+        if vertical:
+            self.seg_h = h / self.segments  # Height of each segment
+            self.seg_w = w
+        else:
+            self.seg_w = w / self.segments
+            self.seg_h = h
+        self.border_radius = 8
+        self.segment_padding = 2
 
     def draw(self, screen, agent):
-        # Background
-        pygame.draw.rect(screen, (20, 20, 20), self.rect)
+        # Draw background with rounded corners
+        pygame.draw.rect(screen, (15, 15, 15), self.rect, border_radius=self.border_radius)
         
-        # Calculate segment counts
-        bio_sleep_segs = int(round(agent.ap_sleep))  # Biological sleep requirement
-        target_sleep_segs = int(round(agent.target_sleep_hours))  # User's target sleep
-        locked_segs = int(round(agent.ap_locked))  # Total obligation (school/work)
-        attended_segs = int(round(agent.ap_locked * agent.attendance_rate))  # Actually attended
-        used_segs = int(round(agent.ap_used))  # Used for activities
+        # Create inner content area with padding
+        inner_rect = pygame.Rect(
+            self.rect.x + self.segment_padding,
+            self.rect.y + self.segment_padding,
+            self.rect.width - (self.segment_padding * 2),
+            self.rect.height - (self.segment_padding * 2)
+        )
+        
+        # Draw inner background
+        pygame.draw.rect(screen, (25, 25, 25), inner_rect, border_radius=self.border_radius - 2)
+        
+        # Calculate segment counts (convert to half-hour segments)
+        bio_sleep_segs = int(round(agent.ap_sleep * 2))  # Convert to half-hours
+        target_sleep_segs = int(round(agent.target_sleep_hours * 2))
+        locked_segs = int(round(agent.ap_locked * 2))
+        attended_segs = int(round(agent.ap_locked * agent.attendance_rate * 2))
+        used_segs = int(round(agent.ap_used * 2))
         
         # Calculate deficits
         sleep_deficit_segs = max(0, bio_sleep_segs - target_sleep_segs)
         truancy_segs = max(0, locked_segs - attended_segs)
         
-        # Draw base segments
-        for i in range(self.segments):
-            seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
-            
-            color = constants.COLOR_LOG_POSITIVE # Default Green (Free)
-            
-            # Base coloring logic
-            # 1. Attended (Left aligned) - Red
-            if i < attended_segs:
-                color = constants.COLOR_DEATH
-            # 2. Used (After Attended) - Gray
-            elif i < attended_segs + used_segs:
-                color = constants.COLOR_BTN_IDLE
-            # 3. Target Sleep (Right aligned) - Blue
-            elif i >= self.segments - target_sleep_segs:
-                color = (100, 150, 255)
-            
-            # Draw fill
-            pygame.draw.rect(screen, color, seg_rect)
-            
-            # Draw grid line
-            pygame.draw.line(screen, (0, 0, 0), seg_rect.topright, seg_rect.bottomright)
+        # Enhanced color palette
+        colors = {
+            'attended': (220, 80, 80),      # Softer red
+            'used': (100, 100, 120),        # Muted gray-blue
+            'free': (80, 180, 80),          # Softer green
+            'sleep': (100, 140, 220),       # Softer blue
+            'sleep_deficit': (200, 60, 60), # Brighter red for deficit
+            'truancy': (120, 200, 120)      # Brighter green for truancy
+        }
         
-        # Draw hatched overlays
-        # Sleep Deficit (Hatched Red) - shows biological need not being met
-        if sleep_deficit_segs > 0:
-            deficit_start = self.segments - bio_sleep_segs
-            for i in range(deficit_start, deficit_start + sleep_deficit_segs):
-                seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
-                self._draw_hatched(screen, seg_rect, (200, 50, 50))  # Red hatched
+        if self.vertical:
+            # Draw vertical segments (top to bottom = morning to night)
+            for i in range(self.segments):
+                seg_y = inner_rect.y + (i * self.seg_h)
+                seg_rect = pygame.Rect(inner_rect.x, seg_y, inner_rect.width, self.seg_h - 1)
+                
+                # Determine base color (0 = top/morning, 47 = bottom/night)
+                if i < attended_segs:
+                    base_color = colors['attended']
+                elif i < attended_segs + used_segs:
+                    base_color = colors['used']
+                elif i >= self.segments - target_sleep_segs:
+                    base_color = colors['sleep']
+                else:
+                    base_color = colors['free']
+                
+                # Draw segment with gradient effect (left lighter, right darker for vertical)
+                left_color = tuple(min(255, c + 30) for c in base_color)
+                right_color = tuple(max(0, c - 20) for c in base_color)
+                
+                # Draw gradient manually
+                gradient_steps = 3  # Fewer steps for narrow width
+                for step in range(gradient_steps):
+                    step_ratio = step / gradient_steps
+                    interp_color = tuple(
+                        int(left_color[j] * (1 - step_ratio) + right_color[j] * step_ratio)
+                        for j in range(3)
+                    )
+                    step_rect = pygame.Rect(
+                        seg_rect.x + (seg_rect.width * step // gradient_steps),
+                        seg_rect.y,
+                        seg_rect.width // gradient_steps + 1,
+                        seg_rect.height
+                    )
+                    pygame.draw.rect(screen, interp_color, step_rect)
+                
+                # Add subtle highlight on left edge
+                highlight_rect = pygame.Rect(seg_rect.x, seg_rect.y, 2, seg_rect.height)
+                pygame.draw.rect(screen, tuple(min(255, c + 50) for c in base_color), highlight_rect)
+            
+            # Draw hatched overlays for vertical orientation
+            if sleep_deficit_segs > 0:
+                deficit_start = self.segments - bio_sleep_segs
+                for i in range(deficit_start, deficit_start + sleep_deficit_segs):
+                    seg_y = inner_rect.y + (i * self.seg_h)
+                    seg_rect = pygame.Rect(inner_rect.x, seg_y, inner_rect.width, self.seg_h - 1)
+                    self._draw_enhanced_hatch_vertical(screen, seg_rect, colors['sleep_deficit'])
+            
+            if truancy_segs > 0:
+                truancy_start = attended_segs
+                for i in range(truancy_start, truancy_start + truancy_segs):
+                    seg_y = inner_rect.y + (i * self.seg_h)
+                    seg_rect = pygame.Rect(inner_rect.x, seg_y, inner_rect.width, self.seg_h - 1)
+                    self._draw_enhanced_hatch_vertical(screen, seg_rect, colors['truancy'])
+            
+            # Draw time markers for vertical orientation (right side)
+            marker_font = pygame.font.SysFont("Arial", 8)
+            for marker in range(0, 49):  # 0 to 48 half-hour segments
+                marker_y = inner_rect.y + (marker * self.seg_h)
+                if marker_y <= inner_rect.bottom:
+                    is_hour = marker % 2 == 0  # Even numbers are full hours
+                    hour_num = marker // 2
+                    
+                    if is_hour:
+                        # Draw stronger horizontal marker for full hours
+                        pygame.draw.line(screen, (80, 80, 80), 
+                                       (inner_rect.right - 8, marker_y), 
+                                       (inner_rect.right, marker_y), 2)
+                        # Draw hour label for full hours
+                        if hour_num <= 24 and hour_num % 6 == 0:  # Show every 6 hours
+                            hour_text = f"{hour_num}h"
+                            hour_surf = marker_font.render(hour_text, True, (140, 140, 140))
+                            hour_rect = hour_surf.get_rect(midleft=(inner_rect.right + 2, marker_y))
+                            screen.blit(hour_surf, hour_rect)
+                    else:
+                        # Draw subtle marker for half-hours
+                        pygame.draw.line(screen, (50, 50, 50), 
+                                       (inner_rect.right - 4, marker_y), 
+                                       (inner_rect.right, marker_y), 1)
+            
+            # No text for vertical AP bar
+            
+        else:
+            # Original horizontal drawing logic
+            for i in range(self.segments):
+                seg_x = inner_rect.x + (i * self.seg_w)
+                seg_rect = pygame.Rect(seg_x, inner_rect.y, self.seg_w - 1, inner_rect.height)
+                
+                # Determine base color
+                if i < attended_segs:
+                    base_color = colors['attended']
+                elif i < attended_segs + used_segs:
+                    base_color = colors['used']
+                elif i >= self.segments - target_sleep_segs:
+                    base_color = colors['sleep']
+                else:
+                    base_color = colors['free']
+                
+                # Draw segment with gradient effect (top lighter, bottom darker)
+                top_color = tuple(min(255, c + 30) for c in base_color)
+                bottom_color = tuple(max(0, c - 20) for c in base_color)
+                
+                # Draw gradient manually
+                gradient_steps = 5
+                for step in range(gradient_steps):
+                    step_ratio = step / gradient_steps
+                    interp_color = tuple(
+                        int(top_color[j] * (1 - step_ratio) + bottom_color[j] * step_ratio)
+                        for j in range(3)
+                    )
+                    step_rect = pygame.Rect(
+                        seg_rect.x,
+                        seg_rect.y + (seg_rect.height * step // gradient_steps),
+                        seg_rect.width,
+                        seg_rect.height // gradient_steps + 1
+                    )
+                    pygame.draw.rect(screen, interp_color, step_rect)
+                
+                # Add subtle highlight on top edge
+                highlight_rect = pygame.Rect(seg_rect.x, seg_rect.y, seg_rect.width, 2)
+                pygame.draw.rect(screen, tuple(min(255, c + 50) for c in base_color), highlight_rect)
+            
+            # Draw hatched overlays with enhanced patterns
+            if sleep_deficit_segs > 0:
+                deficit_start = self.segments - bio_sleep_segs
+                for i in range(deficit_start, deficit_start + sleep_deficit_segs):
+                    seg_x = inner_rect.x + (i * self.seg_w)
+                    seg_rect = pygame.Rect(seg_x, inner_rect.y, self.seg_w - 1, inner_rect.height)
+                    self._draw_enhanced_hatch(screen, seg_rect, colors['sleep_deficit'])
+            
+            if truancy_segs > 0:
+                truancy_start = attended_segs
+                for i in range(truancy_start, truancy_start + truancy_segs):
+                    seg_x = inner_rect.x + (i * self.seg_w)
+                    seg_rect = pygame.Rect(seg_x, inner_rect.y, self.seg_w - 1, inner_rect.height)
+                    self._draw_enhanced_hatch(screen, seg_rect, colors['truancy'])
+            
+            # Draw time markers (hour and half-hour intervals)
+            marker_font = pygame.font.SysFont("Arial", 10)
+            for marker in range(0, 49):  # 0 to 48 half-hour segments
+                marker_x = inner_rect.x + (marker * self.seg_w)
+                if marker_x <= inner_rect.right:
+                    is_hour = marker % 2 == 0  # Even numbers are full hours
+                    hour_num = marker // 2
+                    
+                    if is_hour:
+                        # Draw stronger vertical marker for full hours
+                        pygame.draw.line(screen, (80, 80, 80), 
+                                       (marker_x, inner_rect.bottom - 8), 
+                                       (marker_x, inner_rect.bottom), 2)
+                        # Draw hour label for full hours
+                        if hour_num <= 24:
+                            hour_text = f"{hour_num}h"
+                            hour_surf = marker_font.render(hour_text, True, (140, 140, 140))
+                            hour_rect = hour_surf.get_rect(center=(marker_x, inner_rect.bottom + 10))
+                            screen.blit(hour_surf, hour_rect)
+                    else:
+                        # Draw subtle marker for half-hours
+                        pygame.draw.line(screen, (50, 50, 50), 
+                                       (marker_x, inner_rect.bottom - 4), 
+                                       (marker_x, inner_rect.bottom), 1)
+            
+            # Enhanced text with shadow effect
+            font = pygame.font.SysFont("Arial", 14, bold=True)
+            txt = f" Time: {agent.free_ap:.1f}h Free / {agent.target_sleep_hours:.1f}h Sleep"
+            
+            # Draw shadow
+            shadow_surf = font.render(txt, True, (10, 10, 10))
+            screen.blit(shadow_surf, (self.rect.x + 1, self.rect.y - 17))
+            
+            # Draw main text
+            txt_surf = font.render(txt, True, (200, 200, 200))
+            screen.blit(txt_surf, (self.rect.x, self.rect.y - 18))
         
-        # Truancy (Hatched Green) - shows skipped school/work time
-        if truancy_segs > 0:
-            truancy_start = attended_segs
-            for i in range(truancy_start, truancy_start + truancy_segs):
-                seg_rect = pygame.Rect(self.rect.x + (i * self.seg_w), self.rect.y, self.seg_w, self.rect.height)
-                self._draw_hatched(screen, seg_rect, (100, 255, 100))  # Green hatched
+        # Draw border with rounded corners
+        pygame.draw.rect(screen, (80, 80, 80), self.rect, 2, border_radius=self.border_radius)
         
-        # Border
-        pygame.draw.rect(screen, constants.COLOR_BORDER, self.rect, 1)
+        # Draw inner border for depth
+        pygame.draw.rect(screen, (40, 40, 40), inner_rect, 1, border_radius=self.border_radius - 2)
+
+    def _draw_enhanced_hatch_vertical(self, screen, rect, color):
+        """Draw enhanced hatched pattern overlay for vertical segments."""
+        # Create a surface for the hatched pattern
+        hatch_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
         
-        # Text Label
-        font = pygame.font.SysFont("Arial", 14)
-        txt = f"Time: {agent.free_ap:.1f}h Free / {agent.target_sleep_hours:.1f}h Sleep"
-        txt_surf = font.render(txt, True, constants.COLOR_TEXT_DIM)
-        screen.blit(txt_surf, (self.rect.x, self.rect.y - 18))
+        # Draw horizontal lines for vertical hatching effect
+        spacing = 3
+        for i in range(0, rect.height, spacing):
+            # Draw with alpha for better blending
+            pygame.draw.line(hatch_surface, (*color, 160), 
+                           (0, i), (rect.width, i), 1)
+        
+        # Blit the hatched surface onto the screen
+        screen.blit(hatch_surface, rect.topleft)
+    
+    def _draw_enhanced_hatch(self, screen, rect, color):
+        """Draw enhanced hatched pattern overlay on a rectangle."""
+        # Create a surface for the hatched pattern
+        hatch_surface = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        
+        # Draw diagonal lines with better spacing and thickness
+        spacing = 4
+        for i in range(-rect.height, rect.width, spacing):
+            start_x = max(0, i)
+            start_y = max(0, -i)
+            end_x = min(rect.width, i + rect.height)
+            end_y = min(rect.height, i + rect.width)
+            
+            # Draw with alpha for better blending
+            pygame.draw.line(hatch_surface, (*color, 180), 
+                           (start_x, start_y), (end_x, end_y), 2)
+        
+        # Blit the hatched surface onto the screen
+        screen.blit(hatch_surface, rect.topleft)
     
     def _draw_hatched(self, screen, rect, color):
-        """Draw hatched pattern overlay on a rectangle."""
+        """Draw hatched pattern overlay on a rectangle (legacy method)."""
         # Draw diagonal lines for hatched effect
         for i in range(0, rect.width + rect.height, 3):
             start_x = rect.x + max(0, i - rect.height)
@@ -250,13 +448,14 @@ class APBar:
 
 class NumberStepper:
     """A numeric input widget with increment/decrement buttons."""
-    def __init__(self, x, y, w, h, value, min_val, max_val, step, label_font):
+    def __init__(self, x, y, w, h, value, min_val, max_val, step, label_font, label="Value"):
         self.rect = pygame.Rect(x, y, w, h)
         self.value = value
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
         self.label_font = label_font
+        self.label = label  # Store the label text
         
         # Create buttons for [-] and [+]
         button_w = h  # Square buttons
@@ -288,13 +487,33 @@ class NumberStepper:
         return None
         
     def draw(self, screen):
-        """Draw the stepper component."""
+        """Draw stepper component with integrated label."""
+        # Calculate total height including label
+        total_height = self.rect.height + 30  # 30 pixels for label
+        total_rect = pygame.Rect(self.rect.x, self.rect.y - 30, self.rect.width, total_height)
+        
+        # Draw background for entire component
+        pygame.draw.rect(screen, (40, 40, 40), total_rect, border_radius=4)
+        
+        # Draw label text at top
+        label_surf = self.label_font.render(self.label, True, (200, 200, 200))
+        label_rect = label_surf.get_rect(centerx=total_rect.centerx, top=total_rect.y + 5)
+        screen.blit(label_surf, label_rect)
+        
         # Draw buttons
         self.minus_btn.draw(screen)
         self.plus_btn.draw(screen)
         
-        # Draw value text centered between buttons
-        value_text = str(self.value)
-        text_surf = self.label_font.render(value_text, True, constants.COLOR_TEXT)
-        text_rect = text_surf.get_rect(center=self.text_area.center)
-        screen.blit(text_surf, text_rect)
+        # Draw text display area
+        text_rect = pygame.Rect(self.text_area.x + 2, self.text_area.y + 2, 
+                               self.text_area.width - 4, self.text_area.height - 4)
+        pygame.draw.rect(screen, (60, 60, 60), text_rect, border_radius=2)
+        
+        # Draw value text
+        value_text = f"{self.value:.2f}"
+        value_surf = self.label_font.render(value_text, True, (220, 220, 220))
+        value_rect = value_surf.get_rect(center=self.text_area.center)
+        screen.blit(value_surf, value_rect)
+        
+        # Draw border around entire component
+        pygame.draw.rect(screen, (80, 80, 80), total_rect, 2, border_radius=4)

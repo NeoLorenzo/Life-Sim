@@ -11,8 +11,10 @@ WINDOW_TITLE = "Life-Sim MVP 0.5"
 FPS = 60
 
 # Layout Dimensions
-PANEL_LEFT_WIDTH = 300
+PANEL_LEFT_WIDTH = 250  # Reduced from 300 to make space for vertical AP bar
 PANEL_RIGHT_WIDTH = 300
+AP_BAR_WIDTH = 30  # Width for vertical AP bar between panels
+AP_BAR_HEIGHT_PERCENTAGE = 0.6  # AP bar height as 60% of screen height
 # Center panel takes the remaining width
 
 # Colors (R, G, B)
