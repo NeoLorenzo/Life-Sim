@@ -484,10 +484,10 @@ These compare traits between two agents using: `(AFFINITY_DYADIC_THRESHOLD - Del
 - **Neutral Baseline**: Score of 0 displays as neutral light gray (200, 200, 200)
 
 **Form-Based Features**
-- **Same Form Visualization**: Students in same form show enhanced relationships
-- **Modifier Display**: "Same Form" (+10) modifiers shown in detailed tooltips
+- **Same Form Visualization**: Students in same form show magnified relationships
+- **Modifier Display**: "Same Form" modifiers act as magnifiers (+10/-10) shown in detailed tooltips
 - **Cohort Organization**: Visual grouping by form assignments
-- **Social Cohesion**: Enhanced visual feedback for form-based relationships
+- **Social Magnification**: Form exposure amplifies existing positive or negative feelings
 
 </details>
 
@@ -565,7 +565,7 @@ Represents temporary or permanent factors that affect relationship scores:
 
 **Use Cases**
 - **Permanent Bonds**: Marriage (+60), Maternal/Paternal Bond (+80)
-- **Form-Based**: "Same Form" (+10) for students in the same school form
+- **Form-Based**: "Same Form" acts as magnifier (+10 for positive affinity, -10 for negative) for students in the same school form
 - **Temporary Effects**: "Recent Argument" (-20, duration: 3 months)
 - **Decaying Effects**: "New Romance" (+30, decay: -5 per month)
 
@@ -1234,7 +1234,7 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 
 **Aptitude and Profiles**
 - Subject category is inferred from subject name.
-- Category profile defines weighted trait inputs (IQ, conscientiousness-derived competence, openness-derived facets, athleticism).
+- Category profile defines weighted trait inputs from cognitive domains (`Analytical Reasoning`, `Verbal Abilities`, `Spatial Abilities`, `Working Memory`, `Long-term Memory`, `Secondary Cognitive`) plus personality-derived inputs (`Conscientiousness.Competence`, `Openness` facets) and athleticism.
 - Natural aptitude and progression rate are computed per subject from these profiles.
 
 **Monthly Grade Delta (v1 Legacy)**
@@ -1306,7 +1306,7 @@ At year-end, player history receives a full report card:
 
 **Rendering (`renderer.py`)**
 - Academics panel renders dynamic subject list from `player.subjects`.
-- Supports scrolling for long KS4/KS5 lists and grade tooltips with category detail.
+- Supports scrolling for long KS4/KS5 lists and grade tooltips with full natural-aptitude math breakdown (category, weighted input variables, per-variable contribution `value * weight`, raw sum, and clamped natural aptitude).
 
 </details>
 
@@ -1929,7 +1929,7 @@ The application features a comprehensive window resizing system that provides a 
     *   Year transitions reuse the same classmates instead of generating new ones.
     *   Classmate school payloads are updated each year to match the player year/stage/session.
     *   Social forms for relationship modifiers cycle through configured `form_labels`.
-    *   Cohort relationships are meshed pairwise with affinity-derived labels and optional "Same Form" modifier.
+    *   Cohort relationships are meshed pairwise with affinity-derived labels and optional "Same Form" magnifier modifier.
 
 *   **Academic Calendar + AP Integration**
     *   Start of school year:
@@ -2329,6 +2329,20 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Sleep Deficit Indicator:** Red hatched overlay appears when biological need exceeds user target.
     *   **Truancy Visualization:** Green hatched overlay shows skipped school/work time that becomes risky free time.
     *   **Dynamic State Updates:** AP bar properly resets when player graduates from school (red sections disappear).
+
+</details>
+
+<details>
+<summary><strong>Interests & Motivation System</strong></summary>
+
+*   **Agent-Determined Interests:** Every agent stores an `interests` map (`interest_name -> 0-100`) that is shaped over time by the agent's life path.
+*   **Events Drive Interest Growth:** Agents encounter events that can foster new interests, strengthen existing ones, or reduce weak interests.
+*   **Inherited/Household Bias:** Early-life environment should bias likely interests (for example, agents from highly physically active households have a higher likelihood of developing physical/sport interests).
+*   **Life-Wide Usage:**
+    *   **Relationships:** Shared interests should improve compatibility, conversation outcomes, and relationship growth.
+    *   **Education:** Interests should influence subject selection and later degree/program selection.
+    *   **Careers:** Interests should influence job selection preferences and long-term satisfaction.
+*   **UI Support:** Add an Interests panel in attributes modal with sortable bars and contextual tooltips.
 
 </details>
 

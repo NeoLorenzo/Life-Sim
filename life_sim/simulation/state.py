@@ -607,7 +607,7 @@ class Agent:
         return sum(self.personality.get(trait, {}).values())
 
     def _subject_trait_inputs(self):
-        """Returns normalized aptitude inputs used by subject calculations."""
+        """Returns normalized aptitude + personality inputs used by subject calculations."""
         if self.personality:
             openness = self.personality.get("Openness", {})
             conscientiousness = self.personality.get("Conscientiousness", {})
@@ -615,10 +615,20 @@ class Agent:
             openness = {"Ideas": 10, "Aesthetics": 10, "Values": 10}
             conscientiousness = {"Competence": 10}
 
-        iq_normalized = (self.iq - 50) / 130.0 * 100  # IQ range 50-180 mapped to 0-100
-        iq_normalized = max(0, min(100, iq_normalized))
+        aptitudes = getattr(self, "aptitudes", {}) or {}
+
+        def normalized_aptitude(name):
+            phenotype = aptitudes.get(name, {}).get("phenotype", 100.0)
+            normalized = (float(phenotype) / 180.0) * 100.0
+            return max(0.0, min(100.0, normalized))
+
         return {
-            "iq": iq_normalized,
+            "analytical": normalized_aptitude("Analytical Reasoning"),
+            "verbal": normalized_aptitude("Verbal Abilities"),
+            "spatial": normalized_aptitude("Spatial Abilities"),
+            "working_memory": normalized_aptitude("Working Memory"),
+            "long_term_memory": normalized_aptitude("Long-term Memory"),
+            "secondary_cognitive": normalized_aptitude("Secondary Cognitive"),
             "competence": max(0, min(100, (conscientiousness.get("Competence", 10) / 20.0) * 100)),
             "ideas": max(0, min(100, (openness.get("Ideas", 10) / 20.0) * 100)),
             "aesthetics": max(0, min(100, (openness.get("Aesthetics", 10) / 20.0) * 100)),
@@ -647,31 +657,81 @@ class Agent:
         """Returns weighting and progression profile for a subject category."""
         profiles = {
             "core_skills": {
-                "weights": {"iq": 0.28, "competence": 0.27, "ideas": 0.20, "aesthetics": 0.15, "values": 0.10},
+                "weights": {
+                    "verbal": 0.25,
+                    "long_term_memory": 0.20,
+                    "working_memory": 0.15,
+                    "competence": 0.20,
+                    "ideas": 0.10,
+                    "values": 0.10
+                },
                 "progression_rate": 0.020
             },
             "stem": {
-                "weights": {"iq": 0.45, "competence": 0.25, "ideas": 0.20, "values": 0.05, "athleticism": 0.05},
+                "weights": {
+                    "analytical": 0.35,
+                    "working_memory": 0.25,
+                    "spatial": 0.15,
+                    "competence": 0.15,
+                    "ideas": 0.10
+                },
                 "progression_rate": 0.018
             },
             "language": {
-                "weights": {"iq": 0.30, "competence": 0.25, "aesthetics": 0.25, "ideas": 0.15, "values": 0.05},
+                "weights": {
+                    "verbal": 0.35,
+                    "long_term_memory": 0.20,
+                    "working_memory": 0.15,
+                    "aesthetics": 0.10,
+                    "competence": 0.10,
+                    "ideas": 0.05,
+                    "values": 0.05
+                },
                 "progression_rate": 0.019
             },
             "humanities": {
-                "weights": {"iq": 0.28, "competence": 0.25, "values": 0.30, "ideas": 0.12, "aesthetics": 0.05},
+                "weights": {
+                    "verbal": 0.20,
+                    "long_term_memory": 0.20,
+                    "values": 0.25,
+                    "competence": 0.15,
+                    "ideas": 0.10,
+                    "secondary_cognitive": 0.10
+                },
                 "progression_rate": 0.018
             },
             "creative": {
-                "weights": {"iq": 0.20, "competence": 0.18, "aesthetics": 0.47, "ideas": 0.10, "values": 0.05},
+                "weights": {
+                    "spatial": 0.25,
+                    "aesthetics": 0.35,
+                    "ideas": 0.15,
+                    "verbal": 0.10,
+                    "competence": 0.10,
+                    "secondary_cognitive": 0.05
+                },
                 "progression_rate": 0.021
             },
             "physical": {
-                "weights": {"iq": 0.10, "competence": 0.25, "athleticism": 0.55, "ideas": 0.05, "values": 0.05},
+                "weights": {
+                    "athleticism": 0.50,
+                    "competence": 0.20,
+                    "spatial": 0.15,
+                    "working_memory": 0.05,
+                    "analytical": 0.05,
+                    "values": 0.05
+                },
                 "progression_rate": 0.020
             },
             "default": {
-                "weights": {"iq": 0.35, "competence": 0.30, "ideas": 0.20, "aesthetics": 0.10, "values": 0.05},
+                "weights": {
+                    "analytical": 0.20,
+                    "verbal": 0.20,
+                    "working_memory": 0.15,
+                    "long_term_memory": 0.15,
+                    "competence": 0.15,
+                    "ideas": 0.10,
+                    "aesthetics": 0.05
+                },
                 "progression_rate": 0.019
             }
         }
@@ -1217,8 +1277,9 @@ class SimState:
                 # Link
                 # Check if students are in the same form and add modifier if needed
                 if agent_a.form == agent_b.form:
-                    # Add "Same Form" modifier (+10) for students in the same form
-                    self._link_agents(agent_a, agent_b, rel_type, rel_type, "Same Form", 10)
+                    # Form modifier acts as a magnifier: +10 for positive affinity, -10 for negative affinity
+                    form_modifier = 10 if aff_score > 0 else -10
+                    self._link_agents(agent_a, agent_b, rel_type, rel_type, "Same Form", form_modifier)
                 else:
                     # Link without modifier for students in different forms
                     self._link_agents(agent_a, agent_b, rel_type, rel_type)

@@ -1265,14 +1265,50 @@ class Renderer:
                 player = sim_state.player
                 if subject_name in player.subjects:
                     subject_data = player.subjects[subject_name]
-                    
+
                     # Build tooltip lines
                     lines = []
                     lines.append((f"{subject_name} Details", constants.COLOR_ACCENT))
                     lines.append((f"Current Grade: {int(subject_data['current_grade'])}", constants.COLOR_TEXT))
+
+                    # Rebuild natural-aptitude formula inputs for full transparency.
+                    category = player._classify_subject_category(subject_name)
+                    profile = player._get_subject_profile(category)
+                    trait_inputs = player._subject_trait_inputs()
+                    weights = profile.get("weights", {})
+
+                    raw_sum = 0.0
                     lines.append((f"Natural Aptitude: {int(subject_data['natural_aptitude'])}", constants.COLOR_TEXT))
-                    if "category" in subject_data:
-                        lines.append((f"Category: {subject_data['category']}", constants.COLOR_TEXT_DIM))
+                    lines.append((f"Category: {category}", constants.COLOR_TEXT_DIM))
+                    lines.append(("Aptitude Inputs:", constants.COLOR_TEXT_DIM))
+
+                    label_map = {
+                        "analytical": "Analytical",
+                        "verbal": "Verbal",
+                        "spatial": "Spatial",
+                        "working_memory": "Working Memory",
+                        "long_term_memory": "Long-term Memory",
+                        "secondary_cognitive": "Secondary Cognitive",
+                        "competence": "Conscientiousness-Competence",
+                        "ideas": "Openness-Ideas",
+                        "aesthetics": "Openness-Aesthetics",
+                        "values": "Openness-Values",
+                        "athleticism": "Athleticism"
+                    }
+
+                    for key, weight in weights.items():
+                        value = float(trait_inputs.get(key, 50.0))
+                        contribution = value * float(weight)
+                        raw_sum += contribution
+                        label = label_map.get(key, key.replace("_", " ").title())
+                        lines.append((
+                            f"{label}: {value:.1f} x {float(weight):.2f} = {contribution:.1f}",
+                            constants.COLOR_TEXT
+                        ))
+
+                    computed_natural = max(0.0, min(100.0, raw_sum))
+                    lines.append((f"Raw Sum: {raw_sum:.1f}", constants.COLOR_TEXT_DIM))
+                    lines.append((f"Clamped (0-100): {computed_natural:.1f}", constants.COLOR_TEXT_DIM))
                     
                     # Monthly change with color
                     change = subject_data['monthly_change']
@@ -1309,6 +1345,10 @@ class Renderer:
                         bg_rect.x -= box_w + 30
                     if bg_rect.bottom > self.screen_height:
                         bg_rect.y -= box_h + 30
+                    if bg_rect.x < 0:
+                        bg_rect.x = 0
+                    if bg_rect.y < 0:
+                        bg_rect.y = 0
                     
                     # Draw tooltip background and border
                     pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
