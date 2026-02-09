@@ -181,6 +181,61 @@
                     "students_per_form": 20,
                     "churn_rate": 0.0
                 },
+                "attendance": {
+                    "min_promotion_rate": 0.75
+                },
+                "calendar": {
+                    "holiday_learning_loss": {
+                        "enabled": true,
+                        "base_monthly_loss": 0.45,
+                        "max_monthly_loss": 0.9,
+                        "conscientiousness_protection_strength": 0.45,
+                        "category_multipliers": {
+                            "stem": 1.1,
+                            "language": 1.0,
+                            "humanities": 0.95,
+                            "creative": 0.9,
+                            "physical": 1.0,
+                            "core_skills": 0.95,
+                            "default": 1.0
+                        }
+                    }
+                },
+                "academic_model": {
+                    "version": "v2",
+                    "v2_enabled": true,
+                    "convergence_rate": 0.1,
+                    "readiness_weight": 0.2,
+                    "effort_weight": 0.16,
+                    "recovery_boost": 0.16,
+                    "noise_cap": 0.25,
+                    "max_monthly_delta": 3.5,
+                    "stage_difficulty": {
+                        "EYFS": 0.9,
+                        "Key Stage 1": 0.95,
+                        "Key Stage 2": 0.98,
+                        "Key Stage 3": 1.0,
+                        "Key Stage 4 (IGCSE)": 1.03,
+                        "Key Stage 5 (Sixth Form)": 1.1,
+                        "default": 1.0
+                    },
+                    "category_difficulty": {
+                        "stem": 1.03,
+                        "language": 0.98,
+                        "humanities": 0.96,
+                        "creative": 0.93,
+                        "physical": 0.97,
+                        "core_skills": 0.95,
+                        "default": 1.0
+                    },
+                    "year_difficulty": {
+                        "10": 1.02,
+                        "11": 1.05,
+                        "12": 1.08,
+                        "13": 1.12,
+                        "default": 1.0
+                    }
+                },
                 "subjects_by_stage": {
                     "EYFS": ["Communication & Language", "Physical Development", "PSED", "Literacy", "Mathematics", "Expressive Arts"],
                     "Key Stage 1": ["Phonics", "Mathematics", "Science", "Art & Design", "History", "Geography", "PE", "Music"],

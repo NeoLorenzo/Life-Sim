@@ -6,6 +6,7 @@ Handles enrollment, academic years, and graduation.
 import logging
 import string
 import random
+import math
 from .. import constants
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,47 @@ class School:
         self.end_month = data["end_month_index"]
         
         # Structure
-        self.forms_per_year = data["structure"]["forms_per_year"]
-        self.class_capacity = data["structure"]["class_capacity"]
+        structure_cfg = data.get("structure", {})
+        self.forms_per_year = int(structure_cfg.get("forms_per_year", 4))
+        self.class_capacity = int(structure_cfg.get("class_capacity", 20))
+        self.students_per_form = int(structure_cfg.get("students_per_form", self.class_capacity))
+        configured_labels = structure_cfg.get("form_labels")
+        if configured_labels and isinstance(configured_labels, list):
+            deduped_labels = list(dict.fromkeys(str(label).strip() for label in configured_labels if str(label).strip()))
+            self.form_labels = deduped_labels if deduped_labels else list(string.ascii_uppercase[:self.forms_per_year])
+        else:
+            self.form_labels = list(string.ascii_uppercase[:self.forms_per_year])
+
+        # Future-compatible policy defaults (Phase 0 migration safety).
+        attendance_cfg = data.get("attendance", {})
+        self.attendance_policy = {
+            "min_promotion_rate": float(attendance_cfg.get("min_promotion_rate", 0.0))
+        }
+        calendar_cfg = data.get("calendar", {})
+        holiday_cfg = calendar_cfg.get("holiday_learning_loss", {})
+        self.calendar_policy = {
+            "enabled": bool(holiday_cfg.get("enabled", False)),
+            "base_monthly_loss": float(holiday_cfg.get("base_monthly_loss", 0.0)),
+            "max_monthly_loss": float(holiday_cfg.get("max_monthly_loss", 0.0)),
+            "conscientiousness_protection_strength": float(
+                holiday_cfg.get("conscientiousness_protection_strength", 0.0)
+            ),
+            "category_multipliers": dict(holiday_cfg.get("category_multipliers", {}))
+        }
+        academic_cfg = data.get("academic_model", {})
+        self.academic_policy = {
+            "version": str(academic_cfg.get("version", "v1")),
+            "v2_enabled": bool(academic_cfg.get("v2_enabled", False)),
+            "convergence_rate": float(academic_cfg.get("convergence_rate", 0.06)),
+            "readiness_weight": float(academic_cfg.get("readiness_weight", 0.15)),
+            "effort_weight": float(academic_cfg.get("effort_weight", 0.12)),
+            "recovery_boost": float(academic_cfg.get("recovery_boost", 0.08)),
+            "noise_cap": float(academic_cfg.get("noise_cap", 0.25)),
+            "max_monthly_delta": float(academic_cfg.get("max_monthly_delta", 2.5)),
+            "stage_difficulty": dict(academic_cfg.get("stage_difficulty", {})),
+            "category_difficulty": dict(academic_cfg.get("category_difficulty", {})),
+            "year_difficulty": dict(academic_cfg.get("year_difficulty", {}))
+        }
 
         # Curriculum configuration (Phase 1 foundation for config-driven subjects)
         self.subjects_by_stage = data.get("subjects_by_stage", {})
@@ -54,8 +94,10 @@ class School:
         return None
 
     def get_random_form_label(self):
-        """Returns a random form label (A, B, C...) based on forms_per_year."""
-        return string.ascii_uppercase[random.randint(0, self.forms_per_year - 1)]
+        """Returns a random configured form label."""
+        if not self.form_labels:
+            return "A"
+        return random.choice(self.form_labels)
     
     def enroll_student(self, student_id, form=None):
         """Enrolls a student in a specific form. If form is None, assigns randomly."""
@@ -355,6 +397,204 @@ def _sync_agent_subjects_for_current_stage(sim_state, agent, school_sys, preserv
 
     return {"synced": True, "carried": carried, "added": added, "retired": retired}
 
+def _reset_attendance_tracking(agent):
+    """Resets per-school-year attendance counters for an enrolled agent."""
+    if not agent or not agent.school:
+        return
+    agent.school["attendance_months_total"] = 0
+    agent.school["attendance_months_present_equiv"] = 0.0
+
+def _record_monthly_attendance(agent):
+    """Accumulates monthly attendance progress for promotion gating."""
+    if not agent or not agent.school:
+        return
+    total = int(agent.school.get("attendance_months_total", 0))
+    present = float(agent.school.get("attendance_months_present_equiv", 0.0))
+    attendance = max(0.0, min(1.0, float(getattr(agent, "attendance_rate", 1.0))))
+    agent.school["attendance_months_total"] = total + 1
+    agent.school["attendance_months_present_equiv"] = round(present + attendance, 4)
+
+def _get_attendance_ratio(agent):
+    """
+    Returns school-year attendance ratio from tracked counters.
+    Falls back to 1.0 when no counters exist to preserve compatibility.
+    """
+    if not agent or not agent.school:
+        return 1.0
+    total = int(agent.school.get("attendance_months_total", 0))
+    present = float(agent.school.get("attendance_months_present_equiv", 0.0))
+    if total <= 0:
+        return 1.0
+    return max(0.0, min(1.0, present / total))
+
+def _apply_holiday_learning_loss(agent, school_sys):
+    """
+    Applies small stage-agnostic learning decay during out-of-session months.
+    Designed to be conservative and fully config-driven.
+    """
+    if not agent or not agent.school or not agent.subjects:
+        return False
+
+    policy = getattr(school_sys, "calendar_policy", {}) or {}
+    if not bool(policy.get("enabled", False)):
+        return False
+
+    base_loss = abs(float(policy.get("base_monthly_loss", 0.0)))
+    max_loss = abs(float(policy.get("max_monthly_loss", 0.0)))
+    if base_loss <= 0:
+        return False
+    if max_loss <= 0:
+        max_loss = base_loss
+
+    protection_strength = max(
+        0.0,
+        min(1.0, float(policy.get("conscientiousness_protection_strength", 0.0)))
+    )
+    category_multipliers = policy.get("category_multipliers", {})
+    if not isinstance(category_multipliers, dict):
+        category_multipliers = {}
+
+    if agent.personality:
+        conscientiousness = agent.get_personality_sum("Conscientiousness") / 120.0
+    else:
+        conscientiousness = 0.5
+    conscientiousness = max(0.0, min(1.0, conscientiousness))
+    protection_factor = 1.0 - (protection_strength * conscientiousness)
+    protection_factor = max(0.1, protection_factor)
+
+    changed = False
+    for _, subject_data in agent.subjects.items():
+        category = subject_data.get("category", "default")
+        category_multiplier = float(category_multipliers.get(category, category_multipliers.get("default", 1.0)))
+        monthly_loss = base_loss * max(0.0, category_multiplier) * protection_factor
+        monthly_loss = max(0.0, min(max_loss, monthly_loss))
+
+        previous_grade = float(subject_data["current_grade"])
+        updated = max(0.0, min(100.0, previous_grade - monthly_loss))
+        subject_data["current_grade"] = updated
+        subject_data["monthly_change"] = round(updated - previous_grade, 1)
+        changed = True
+
+    if changed:
+        recalculate_school_performance(agent)
+    return changed
+
+def _coerce_year_number(year_label):
+    if not year_label:
+        return None
+    digits = "".join(ch for ch in str(year_label) if ch.isdigit())
+    if not digits:
+        return None
+    return int(digits)
+
+def _resolve_stage_difficulty(stage_name, school_sys):
+    stage_map = school_sys.academic_policy.get("stage_difficulty", {})
+    stage_key = (stage_name or "").strip()
+    if stage_key in stage_map:
+        return max(0.5, float(stage_map[stage_key]))
+    return max(0.5, float(stage_map.get("default", 1.0)))
+
+def _resolve_year_difficulty(year_label, school_sys):
+    year_map = school_sys.academic_policy.get("year_difficulty", {})
+    numeric = _coerce_year_number(year_label)
+    if numeric is not None:
+        key = str(numeric)
+        if key in year_map:
+            return max(0.5, float(year_map[key]))
+    return max(0.5, float(year_map.get("default", 1.0)))
+
+def _resolve_category_difficulty(category_name, school_sys):
+    category_map = school_sys.academic_policy.get("category_difficulty", {})
+    if category_name in category_map:
+        return max(0.5, float(category_map[category_name]))
+    return max(0.5, float(category_map.get("default", 1.0)))
+
+def _compute_readiness_score(agent, school_sys):
+    """
+    Grade-aware readiness score in [0, 1]:
+    blends attendance, age fit for current grade, and prior achievement.
+    """
+    if not agent or not agent.school:
+        return 0.5
+
+    attendance_ratio = _get_attendance_ratio(agent)
+    performance = max(0.0, min(100.0, float(agent.school.get("performance", 50.0)))) / 100.0
+
+    expected_age = None
+    year_index = agent.school.get("year_index")
+    if isinstance(year_index, int):
+        grade_info = school_sys.get_grade_info(year_index)
+        if grade_info:
+            expected_age = grade_info.get("min_age")
+
+    if expected_age is None:
+        age_fit = 0.75
+    else:
+        age_gap = abs(float(agent.age) - float(expected_age))
+        age_fit = max(0.0, 1.0 - (0.12 * age_gap))
+
+    readiness = (0.45 * attendance_ratio) + (0.30 * age_fit) + (0.25 * performance)
+    return max(0.0, min(1.0, readiness))
+
+def _compute_effort_score(agent):
+    """
+    Effort score in [0, 1] from attendance, conscientiousness, and sleep impact.
+    """
+    attendance = max(0.0, min(1.0, float(getattr(agent, "attendance_rate", 1.0))))
+    cognitive_penalty = max(0.0, min(0.8, float(getattr(agent, "_temp_cognitive_penalty", 0.0))))
+    sleep_factor = max(0.0, min(1.0, 1.0 - cognitive_penalty))
+
+    if agent.personality:
+        conscientiousness = agent.get_personality_sum("Conscientiousness") / 120.0
+    else:
+        conscientiousness = 0.5
+    conscientiousness = max(0.0, min(1.0, conscientiousness))
+
+    effort = (0.45 * attendance) + (0.35 * conscientiousness) + (0.20 * sleep_factor)
+    return max(0.0, min(1.0, effort))
+
+def _apply_subject_progression_v2(agent, subject_data, school_sys):
+    """
+    Grade-aware subject progression:
+    convergence toward difficulty-adjusted aptitude + readiness/effort modifiers.
+    """
+    policy = school_sys.academic_policy
+    stage_name = agent.school.get("stage", "")
+    year_label = agent.school.get("year_label", "")
+    category = subject_data.get("category", "default")
+
+    stage_diff = _resolve_stage_difficulty(stage_name, school_sys)
+    year_diff = _resolve_year_difficulty(year_label, school_sys)
+    category_diff = _resolve_category_difficulty(category, school_sys)
+    difficulty = stage_diff * year_diff * category_diff
+    difficulty = max(0.5, min(2.5, difficulty))
+
+    current_grade = float(subject_data.get("current_grade", 50.0))
+    aptitude = max(0.0, min(100.0, float(subject_data.get("natural_aptitude", 50.0))))
+
+    target_grade = max(0.0, min(100.0, aptitude / difficulty))
+    convergence_rate = max(0.0, float(policy.get("convergence_rate", 0.06))) / math.sqrt(difficulty)
+
+    readiness = _compute_readiness_score(agent, school_sys)
+    effort = _compute_effort_score(agent)
+    readiness_term = float(policy.get("readiness_weight", 0.15)) * ((readiness - 0.5) * 2.0)
+    effort_term = float(policy.get("effort_weight", 0.12)) * ((effort - 0.5) * 2.0)
+
+    recovery_term = 0.0
+    if current_grade < target_grade:
+        recovery_term = float(policy.get("recovery_boost", 0.08)) * ((target_grade - current_grade) / 100.0)
+
+    noise_cap = max(0.0, float(policy.get("noise_cap", 0.25)))
+    noise = random.uniform(-noise_cap, noise_cap) if noise_cap > 0 else 0.0
+
+    delta = ((target_grade - current_grade) * convergence_rate) + readiness_term + effort_term + recovery_term + noise
+    max_delta = max(0.1, float(policy.get("max_monthly_delta", 2.5)))
+    delta = max(-max_delta, min(max_delta, delta))
+
+    updated = max(0.0, min(100.0, current_grade + delta))
+    subject_data["current_grade"] = updated
+    subject_data["monthly_change"] = round(updated - current_grade, 1)
+
 def _process_single_agent_school(sim_state, agent, school_sys):
     current_month = sim_state.month_index
     
@@ -374,27 +614,41 @@ def _process_single_agent_school(sim_state, agent, school_sys):
         if not agent.subjects:
             return
 
-        # Update each subject individually based on natural aptitude only
+        _record_monthly_attendance(agent)
+
+        use_v2 = bool(school_sys.academic_policy.get("v2_enabled", False))
+
+        # Update each subject individually based on active academic model.
         for subject_name, subject_data in agent.subjects.items():
-            # Category/profile-based drift with deterministic modifiers.
-            progression_rate = float(subject_data.get("progression_rate", 0.02))
-            aptitude_influence = (subject_data["natural_aptitude"] - 50) * progression_rate
-            cognitive_penalty = max(0.0, min(0.8, float(getattr(agent, "_temp_cognitive_penalty", 0.0))))
-            attendance_modifier = 0.6 + (0.4 * float(agent.attendance_rate))
-            aptitude_influence *= (1.0 - cognitive_penalty) * attendance_modifier
-            
-            # Store previous grade for change tracking
-            previous_grade = subject_data["current_grade"]
-            
-            # Apply change and clamp to 0-100
-            subject_data["current_grade"] += aptitude_influence
-            subject_data["current_grade"] = max(0, min(100, subject_data["current_grade"]))
-            
-            # Track monthly change for tooltips
-            subject_data["monthly_change"] = round(subject_data["current_grade"] - previous_grade, 1)
+            if use_v2:
+                _apply_subject_progression_v2(agent, subject_data, school_sys)
+            else:
+                # Category/profile-based drift with deterministic modifiers.
+                progression_rate = float(subject_data.get("progression_rate", 0.02))
+                aptitude_influence = (subject_data["natural_aptitude"] - 50) * progression_rate
+                cognitive_penalty = max(0.0, min(0.8, float(getattr(agent, "_temp_cognitive_penalty", 0.0))))
+                attendance_modifier = 0.6 + (0.4 * float(agent.attendance_rate))
+                aptitude_influence *= (1.0 - cognitive_penalty) * attendance_modifier
+                
+                # Store previous grade for change tracking
+                previous_grade = subject_data["current_grade"]
+                
+                # Apply change and clamp to 0-100
+                subject_data["current_grade"] += aptitude_influence
+                subject_data["current_grade"] = max(0, min(100, subject_data["current_grade"]))
+                
+                # Track monthly change for tooltips
+                subject_data["monthly_change"] = round(subject_data["current_grade"] - previous_grade, 1)
         
         # Update overall performance for compatibility (average of all subjects)
         recalculate_school_performance(agent)
+    elif (
+        agent.school
+        and not agent.school["is_in_session"]
+        and current_month != school_sys.end_month
+        and current_month != school_sys.start_month
+    ):
+        _apply_holiday_learning_loss(agent, school_sys)
 
 def _handle_school_start(sim_state, agent, school_sys):
     """Starts the school year, enrolling or advancing grades."""
@@ -402,6 +656,7 @@ def _handle_school_start(sim_state, agent, school_sys):
     # Case A: Already in school -> Start Session
     if agent.school:
         agent.school["is_in_session"] = True
+        _reset_attendance_tracking(agent)
         
         # Set AP locked time for school session (7 hours per day)
         agent.ap_locked = 7.0
@@ -456,7 +711,9 @@ def _handle_school_start(sim_state, agent, school_sys):
             "year_label": grade_data["name"],
             "form_label": form_label,
             "performance": 50,
-            "is_in_session": True
+            "is_in_session": True,
+            "attendance_months_total": 0,
+            "attendance_months_present_equiv": 0.0
         }
         _sync_agent_subjects_for_current_stage(sim_state, agent, school_sys, preserve_existing=False)
         
@@ -476,13 +733,19 @@ def _handle_school_end(sim_state, agent, school_sys):
         return
 
     agent.school["is_in_session"] = False
+    # Summer break should release school-locked hours for all enrolled students.
+    agent.ap_locked = 0.0
     current_idx = agent.school["year_index"]
     current_grade_name = agent.school["year_label"]
     current_stage_name = agent.school.get("stage", "")
+    attendance_ratio = _get_attendance_ratio(agent)
+    min_promotion_rate = max(0.0, min(1.0, float(school_sys.attendance_policy.get("min_promotion_rate", 0.0))))
     _log_year_end_report_card(sim_state, agent)
     
     # Pass/Fail Logic
-    passed = _is_passing_grade(agent.school["performance"], current_stage_name)
+    grade_pass = _is_passing_grade(agent.school["performance"], current_stage_name)
+    attendance_pass = attendance_ratio >= min_promotion_rate
+    passed = grade_pass and attendance_pass
     
     if passed:
         if agent.is_player:
@@ -513,7 +776,15 @@ def _handle_school_end(sim_state, agent, school_sys):
                 sim_state.add_log("Enjoy your summer break!", constants.COLOR_TEXT_DIM)
     else:
         if agent.is_player:
-            sim_state.add_log(f"Failed {current_grade_name}. You must repeat the year.", constants.COLOR_LOG_NEGATIVE)
+            if not attendance_pass:
+                pct = int(round(attendance_ratio * 100))
+                min_pct = int(round(min_promotion_rate * 100))
+                sim_state.add_log(
+                    f"Failed {current_grade_name}. Attendance too low ({pct}% < required {min_pct}%).",
+                    constants.COLOR_LOG_NEGATIVE
+                )
+            else:
+                sim_state.add_log(f"Failed {current_grade_name}. You must repeat the year.", constants.COLOR_LOG_NEGATIVE)
         
         agent.happiness = max(0, agent.happiness - 20)
         # Do not increment year_index, keep same form

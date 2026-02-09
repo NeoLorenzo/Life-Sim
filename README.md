@@ -92,7 +92,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 
 - Basic bio-data: name, gender, age (stored as months), country, city
 - Physical stats: health, happiness, IQ (Gaussian distribution), looks, money
-- **Form Assignment**: `form` attribute for school form tracking (A, B, C, D)
+- **Form Assignment**: `form` attribute for school form tracking using configured school labels
 - Genetic system: supports both procedurally generated "lineage heads" and inherited "descendants"
 
 </details>
@@ -155,7 +155,7 @@ The `SimState` class serves as the central container for the entire simulation w
 - **School System**: Manages educational institutions and enrollment
 - **Family Generation**: Creates multi-generational family trees
 - **Narrative Engine**: Generates contextual birth and life event stories
-- **Class Population**: Generates 80-student cohorts with form assignments
+- **Class Population**: Builds config-driven school cohorts with persistent membership and form assignments
 
 </details>
 
@@ -175,8 +175,8 @@ The `SimState` class serves as the central container for the entire simulation w
 <details>
 <summary><strong>Key Methods</strong></summary>
 
-- `populate_classmates()`: Generates 79 classmates for total of 80 students with form assignments
-- `_assign_form_to_student()`: Helper function for form assignment (A, B, C, D)
+- `populate_classmates()`: Generates a config-sized class cohort once, then reuses that cohort across year transitions
+- `_assign_form_to_student()`: Helper function for form assignment using configured `form_labels`
 - `_link_agents()`: Creates bidirectional relationships with optional modifiers
 - `_setup_family_and_player()`: Generates multi-generational family trees
 - `_create_npc()`: Instantiates and registers new NPCs
@@ -376,7 +376,7 @@ The `affinity.py` module contains the psychometric compatibility engine that cal
 
 **`calculate_affinity(agent_a, agent_b)`** - **Lean Performance Path**
 - **Purpose**: Calculates psychometric compatibility without building breakdown
-- **Usage**: Bulk initialization (e.g., populating 80 classmates = 3,160 pairs)
+- **Usage**: Bulk classmate graph wiring during cohort setup
 - **Performance**: Zero allocations, identical math to breakdown version
 - **Returns**: Integer compatibility score clamped to `[AFFINITY_SCORE_MIN, AFFINITY_SCORE_MAX]`
 
@@ -530,7 +530,7 @@ These compare traits between two agents using: `(AFFINITY_DYADIC_THRESHOLD - Del
 - **Symmetric Math**: Same calculation for `affinity(A,B)` and `affinity(B,A)` enables memoization
 
 **Quantitative Impact**
-- **80 classmates**: 3,160 relationship calculations during initialization
+- **Config-Sized Cohorts**: Relationship calculations scale as `n*(n-1)/2` for cohort size `n`
 - **Memory Saved**: ~2-5 MB by avoiding unnecessary list allocations
 - **Performance**: Microseconds per pair, but significant at population scale
 - **Maintenance**: Byte-for-byte identical math ensures consistency between functions
@@ -1120,17 +1120,20 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 **Core Properties**
 - `id`, `name`, `type`: school identity metadata.
 - `start_month` / `end_month`: academic year boundaries.
-- `forms_per_year`, `class_capacity`: classroom structure controls.
+- `forms_per_year`, `students_per_form`, `class_capacity`, `form_labels`: classroom structure controls.
 - `student_forms`: student ID to form tracking map.
 - `grades`: flattened stage/year progression list used by age-based enrollment and year advancement.
 - `stage_order`: preserved stage ordering from config.
 - `subjects_by_stage`: stage-to-subject mapping from config.
 - `igcse_configuration`: core subjects, elective pool, science tracks.
 - `ib_groups`: IB group descriptors used for KS5 defaults.
+- `attendance_policy`: promotion gate controls (e.g., minimum attendance rate).
+- `calendar_policy`: holiday-learning-loss controls for out-of-session months.
+- `academic_policy`: selectable academic model (legacy v1 or grade-aware v2) with tuning knobs.
 
 **Key Methods**
 - `get_grade_info(index)`: returns year metadata by progression index.
-- `get_random_form_label()`: random form assignment (A/B/C/D based on configured `forms_per_year`).
+- `get_random_form_label()`: random form assignment drawn from configured `form_labels`.
 - `enroll_student(...)` and `get_form_students(...)`: form registry helpers.
 - `get_stage_subjects(stage_name)`: stage subject list (deduplicated, config order preserved).
 - `get_igcse_subject_options()`: returns normalized IGCSE buckets (`core_subjects`, `elective_pool`, `science_tracks`).
@@ -1187,26 +1190,31 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 **Monthly Processing (`process_school_turn`)**
 - Processes player and NPCs.
 - Handles start-of-year and end-of-year events by month.
-- Applies deterministic per-subject monthly progression while in session.
+- Tracks per-year attendance totals while school is in session.
+- Applies active academic model per subject while in session (`v1` deterministic drift or `v2` grade-aware progression).
+- Applies configurable holiday learning loss during break months (excluding start/end transition ticks).
 - Recomputes `agent.school["performance"]` as aggregate of current subject grades.
 
 **Start of Year (`_handle_school_start`)**
 - Already enrolled:
 - marks `is_in_session = True`,
 - applies school AP lock (`ap_locked = 7.0`),
+- resets annual attendance counters,
 - refreshes labels/stage from grade index,
 - synchronizes subject portfolio for the current stage (carry/add/retire behavior),
-- repopulates classmates for player context.
+- rehydrates player cohort context without growing cohort size (stable `cohort_member_uids`).
 - New enrollment:
 - age-based grade lookup from flattened progression,
 - creates school payload,
+- initializes annual attendance counters,
 - initializes stage subject portfolio,
 - applies AP lock and classmate population.
 
 **End of Year (`_handle_school_end`)**
 - Ends school session (`is_in_session = False`).
+- Releases school AP lock for summer (`ap_locked = 0.0` for enrolled students).
 - Writes report card to history log (player).
-- Performs stage-aware pass/fail evaluation.
+- Performs stage-aware pass/fail evaluation plus attendance gate evaluation.
 - Advances year index on pass (or repeats year on fail).
 - Handles graduation at final grade (school removal + AP reset + happiness reward).
 
@@ -1229,12 +1237,19 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 - Category profile defines weighted trait inputs (IQ, conscientiousness-derived competence, openness-derived facets, athleticism).
 - Natural aptitude and progression rate are computed per subject from these profiles.
 
-**Monthly Grade Delta**
+**Monthly Grade Delta (v1 Legacy)**
 - Base: `(natural_aptitude - 50) * progression_rate`
 - Deterministic modifiers:
 - attendance modifier,
 - temporary cognitive penalty modifier.
 - Grades are clamped to `[0, 100]`.
+
+**Monthly Grade Delta (v2 Grade-Aware)**
+- Convergence toward a difficulty-adjusted target grade.
+- Difficulty is composed from stage, year, and subject-category difficulty multipliers.
+- Adds readiness and effort terms (attendance, age-fit, prior performance, conscientiousness, sleep penalty).
+- Includes bounded noise and per-month delta clamp for numerical stability.
+- Adds recovery bias when current performance is below target.
 
 **Portfolio Synchronization**
 - `Agent.sync_subjects_with_school(...)` aligns subject portfolio to stage resolver output.
@@ -1278,8 +1293,9 @@ At year-end, player history receives a full report card:
 <summary><strong>Integration Points</strong></summary>
 
 **State Management (`state.py`)**
-- Enrollment and cohort generation wire school payloads and call subject synchronization.
+- Enrollment and cohort generation wire school payloads (including attendance counters) and call subject synchronization.
 - Classmate generation aligns new/existing cohort members to current stage curriculum.
+- Cohort capacity now derives from config (`forms_per_year * students_per_form`) and form assignment cycles configured `form_labels`.
 
 **Event System (`events.py`)**
 - IGCSE event is config-driven at runtime.
@@ -1301,9 +1317,11 @@ At year-end, player history receives a full report card:
 - Curriculum and stage structure come from external config; behavior adapts to config changes.
 
 **Deterministic and Testable**
-- Progression math has no random noise in monthly subject deltas.
-- Modifiers are explicit and reproducible.
+- Legacy `v1` progression math is deterministic and reproducible.
+- `v2` progression supports bounded stochastic noise (`noise_cap`) for realism while remaining seed-reproducible in tests.
+- Modifiers are explicit and config-driven.
 - Dedicated education test suite validates curriculum mapping, transitions, IGCSE constraints, progression behavior, report cards, and grading labels.
+- `scripts/phase6_balance_report.py` provides seeded multi-year calibration output (repeats/promotions/graduations/grade distributions).
 
 **Modular**
 - School, event, state, and rendering responsibilities are separated.
@@ -1886,70 +1904,109 @@ The application features a comprehensive window resizing system that provides a 
 <details>
 <summary><strong>Education System</strong></summary>
 
-*   **Comprehensive School Configuration:**
-    *   **Detailed Structure:** Configurable forms per year (4 forms: A, B, C, D) with 20 students per form
-    *   **Stage-Based Subjects:** Different subject lists for each educational stage:
-        *   **Early Years:** Literacy, Numeracy, Creative Play
-        *   **Primary:** Math, English, Science, History, Art
-        *   **Secondary:** Mathematics, English, Biology, Chemistry, Physics, History, Geography, Art, Music, PE
-        *   **Sixth Form:** Empty (filled by IGCSE/IB choices)
-    *   **IGCSE Curriculum:** Core subjects (Mathematics, English, Science) and electives (History, Geography, Art, Music, Computer Science, Business Studies, Foreign Language)
-    *   **IB Framework:** Six subject groups (Language, Language Acquisition, Individuals & Societies, Sciences, Mathematics, Arts)
-*   **School UI Integration:**
-    *   **Dedicated School Tab:** New tab in the right panel that only appears when the agent is enrolled in school
-    *   **Context-Aware Visibility:** School tab and buttons automatically hide when not enrolled or during summer break
-    *   **School Actions:** View Grades, View Classmates, Study Hard, Skip Class (with proper session state checking)
-*   **Persistent School Entity:**
-    *   **The Royal British College of Lisbon:** The simulation now instantiates a specific school object with defined metadata (Tuition: €18,000, Uniform Policy, Location).
-    *   **Hierarchical Structure:** Grades are no longer a flat list but are grouped into logical **Stages** (Early Years, Primary, Secondary, Sixth Form), allowing for future rule differentiation (e.g., Uniforms optional in Sixth Form).
-*   **The Cohort System:**
-    *   **Form Assignment:** Upon enrollment, agents are assigned to a specific **Form** (e.g., "Year 7**B**").
-    *   **Static Groups:** This assignment is persistent. If a player starts in the "B" stream, they remain in the "B" stream until graduation, simulating a stable peer group.
-    *   **Structure:** Configured for **4 Forms per Year** (A, B, C, D) with a capacity of **20 students** each.
-*   **Academic Calendar:**
-    *   **Timeline:** School runs independently of biological age, operating on a **September to June** cycle.
-    *   **Status:** Tracks "In Session" vs. "Summer Break" states.
-*   **Subject-Based Academic System:**
-    *   **Four Core Subjects:** Math, Science, Language Arts, and History replace the single performance score.
-    *   **Natural Aptitude Calculation:** Each subject's aptitude is calculated based on IQ and Big 5 personality traits:
-        *   **Math:** (IQ × 0.4) + (Conscientiousness × 0.3) + (Openness[Ideas] × 0.3)
-        *   **Science:** (IQ × 0.5) + (Conscientiousness × 0.25) + (Openness[Ideas] × 0.25)
-        *   **Language Arts:** (IQ × 0.4) + (Openness[Aesthetics] × 0.3) + (Conscientiousness × 0.3)
-        *   **History:** (IQ × 0.3) + (Openness[Values] × 0.4) + (Conscientiousness × 0.3)
-    *   **Deterministic Grade Progression:** Grades change monthly based purely on natural aptitude, removing random fluctuations:
-        *   **Formula:** `(natural_aptitude - 50) × 0.02` per month
-        *   **High aptitude (80):** +0.6 monthly improvement
-        *   **Average aptitude (50):** No change
-        *   **Low aptitude (20):** -0.6 monthly decline
-        *   **Perfect aptitude (100):** +1.0 monthly improvement
-    *   **Monthly Change Tracking:** Each subject tracks its monthly change for tooltip display, showing progression patterns.
-*   **Interactive Academic Dashboard:**
-    *   **Left Panel Display:** When enrolled in school, the left dashboard shows an "Academics" section with all four subjects and their current grades.
-    *   **Color-Coded Performance:** Grades are color-coded for quick visual assessment:
-        *   **90-100:** Green (Excellent)
-        *   **70-89:** Blue (Good)
-        *   **50-69:** Yellow (Average)
-        *   **<50:** Red (Poor)
-    *   **Vertical Layout:** Each subject appears on its own line to prevent wrapping issues and ensure readability within panel bounds.
-    *   **Interactive Tooltips:** Hovering over any grade reveals detailed information:
-        *   Current grade and subject name
-        *   Natural aptitude score
-        *   Monthly change with color-coded direction (green for positive, red for negative)
-        *   Smart positioning to stay within screen boundaries
-    *   **Top-Layer Rendering:** Tooltips render on top of all other UI elements, including modals, ensuring visibility.
-*   **Progression:**
-    *   **Immediate Enrollment:** Agents are automatically enrolled in the appropriate grade level immediately upon generation.
-    *   **Overall Performance:** Calculated as the average of all subject grades for backward compatibility with existing systems.
-    *   **Pass/Fail Logic:**
-        *   *Threshold:* Overall performance must be **> 20** to pass a grade.
-        *   *Failure:* Results in repeating the year and a **-20 Happiness** penalty.
-        *   *Graduation:* Completing the final year (Year 13) awards a **+20 Happiness** boost and removes the "School" status.
-*   **Comprehensive Classmate Generation:**
-    *   **Dynamic Population System:** The school now fully populates the form with complete NPC cohorts. When the player enrolls or advances to a new grade, the system generates all missing classmates to fill the form capacity (20 students per form).
-    *   **Generic Lineage Factory:** Utilizes the `_generate_lineage_structure()` method to create fully-realized NPC classmates with complete family trees, genetic inheritance, and personality profiles.
-    *   **Forced Enrollment:** Generated classmates are automatically assigned to the same school, stage, year, and form as the player, ensuring a cohesive peer group.
-    *   **Relationship Meshing:** The system automatically establishes relationships between all classmates in a cohort, creating a realistic social web where every student knows every other student, not just the player.
-    *   **Affinity-Driven Relationships:** Classmate relationships are determined by the refined affinity calculation system, resulting in natural social dynamics (Classmates, Acquaintances, Rivals) based on personality compatibility.
+*   **Configuration-Driven School Definition**
+    *   The active school is resolved from `education.active_school_id`.
+    *   Calendar uses `start_month_index` and `end_month_index` (currently September to June).
+    *   Structure is driven by `forms_per_year`, `students_per_form`, `form_labels`, and optional churn metadata.
+    *   Curriculum is driven by `subjects_by_stage`, `igcse_configuration`, and `ib_groups`.
+    *   Policy blocks include:
+        *   `attendance.min_promotion_rate`
+        *   `calendar.holiday_learning_loss`
+        *   `academic_model` (legacy v1 + grade-aware v2 controls)
+
+*   **Enrollment and Year Mapping**
+    *   Enrollment is age-linked through a flattened grade progression list built from staged config.
+    *   Agents with exact `age == grade.min_age` can be enrolled at school-year start.
+    *   School payload includes year/stage metadata plus:
+        *   `performance`
+        *   `is_in_session`
+        *   annual attendance counters
+        *   persistent cohort member IDs for stable class groups
+
+*   **Cohort System (Current Behavior)**
+    *   Cohort capacity is config-driven: `forms_per_year * students_per_form`.
+    *   Cohort members are generated once (initial population) and persisted via `cohort_member_uids`.
+    *   Year transitions reuse the same classmates instead of generating new ones.
+    *   Classmate school payloads are updated each year to match the player year/stage/session.
+    *   Social forms for relationship modifiers cycle through configured `form_labels`.
+    *   Cohort relationships are meshed pairwise with affinity-derived labels and optional "Same Form" modifier.
+
+*   **Academic Calendar + AP Integration**
+    *   Start of school year:
+        *   `is_in_session = True`
+        *   `ap_locked = 7.0`
+        *   annual attendance counters reset
+        *   stage labels refreshed from grade index
+        *   subject portfolio synchronized to active stage
+    *   End of school year:
+        *   `is_in_session = False`
+        *   `ap_locked = 0.0` (summer break)
+        *   report card generated for player
+        *   promotion/repeat/graduation resolved
+
+*   **Subject Portfolio System**
+    *   Subjects are dynamic and stage-dependent; there is no hardcoded four-subject core model.
+    *   Each subject record stores:
+        *   `current_grade` (0-100)
+        *   `natural_aptitude` (0-100)
+        *   `monthly_change`
+        *   `category`
+        *   `progression_rate`
+    *   Category and aptitude are computed from IQ, Big Five facets, and athleticism using category profiles.
+    *   `school.performance` is always recomputed as average subject grade.
+
+*   **Academic Models**
+    *   **v1 (legacy):**
+        *   deterministic drift from aptitude and progression rate
+        *   modified by attendance and temporary cognitive penalty
+    *   **v2 (active):**
+        *   convergence toward difficulty-adjusted target performance
+        *   difficulty composition: stage x year x category multipliers
+        *   readiness term: attendance ratio + age fit + prior performance
+        *   effort term: attendance + conscientiousness + sleep/cognitive state
+        *   recovery boost when below target
+        *   bounded noise (`noise_cap`) and monthly delta clamp (`max_monthly_delta`)
+
+*   **Attendance and Promotion Rules**
+    *   Attendance is accumulated monthly in session:
+        *   `attendance_months_total`
+        *   `attendance_months_present_equiv`
+    *   End-of-year pass requires both:
+        *   stage-specific academic pass threshold
+        *   attendance ratio >= `attendance.min_promotion_rate`
+    *   Low attendance can force repeat year even when grades are high.
+    *   Failure applies happiness penalty; passing final year graduates and clears school status.
+
+*   **Holiday Learning Loss**
+    *   During out-of-session months, optional decay can apply via `calendar.holiday_learning_loss`.
+    *   Decay is category-aware (`category_multipliers`) and conscientiousness-mitigated.
+    *   Loss is bounded by `base_monthly_loss` and `max_monthly_loss`.
+    *   Loss is skipped on start/end transition ticks to avoid double-processing artifacts.
+
+*   **IGCSE / IB Specialization**
+    *   IGCSE selection event (`EVT_IGCSE_SUBJECTS`) is built dynamically from school config.
+    *   Validation enforces:
+        *   exactly one science track
+        *   required core subjects
+        *   elective count within configured min/max
+    *   Confirmed IGCSE subjects persist in `agent.school["igcse_subjects"]`.
+    *   KS5/IB uses persistent `agent.school["ib_subjects"]` defaults (one per IB group).
+
+*   **UI/Rendering Integration**
+    *   School tab visibility and school action visibility are session-aware.
+    *   Left panel academic list is dynamic from `player.subjects` and supports scrolling.
+    *   Grade color coding and tooltip rendering support long subject portfolios.
+
+*   **Balance and Testing Tooling**
+    *   Education behavior is covered by dedicated tests across:
+        *   curriculum mapping
+        *   IGCSE validation
+        *   AP calendar transitions
+        *   attendance gating
+        *   holiday learning loss
+        *   v2 progression dynamics
+        *   multi-year integration scenarios
+    *   `scripts/phase6_balance_report.py` runs seeded multi-year reports for repeats/promotions/graduations/grade distributions.
 
 </details>
 

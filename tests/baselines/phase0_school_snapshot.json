@@ -1,0 +1,41 @@
+{
+  "seed": 20260209,
+  "months_simulated": [
+    8,
+    9,
+    10,
+    11,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "school": {
+    "is_in_session": false,
+    "year_index": 9,
+    "year_label": "Year 8",
+    "stage": "Key Stage 3",
+    "performance": 36,
+    "ap_locked": 0.0
+  },
+  "subjects": {
+    "count": 11,
+    "sample_first_five_sorted": {
+      "Art & Design": 33.609,
+      "Citizenship": 31.605,
+      "Computing": 36.348,
+      "English": 34.944,
+      "Geography": 31.834
+    }
+  },
+  "log_count": 18,
+  "log_tail_last_5": [
+    "Music: 34/100 (Working Towards)",
+    "PE: 57/100 (Expected)",
+    "Science: 36/100 (Working Towards)",
+    "Overall Performance: 36/100 (Working Towards)",
+    "Failed Year 8. You must repeat the year."
+  ]
+}

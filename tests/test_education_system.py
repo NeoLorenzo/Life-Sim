@@ -141,6 +141,8 @@ class EducationSystemTests(unittest.TestCase):
         self.assertEqual(agent.school["performance"], expected_perf)
 
     def test_monthly_school_processing_uses_subject_progression_profile(self):
+        # This test validates legacy v1 deterministic progression behavior.
+        self.school_system.academic_policy["v2_enabled"] = False
         player = self.make_agent(age=15)
         player.school = make_school_payload(self.school_system, stage="Key Stage 4 (IGCSE)", year_label="Year 11", year_index=10)
         player.sync_subjects_with_school(self.school_system, preserve_existing=False, reset_monthly_change=True)

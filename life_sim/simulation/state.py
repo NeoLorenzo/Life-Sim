@@ -1092,42 +1092,51 @@ class SimState:
 
     def _assign_form_to_student(self, student, index):
         """
-        Helper function that returns "A", "B", "C", or "D" based on student position.
-        Index 0 (player) gets "A", then distribute evenly across all forms.
+        Returns a configured form label based on student position.
+        Index 0 gets the first configured label, then cycles through the label set.
         """
-        forms = ["A", "B", "C", "D"]
-        return forms[index % 4]
+        forms = getattr(self.school_system, "form_labels", None) or ["A", "B", "C", "D"]
+        return forms[index % len(forms)]
 
     def populate_classmates(self):
         """
-        Generates a cohort of students for the player's current class.
-        Public method called by school.py upon enrollment.
+        Generates the player's cohort once and keeps it stable across years.
+        Public method called by school.py upon enrollment/year start.
         """
         school_data = self.player.school
         if not school_data: return
         
-        # 1. Set capacity to 80 total students (player + 79 classmates)
-        total_capacity = 80
+        # 1. Set total cohort capacity from school config.
+        forms_per_year = int(getattr(self.school_system, "forms_per_year", 4))
+        students_per_form = int(getattr(self.school_system, "students_per_form", 20))
+        total_capacity = max(1, forms_per_year * students_per_form)
             
-        # 2. Identify the Cohort (Player + Existing NPCs)
+        # 2. Resolve persistent cohort membership.
         cohort = [self.player]
-        for npc in self.npcs.values():
-            if not npc.school: continue
-            if (npc.school["school_id"] == school_data["school_id"] and
-                npc.school["year_index"] == school_data["year_index"] and
-                npc.school["form_label"] == school_data["form_label"]):
-                cohort.append(npc)
+        persistent_ids = school_data.get("cohort_member_uids")
+        has_persistent_cohort = isinstance(persistent_ids, list)
+
+        if has_persistent_cohort:
+            # Rebuild cohort from persisted IDs and keep order stable.
+            for uid in persistent_ids:
+                npc = self.npcs.get(uid)
+                if npc:
+                    cohort.append(npc)
+        else:
+            # Backfill for pre-existing saves: discover current-year classmates once.
+            for npc in self.npcs.values():
+                if not npc.school:
+                    continue
+                if (npc.school["school_id"] == school_data["school_id"] and
+                    npc.school["year_index"] == school_data["year_index"] and
+                    npc.school["form_label"] == school_data["form_label"]):
+                    cohort.append(npc)
 
         existing_count = len(cohort)
-        needed = total_capacity - existing_count
+        needed = max(0, total_capacity - existing_count)
 
-        # Ensure existing cohort members are aligned with current curriculum.
-        for student in cohort:
-            if student.school:
-                student.sync_subjects_with_school(self.school_system, preserve_existing=True)
-        
-        # 3. Generate New Students (if needed) - exactly 79 classmates total
-        if needed > 0:
+        # 3. Generate classmates only once (initial population).
+        if not has_persistent_cohort and needed > 0:
             self.logger = logging.getLogger(__name__)
             self.logger.info(f"Populating Class: Generating {needed} students for {school_data['year_label']} {school_data['form_label']}...")
             
@@ -1148,18 +1157,43 @@ class SimState:
                     "year_label": school_data["year_label"],
                     "form_label": school_data["form_label"],
                     "performance": random.randint(20, 90),
-                    "is_in_session": school_data["is_in_session"]
+                    "is_in_session": school_data["is_in_session"],
+                    "attendance_months_total": 0,
+                    "attendance_months_present_equiv": 0.0
                 }
                 classmate.sync_subjects_with_school(self.school_system, preserve_existing=True)
                 
                 cohort.append(classmate)
+
+        # Persist cohort membership so future years reuse the same students.
+        school_data["cohort_member_uids"] = [student.uid for student in cohort if not student.is_player]
+
+        # 4. Align cohort school payload with current player year/session and sync curriculum.
+        for student in cohort:
+            if student.is_player:
+                student.sync_subjects_with_school(self.school_system, preserve_existing=True)
+                continue
+
+            previous_school = student.school if isinstance(student.school, dict) else {}
+            student.school = {
+                "school_id": school_data["school_id"],
+                "school_name": school_data["school_name"],
+                "stage": school_data["stage"],
+                "year_index": school_data["year_index"],
+                "year_label": school_data["year_label"],
+                "form_label": school_data["form_label"],
+                "performance": previous_school.get("performance", random.randint(20, 90)),
+                "is_in_session": school_data["is_in_session"],
+                "attendance_months_total": previous_school.get("attendance_months_total", 0),
+                "attendance_months_present_equiv": previous_school.get("attendance_months_present_equiv", 0.0)
+            }
+            student.sync_subjects_with_school(self.school_system, preserve_existing=True)
         
-        # 4. Assign Forms to All Students
-        # Player gets Form A, distribute remaining students evenly across Forms A, B, C, D
+        # 5. Assign social forms to the stable cohort.
         for i, student in enumerate(cohort):
             student.form = self._assign_form_to_student(student, i)
 
-        # 5. Wire Relationships (The Mesh)
+        # 6. Wire Relationships (The Mesh)
         # We link every student in the cohort to every other student
         # This ensures Classmate A knows Classmate B, not just the Player.
         
@@ -1485,7 +1519,9 @@ class SimState:
                 "year_label": grade_data["name"],
                 "form_label": form_label,
                 "performance": 50, # Start average
-                "is_in_session": True # Assume school is active
+                "is_in_session": True, # Assume school is active
+                "attendance_months_total": 0,
+                "attendance_months_present_equiv": 0.0
             }
             agent.sync_subjects_with_school(self.school_system, preserve_existing=True)
 
