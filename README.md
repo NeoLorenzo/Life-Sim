@@ -1110,27 +1110,75 @@ This contract ensures predictable simulation behavior and helps engineers unders
 <details>
 <summary><strong>🏫 school.py - Education System</strong></summary>
 
-The `school.py` module manages the educational system, including school institutions, form assignments, and academic progression. It provides the infrastructure for organizing students into forms and tracking their educational journey.
+The `school.py` module manages a comprehensive British international school system with Key Stage progression, form-based organization, and IGCSE subject specialization. It provides realistic educational infrastructure from Early Years through Sixth Form.
 
 <details>
 <summary><strong>School Class</strong></summary>
 
-The `School` class represents an educational institution with form-based organization:
+The `School` class represents an educational institution with Key Stage-based structure:
 
 **Core Properties**
 - `id`: Unique school identifier from configuration
-- `name`: School name (e.g., "Springfield High School")
-- `type`: School type (e.g., "High School", "Elementary")
-- `start_month`/`end_month`: Academic year calendar bounds
-- `forms_per_year`: Number of forms per grade level (typically 4: A, B, C, D)
-- `class_capacity`: Maximum students per form
+- `name`: School name (e.g., "Royal British College of Lisbon")
+- `type`: School type (e.g., "Private_International")
+- `start_month`/`end_month`: Academic year calendar bounds (September to May)
+- `forms_per_year`: Number of forms per grade level (4: A, B, C, D)
+- `class_capacity`: Maximum students per form (20)
 - `student_forms`: Dictionary tracking student_id → form_letter assignments
+- `grades`: Flattened grade progression across all Key Stages
 
 **Key Methods**
 - `get_grade_info(index)`: Returns grade information by index
 - `get_random_form_label()`: Returns random form letter (A, B, C, D)
 - `enroll_student(student_id, form=None)`: Enrolls student in specific or random form
 - `get_form_students(form_letter)`: Returns list of student IDs in given form
+
+</details>
+
+<details>
+<summary><strong>British Key Stage System</strong></summary>
+
+**Educational Stages**
+- **EYFS (Early Years Foundation Stage)**: Nursery (age 3), Reception (age 4)
+- **Key Stage 1**: Year 1-2 (ages 5-6)
+- **Key Stage 2**: Year 3-6 (ages 7-10)
+- **Key Stage 3**: Year 7-9 (ages 11-13)
+- **Key Stage 4 (IGCSE)**: Year 10-11 (ages 14-15)
+- **Key Stage 5 (IB)**: Year 12-13 (ages 16-17)
+
+**Stage-Appropriate Subjects**
+- **EYFS**: Communication & Language, Physical Development, PSED, Literacy, Mathematics, Expressive Arts
+- **KS1**: Phonics, Mathematics, Science, Art & Design, History, Geography, PE, Music
+- **KS2**: English, Mathematics, Science, Computing, Design & Technology, Geography, History, MFL (Intro), Music, PE
+- **KS3**: English, Mathematics, Science, Citizenship, Computing, Geography, History, MFL (French/Spanish), Music, PE
+- **KS4**: English Language, English Literature, Mathematics, Biology, Chemistry, Physics, History, Geography, Computer Science, Business Studies, Art & Design, Drama, PE (GCSE), French, Spanish
+- **KS5**: IB Group 1-6 subjects, Theory of Knowledge
+
+</details>
+
+<details>
+<summary><strong>IGCSE Subject System</strong></summary>
+
+**Core Subjects (4)**
+- English Language, English Literature, Mathematics, Co-ordinated Sciences (Double Award)
+
+**Elective Pool (17 subjects)**
+- **Humanities**: History, Geography, Global Perspectives
+- **Languages**: French, Spanish, German, Mandarin
+- **STEM**: Computer Science, ICT
+- **Business**: Business Studies, Economics
+- **Creative**: Art & Design, Music, Drama, Design & Technology
+- **Physical**: Physical Education
+
+**Science Track Options**
+- Co-ordinated Sciences (Double Award) - Combined Biology, Chemistry, Physics
+- Triple Science (Separate Awards) - Individual Biology, Chemistry, Physics
+
+**Subject Selection Event**
+- **Trigger**: Ages 14-15 (Year 10)
+- **Selection**: Choose 6-8 subjects from core + elective pool
+- **Happiness Effects**: Academic subjects (-1 to -5), Creative subjects (+3 to +5)
+- **Storage**: Selected subjects stored in `agent.school['subjects']`
 
 </details>
 
@@ -1143,9 +1191,10 @@ The `School` class represents an educational institution with form-based organiz
 - **Query Support**: Easy retrieval of all students in a particular form
 
 **Form Distribution Logic**
-- **Even Allocation**: Students distributed across available forms
-- **Capacity Management**: Respects `forms_per_year` and `class_capacity` constraints
+- **Even Allocation**: Students distributed across 4 forms (A, B, C, D)
+- **Capacity Management**: Respects 20-student capacity per form
 - **Random Assignment**: When no specific form requested, uses weighted random selection
+- **Form Preservation**: Students maintain same form throughout their school career
 
 </details>
 
@@ -1154,34 +1203,39 @@ The `School` class represents an educational institution with form-based organiz
 
 **Monthly Processing** (`process_school_turn()`)
 - **Player & NPC Processing**: Handles all enrolled agents each month
-- **Academic Progress**: Updates subject grades based on natural aptitude
+- **Subject Grade Updates**: Individual subject progression based on natural aptitude
 - **Session Management**: Tracks school year start/end and enrollment periods
+- **AP Locking**: 7 hours/day locked for school during sessions
 
 **Enrollment Logic** (`_handle_school_start()`)
-- **Age-Based Enrollment**: Automatically enrolls eligible students at appropriate grade levels
-- **Form Assignment**: Assigns students to forms using school's random form selection
-- **Session Activation**: Starts academic sessions at beginning of school year
+- **Age-Based Enrollment**: Automatic enrollment at appropriate Key Stage based on age
+- **Form Assignment**: Random form placement with tracking
+- **Session Activation**: Starts academic sessions at beginning of school year (September)
 
 **Academic Performance** (`_handle_school_end()`)
-- **Grade Evaluation**: Determines passing/failing based on performance threshold (>20)
-- **Progression Logic**: Advances students to next grade or handles graduation
-- **Form Preservation**: Students maintain their form assignment when advancing grades
+- **Grade Evaluation**: Pass/fail based on overall performance (>20 threshold)
+- **Progression Logic**: Advance to next year or repeat year
+- **Graduation**: Complete school after Year 13 (IB2)
+- **Summer Break**: Automatic session end with performance evaluation
 
 </details>
 
 <details>
-<summary><strong>School Year Calendar</strong></summary>
+<summary><strong>Subject Progression System</strong></summary>
 
-**Academic Timeline**
-- **Start Month**: Beginning of academic year (typically September)
-- **End Month**: End of academic year (typically June)
-- **Session Management**: `is_in_session` flag tracks active learning periods
-- **Summer Break**: Automatic session end with performance evaluation
+**Subject Initialization** (`state.py`)
+- **4 Core Subjects**: Math, Science, Language Arts, History (currently hardcoded)
+- **Natural Aptitude**: Calculated from IQ + personality facets
+- **Grade Range**: 0-100 scale, starting at 50
+- **Monthly Change**: Tracks grade changes for UI tooltips
 
-**Grade Structure**
-- **Multi-Stage Education**: Supports primary, secondary, and higher education stages
-- **Linear Progression**: Students advance through grades based on age and performance
-- **Form Consistency**: Students remain in same form throughout their time at the school
+**Monthly Grade Updates**
+- **Aptitude-Based Progression**: `(aptitude - 50) * 0.02` monthly change
+- **No Randomness**: Purely deterministic based on innate abilities
+- **Grade Clamping**: Values constrained to 0-100 range
+- **Overall Performance**: Average of all subject grades
+
+**Note**: Current implementation uses 4 hardcoded subjects. Full Key Stage subject integration is planned for future development.
 
 </details>
 
@@ -1189,7 +1243,7 @@ The `School` class represents an educational institution with form-based organiz
 <summary><strong>Integration Points</strong></summary>
 
 **State Management** (`state.py`)
-- **Class Population**: `populate_classmates()` generates 80-student cohorts
+- **Class Population**: `populate_classmates()` generates 80-student cohorts per form
 - **Form Assignment**: Uses school's form tracking system for student organization
 - **Academic Enrollment**: Automatic enrollment when players reach eligible age
 
@@ -1198,20 +1252,31 @@ The `School` class represents an educational institution with form-based organiz
 - **Progress Tracking**: Monthly change tracking for performance visualization
 - **Form-Based Social Structure**: Students in same form receive relationship bonuses
 
+**Event System** (`events.py`)
+- **IGCSE Selection**: `EVT_IGCSE_SUBJECTS` event handles subject choice
+- **Subject Storage**: Selected subjects stored for future progression logic
+- **UI Integration**: Multi-select interface with 6-8 subject requirement
+
 **Configuration System**
-- **School Definitions**: Loaded from `config.json` education section
-- **Structural Parameters**: Forms per year, class capacity, academic calendar
-- **Grade Progression**: Age-based grade level assignments and requirements
+- **School Definitions**: Comprehensive configuration in `config.json` education section
+- **Key Stage Structure**: Age-appropriate subjects and grade definitions
+- **IGCSE Configuration**: Core/elective subjects and science track options
+- **Academic Calendar**: September start, May end with summer breaks
 
 </details>
 
 <details>
 <summary><strong>Design Principles</strong></summary>
 
+**Realistic British Education**
+- **Key Stage Compliance**: Follows UK National Curriculum structure
+- **Age-Appropriate Progression**: Subjects match developmental stages
+- **International School Model**: Combines British curriculum with global perspective
+
 **Modular Architecture**
 - **Separation of Concerns**: School logic isolated from agent state management
-- **Configuration-Driven**: School structure defined in external configuration files
-- **Extensible Design**: Easy to add new school types or academic systems
+- **Configuration-Driven**: Complete school structure defined in external configuration
+- **Extensible Design**: Easy to add new subjects, Key Stages, or school types
 
 **Deterministic Behavior**
 - **Reproducible Enrollment**: Same configuration produces identical form assignments
