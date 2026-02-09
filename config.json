@@ -1,7 +1,7 @@
 {
     "seed": 42,
     "development": {
-        "disable_events": true
+        "disable_events": false
     },
     "logging": {
         "level": "DEBUG",
@@ -147,6 +147,7 @@
                     "max_age": 2
                 },
                 "ui_type": "single_select",
+                "once_per_lifetime": true,
                 "choices": [
                     {
                         "text": "Cry loudly",

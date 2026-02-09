@@ -140,7 +140,8 @@ class Agent:
             self.personality = self._generate_big_five(attr_config)
         
         # --- Academic Subjects ---
-        self.subjects = self._initialize_subjects()
+        # Populated dynamically from school curriculum when enrolled.
+        self.subjects = {}
         
         self.religiousness = self._rand_attr(attr_config, "religiousness")
         
@@ -605,49 +606,138 @@ class Agent:
             return 50  # Neutral fallback for young children without personality
         return sum(self.personality.get(trait, {}).values())
 
-    def _initialize_subjects(self):
-        """Initialize academic subjects with natural aptitude based on IQ and personality."""
-        subjects = {}
-        
-        # Get personality facets for calculations (handle None for young children)
+    def _subject_trait_inputs(self):
+        """Returns normalized aptitude inputs used by subject calculations."""
         if self.personality:
             openness = self.personality.get("Openness", {})
             conscientiousness = self.personality.get("Conscientiousness", {})
         else:
-            # Default values for young children without Big 5 personality
-            openness = {"Ideas": 10, "Aesthetics": 10}
+            openness = {"Ideas": 10, "Aesthetics": 10, "Values": 10}
             conscientiousness = {"Competence": 10}
-        
-        # Normalize IQ to 0-100 scale for calculations
+
         iq_normalized = (self.iq - 50) / 130.0 * 100  # IQ range 50-180 mapped to 0-100
         iq_normalized = max(0, min(100, iq_normalized))
-        
-        # Calculate natural aptitude for each subject
-        subjects["Math"] = {
-            "current_grade": 50,  # Start at middle grade
-            "natural_aptitude": min(100, max(0, (iq_normalized * 0.4) + (conscientiousness.get("Competence", 10) * 1.5) + (openness.get("Ideas", 10) * 1.5))),
-            "monthly_change": 0.0  # Track last month's change for tooltips
+        return {
+            "iq": iq_normalized,
+            "competence": max(0, min(100, (conscientiousness.get("Competence", 10) / 20.0) * 100)),
+            "ideas": max(0, min(100, (openness.get("Ideas", 10) / 20.0) * 100)),
+            "aesthetics": max(0, min(100, (openness.get("Aesthetics", 10) / 20.0) * 100)),
+            "values": max(0, min(100, (openness.get("Values", 10) / 20.0) * 100)),
+            "athleticism": max(0, min(100, float(self.athleticism)))
         }
-        
-        subjects["Science"] = {
-            "current_grade": 50,
-            "natural_aptitude": min(100, max(0, (iq_normalized * 0.5) + (conscientiousness.get("Competence", 10) * 1.25) + (openness.get("Ideas", 10) * 1.25))),
-            "monthly_change": 0.0
+
+    def _classify_subject_category(self, subject_name):
+        """Classifies subjects into broad categories for aptitude/progression profiles."""
+        name = subject_name.lower()
+        keyword_map = {
+            "core_skills": ("communication", "psed", "development", "reception", "nursery"),
+            "stem": ("math", "mathematics", "science", "biology", "chem", "physics", "comput", "ict", "technology"),
+            "language": ("english", "language", "literature", "phonics", "french", "spanish", "german", "mandarin", "literacy", "lang"),
+            "humanities": ("history", "geography", "citizenship", "economics", "business", "societies", "perspectives", "knowledge"),
+            "creative": ("art", "music", "drama", "expressive", "design"),
+            "physical": ("physical", "pe", "sport")
         }
-        
-        subjects["Language Arts"] = {
-            "current_grade": 50,
-            "natural_aptitude": min(100, max(0, (iq_normalized * 0.4) + (openness.get("Aesthetics", 10) * 1.5) + (conscientiousness.get("Competence", 10) * 1.5))),
-            "monthly_change": 0.0
+
+        for category, keywords in keyword_map.items():
+            if any(keyword in name for keyword in keywords):
+                return category
+        return "default"
+
+    def _get_subject_profile(self, category):
+        """Returns weighting and progression profile for a subject category."""
+        profiles = {
+            "core_skills": {
+                "weights": {"iq": 0.28, "competence": 0.27, "ideas": 0.20, "aesthetics": 0.15, "values": 0.10},
+                "progression_rate": 0.020
+            },
+            "stem": {
+                "weights": {"iq": 0.45, "competence": 0.25, "ideas": 0.20, "values": 0.05, "athleticism": 0.05},
+                "progression_rate": 0.018
+            },
+            "language": {
+                "weights": {"iq": 0.30, "competence": 0.25, "aesthetics": 0.25, "ideas": 0.15, "values": 0.05},
+                "progression_rate": 0.019
+            },
+            "humanities": {
+                "weights": {"iq": 0.28, "competence": 0.25, "values": 0.30, "ideas": 0.12, "aesthetics": 0.05},
+                "progression_rate": 0.018
+            },
+            "creative": {
+                "weights": {"iq": 0.20, "competence": 0.18, "aesthetics": 0.47, "ideas": 0.10, "values": 0.05},
+                "progression_rate": 0.021
+            },
+            "physical": {
+                "weights": {"iq": 0.10, "competence": 0.25, "athleticism": 0.55, "ideas": 0.05, "values": 0.05},
+                "progression_rate": 0.020
+            },
+            "default": {
+                "weights": {"iq": 0.35, "competence": 0.30, "ideas": 0.20, "aesthetics": 0.10, "values": 0.05},
+                "progression_rate": 0.019
+            }
         }
-        
-        subjects["History"] = {
-            "current_grade": 50,
-            "natural_aptitude": min(100, max(0, (iq_normalized * 0.3) + (openness.get("Values", 10) * 2.0) + (conscientiousness.get("Competence", 10) * 1.5))),
-            "monthly_change": 0.0
-        }
-        
+        return profiles.get(category, profiles["default"])
+
+    def _calculate_subject_profile(self, subject_name):
+        """
+        Calculates natural aptitude and progression tuning for a configured subject.
+        Returns tuple: (natural_aptitude, category, progression_rate).
+        """
+        category = self._classify_subject_category(subject_name)
+        profile = self._get_subject_profile(category)
+        trait_inputs = self._subject_trait_inputs()
+
+        raw = 0.0
+        for trait_name, weight in profile["weights"].items():
+            raw += trait_inputs.get(trait_name, 50.0) * weight
+
+        natural_aptitude = min(100, max(0, raw))
+        return natural_aptitude, category, profile["progression_rate"]
+
+    def _initialize_subjects(self, subject_names=None, preserve_existing=False, reset_monthly_change=False):
+        """Builds per-subject grade records for a dynamic subject list."""
+        if subject_names is None:
+            # Legacy fallback for older flows not yet migrated.
+            subject_names = ["Math", "Science", "Language Arts", "History"]
+
+        # De-duplicate while preserving order.
+        unique_subjects = list(dict.fromkeys(subject_names))
+        existing = self.subjects if preserve_existing and isinstance(self.subjects, dict) else {}
+        subjects = {}
+
+        for subject_name in unique_subjects:
+            prev = existing.get(subject_name, {})
+            current_grade = float(prev.get("current_grade", 50))
+            monthly_change = 0.0 if reset_monthly_change else float(prev.get("monthly_change", 0.0))
+            natural_aptitude, category, progression_rate = self._calculate_subject_profile(subject_name)
+
+            subjects[subject_name] = {
+                "current_grade": max(0, min(100, current_grade)),
+                "natural_aptitude": natural_aptitude,
+                "monthly_change": monthly_change,
+                "category": category,
+                "progression_rate": progression_rate
+            }
+
         return subjects
+
+    def sync_subjects_with_school(self, school_system, preserve_existing=True, reset_monthly_change=False):
+        """
+        Synchronizes this agent's subject portfolio to the active school curriculum.
+        Returns True if subjects were updated.
+        """
+        if not self.school or not school_system:
+            return False
+
+        active_subjects = school_system.get_active_subjects_for_agent(self)
+        if not active_subjects:
+            return False
+
+        self.subjects = self._initialize_subjects(
+            active_subjects,
+            preserve_existing=preserve_existing,
+            reset_monthly_change=reset_monthly_change
+        )
+        return True
 
     def _recalculate_hormones(self):
         """
@@ -1030,6 +1120,11 @@ class SimState:
 
         existing_count = len(cohort)
         needed = total_capacity - existing_count
+
+        # Ensure existing cohort members are aligned with current curriculum.
+        for student in cohort:
+            if student.school:
+                student.sync_subjects_with_school(self.school_system, preserve_existing=True)
         
         # 3. Generate New Students (if needed) - exactly 79 classmates total
         if needed > 0:
@@ -1055,6 +1150,7 @@ class SimState:
                     "performance": random.randint(20, 90),
                     "is_in_session": school_data["is_in_session"]
                 }
+                classmate.sync_subjects_with_school(self.school_system, preserve_existing=True)
                 
                 cohort.append(classmate)
         
@@ -1391,6 +1487,7 @@ class SimState:
                 "performance": 50, # Start average
                 "is_in_session": True # Assume school is active
             }
+            agent.sync_subjects_with_school(self.school_system, preserve_existing=True)
 
     def _setup_family_and_player(self):
         """

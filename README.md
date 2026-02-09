@@ -1110,183 +1110,204 @@ This contract ensures predictable simulation behavior and helps engineers unders
 <details>
 <summary><strong>🏫 school.py - Education System</strong></summary>
 
-The `school.py` module manages a comprehensive British international school system with Key Stage progression, form-based organization, and IGCSE subject specialization. It provides realistic educational infrastructure from Early Years through Sixth Form.
+The `school.py` module implements a configuration-driven British international education pipeline: enrollment, subject portfolio assignment, monthly progression, year-end evaluation, and graduation.
 
 <details>
 <summary><strong>School Class</strong></summary>
 
-The `School` class represents an educational institution with Key Stage-based structure:
+The `School` class is initialized from `config["education"]` and resolves the active school definition (`active_school_id`).
 
 **Core Properties**
-- `id`: Unique school identifier from configuration
-- `name`: School name (e.g., "Royal British College of Lisbon")
-- `type`: School type (e.g., "Private_International")
-- `start_month`/`end_month`: Academic year calendar bounds (September to May)
-- `forms_per_year`: Number of forms per grade level (4: A, B, C, D)
-- `class_capacity`: Maximum students per form (20)
-- `student_forms`: Dictionary tracking student_id → form_letter assignments
-- `grades`: Flattened grade progression across all Key Stages
+- `id`, `name`, `type`: school identity metadata.
+- `start_month` / `end_month`: academic year boundaries.
+- `forms_per_year`, `class_capacity`: classroom structure controls.
+- `student_forms`: student ID to form tracking map.
+- `grades`: flattened stage/year progression list used by age-based enrollment and year advancement.
+- `stage_order`: preserved stage ordering from config.
+- `subjects_by_stage`: stage-to-subject mapping from config.
+- `igcse_configuration`: core subjects, elective pool, science tracks.
+- `ib_groups`: IB group descriptors used for KS5 defaults.
 
 **Key Methods**
-- `get_grade_info(index)`: Returns grade information by index
-- `get_random_form_label()`: Returns random form letter (A, B, C, D)
-- `enroll_student(student_id, form=None)`: Enrolls student in specific or random form
-- `get_form_students(form_letter)`: Returns list of student IDs in given form
+- `get_grade_info(index)`: returns year metadata by progression index.
+- `get_random_form_label()`: random form assignment (A/B/C/D based on configured `forms_per_year`).
+- `enroll_student(...)` and `get_form_students(...)`: form registry helpers.
+- `get_stage_subjects(stage_name)`: stage subject list (deduplicated, config order preserved).
+- `get_igcse_subject_options()`: returns normalized IGCSE buckets (`core_subjects`, `elective_pool`, `science_tracks`).
+- `get_ib_default_subject_set(stage_name=None)`: returns KS5 default IB portfolio (group slots + ToK when stage contains it).
+- `ensure_ib_subjects_for_agent(agent)`: persists `agent.school["ib_subjects"]` for KS5/IB stages.
+- `get_active_subjects_for_agent(agent)`: canonical subject resolver for grading:
+- KS4 prefers `agent.school["igcse_subjects"]`,
+- KS5 prefers persistent `ib_subjects`,
+- otherwise falls back to `subjects_by_stage` and configured stage defaults.
 
 </details>
 
 <details>
-<summary><strong>British Key Stage System</strong></summary>
+<summary><strong>British Key Stage Curriculum Mapping</strong></summary>
 
 **Educational Stages**
-- **EYFS (Early Years Foundation Stage)**: Nursery (age 3), Reception (age 4)
-- **Key Stage 1**: Year 1-2 (ages 5-6)
-- **Key Stage 2**: Year 3-6 (ages 7-10)
-- **Key Stage 3**: Year 7-9 (ages 11-13)
-- **Key Stage 4 (IGCSE)**: Year 10-11 (ages 14-15)
-- **Key Stage 5 (IB)**: Year 12-13 (ages 16-17)
+- **EYFS**: Nursery, Reception
+- **Key Stage 1**: Year 1-2
+- **Key Stage 2**: Year 3-6
+- **Key Stage 3**: Year 7-9
+- **Key Stage 4 (IGCSE)**: Year 10-11
+- **Key Stage 5 (Sixth Form / IB)**: Year 12-13
 
-**Stage-Appropriate Subjects**
-- **EYFS**: Communication & Language, Physical Development, PSED, Literacy, Mathematics, Expressive Arts
-- **KS1**: Phonics, Mathematics, Science, Art & Design, History, Geography, PE, Music
-- **KS2**: English, Mathematics, Science, Computing, Design & Technology, Geography, History, MFL (Intro), Music, PE
-- **KS3**: English, Mathematics, Science, Citizenship, Computing, Geography, History, MFL (French/Spanish), Music, PE
-- **KS4**: English Language, English Literature, Mathematics, Biology, Chemistry, Physics, History, Geography, Computer Science, Business Studies, Art & Design, Drama, PE (GCSE), French, Spanish
-- **KS5**: IB Group 1-6 subjects, Theory of Knowledge
+**Curriculum Source of Truth**
+- Stage subject definitions are loaded from `config.json` (`subjects_by_stage`).
+- IGCSE specialization is loaded from `igcse_configuration`.
+- IB group framework is loaded from `ib_groups`.
+- Runtime subject portfolios are generated from these config entries, not hardcoded lists.
 
 </details>
 
 <details>
-<summary><strong>IGCSE Subject System</strong></summary>
+<summary><strong>IGCSE and IB Specialization</strong></summary>
 
-**Core Subjects (4)**
-- English Language, English Literature, Mathematics, Co-ordinated Sciences (Double Award)
+**IGCSE (KS4)**
+- Event: `EVT_IGCSE_SUBJECTS` (`events.py`).
+- Choice list is generated at runtime from config.
+- Validation enforces:
+- exactly one science track,
+- inclusion of non-science core subjects,
+- elective count within min/max bounds.
+- Confirmed selection is stored as `agent.school["igcse_subjects"]` and becomes the active graded subject set for KS4.
 
-**Elective Pool (17 subjects)**
-- **Humanities**: History, Geography, Global Perspectives
-- **Languages**: French, Spanish, German, Mandarin
-- **STEM**: Computer Science, ICT
-- **Business**: Business Studies, Economics
-- **Creative**: Art & Design, Music, Drama, Design & Technology
-- **Physical**: Physical Education
-
-**Science Track Options**
-- Co-ordinated Sciences (Double Award) - Combined Biology, Chemistry, Physics
-- Triple Science (Separate Awards) - Individual Biology, Chemistry, Physics
-
-**Subject Selection Event**
-- **Trigger**: Ages 14-15 (Year 10)
-- **Selection**: Choose 6-8 subjects from core + elective pool
-- **Happiness Effects**: Academic subjects (-1 to -5), Creative subjects (+3 to +5)
-- **Storage**: Selected subjects stored in `agent.school['subjects']`
+**IB / Sixth Form (KS5)**
+- KS5 agents receive persistent `agent.school["ib_subjects"]`.
+- Default model is one slot per configured IB group, with Theory of Knowledge included when present for stage.
+- This portfolio is used as the active graded subject set unless explicitly overridden by future selection logic.
 
 </details>
 
 <details>
-<summary><strong>Form Assignment System</strong></summary>
+<summary><strong>Academic Processing Lifecycle</strong></summary>
 
-**Student Tracking**
-- **Central Registry**: `student_forms` dictionary maintains all student assignments
-- **Flexible Enrollment**: Students can be assigned to specific forms or random placement
-- **Query Support**: Easy retrieval of all students in a particular form
+**Monthly Processing (`process_school_turn`)**
+- Processes player and NPCs.
+- Handles start-of-year and end-of-year events by month.
+- Applies deterministic per-subject monthly progression while in session.
+- Recomputes `agent.school["performance"]` as aggregate of current subject grades.
 
-**Form Distribution Logic**
-- **Even Allocation**: Students distributed across 4 forms (A, B, C, D)
-- **Capacity Management**: Respects 20-student capacity per form
-- **Random Assignment**: When no specific form requested, uses weighted random selection
-- **Form Preservation**: Students maintain same form throughout their school career
+**Start of Year (`_handle_school_start`)**
+- Already enrolled:
+- marks `is_in_session = True`,
+- applies school AP lock (`ap_locked = 7.0`),
+- refreshes labels/stage from grade index,
+- synchronizes subject portfolio for the current stage (carry/add/retire behavior),
+- repopulates classmates for player context.
+- New enrollment:
+- age-based grade lookup from flattened progression,
+- creates school payload,
+- initializes stage subject portfolio,
+- applies AP lock and classmate population.
 
-</details>
-
-<details>
-<summary><strong>Academic System Integration</strong></summary>
-
-**Monthly Processing** (`process_school_turn()`)
-- **Player & NPC Processing**: Handles all enrolled agents each month
-- **Subject Grade Updates**: Individual subject progression based on natural aptitude
-- **Session Management**: Tracks school year start/end and enrollment periods
-- **AP Locking**: 7 hours/day locked for school during sessions
-
-**Enrollment Logic** (`_handle_school_start()`)
-- **Age-Based Enrollment**: Automatic enrollment at appropriate Key Stage based on age
-- **Form Assignment**: Random form placement with tracking
-- **Session Activation**: Starts academic sessions at beginning of school year (September)
-
-**Academic Performance** (`_handle_school_end()`)
-- **Grade Evaluation**: Pass/fail based on overall performance (>20 threshold)
-- **Progression Logic**: Advance to next year or repeat year
-- **Graduation**: Complete school after Year 13 (IB2)
-- **Summer Break**: Automatic session end with performance evaluation
+**End of Year (`_handle_school_end`)**
+- Ends school session (`is_in_session = False`).
+- Writes report card to history log (player).
+- Performs stage-aware pass/fail evaluation.
+- Advances year index on pass (or repeats year on fail).
+- Handles graduation at final grade (school removal + AP reset + happiness reward).
 
 </details>
 
 <details>
-<summary><strong>Subject Progression System</strong></summary>
+<summary><strong>Subject Progression Engine</strong></summary>
 
-**Subject Initialization** (`state.py`)
-- **4 Core Subjects**: Math, Science, Language Arts, History (currently hardcoded)
-- **Natural Aptitude**: Calculated from IQ + personality facets
-- **Grade Range**: 0-100 scale, starting at 50
-- **Monthly Change**: Tracks grade changes for UI tooltips
+`state.py` now builds subject records dynamically from active stage portfolios.
 
-**Monthly Grade Updates**
-- **Aptitude-Based Progression**: `(aptitude - 50) * 0.02` monthly change
-- **No Randomness**: Purely deterministic based on innate abilities
-- **Grade Clamping**: Values constrained to 0-100 range
-- **Overall Performance**: Average of all subject grades
+**Per-Subject Data Model**
+- `current_grade` (0-100)
+- `natural_aptitude` (0-100)
+- `monthly_change`
+- `category` (e.g., stem/language/humanities/creative/physical/core_skills/default)
+- `progression_rate` (category profile rate)
 
-**Note**: Current implementation uses 4 hardcoded subjects. Full Key Stage subject integration is planned for future development.
+**Aptitude and Profiles**
+- Subject category is inferred from subject name.
+- Category profile defines weighted trait inputs (IQ, conscientiousness-derived competence, openness-derived facets, athleticism).
+- Natural aptitude and progression rate are computed per subject from these profiles.
+
+**Monthly Grade Delta**
+- Base: `(natural_aptitude - 50) * progression_rate`
+- Deterministic modifiers:
+- attendance modifier,
+- temporary cognitive penalty modifier.
+- Grades are clamped to `[0, 100]`.
+
+**Portfolio Synchronization**
+- `Agent.sync_subjects_with_school(...)` aligns subject portfolio to stage resolver output.
+- Supports preserving overlap grades and resetting monthly change on year transitions.
+
+</details>
+
+<details>
+<summary><strong>Academic Consistency Utilities</strong></summary>
+
+`school.py` includes shared academic mutation helpers:
+- `recalculate_school_performance(agent)`: canonical aggregate recomputation.
+- `apply_academic_delta(agent, delta_points, target_subjects=None)`: applies global or targeted subject deltas and synchronizes aggregate performance.
+
+These are used to keep penalties/rewards consistent across systems (events, truancy, school processing).
+
+</details>
+
+<details>
+<summary><strong>Report Cards and British Grading</strong></summary>
+
+At year-end, player history receives a full report card:
+- report header (`Report Card: Year/Form`)
+- stage/curriculum label line
+- per-subject score + stage-appropriate grade label
+- overall performance line
+
+**Stage-Aware Grade Labels**
+- KS4 / IGCSE: GCSE-style `9-1` with `U` ungraded fallback.
+- KS5 / IB: IB-style `7-1`.
+- EYFS/KS1/KS2/KS3: UK-style attainment bands (`Greater Depth`, `Expected`, `Working Towards`).
+
+**Stage-Aware Pass Thresholds**
+- KS4: pass threshold aligned to GCSE grade 4+.
+- KS5: pass threshold aligned to IB 4+ equivalent.
+- Earlier key stages: pass threshold aligned to `Expected`.
 
 </details>
 
 <details>
 <summary><strong>Integration Points</strong></summary>
 
-**State Management** (`state.py`)
-- **Class Population**: `populate_classmates()` generates 80-student cohorts per form
-- **Form Assignment**: Uses school's form tracking system for student organization
-- **Academic Enrollment**: Automatic enrollment when players reach eligible age
+**State Management (`state.py`)**
+- Enrollment and cohort generation wire school payloads and call subject synchronization.
+- Classmate generation aligns new/existing cohort members to current stage curriculum.
 
-**Agent Education**
-- **Subject Performance**: Monthly grade updates based on natural aptitude
-- **Progress Tracking**: Monthly change tracking for performance visualization
-- **Form-Based Social Structure**: Students in same form receive relationship bonuses
+**Event System (`events.py`)**
+- IGCSE event is config-driven at runtime.
+- Event resolution supports optional subject-level effects (`effects.subjects`) for targeted or global academic changes.
 
-**Event System** (`events.py`)
-- **IGCSE Selection**: `EVT_IGCSE_SUBJECTS` event handles subject choice
-- **Subject Storage**: Selected subjects stored for future progression logic
-- **UI Integration**: Multi-select interface with 6-8 subject requirement
+**Turn Logic (`logic.py`)**
+- Truancy penalties call shared academic delta APIs so both subject grades and aggregate performance stay in sync.
 
-**Configuration System**
-- **School Definitions**: Comprehensive configuration in `config.json` education section
-- **Key Stage Structure**: Age-appropriate subjects and grade definitions
-- **IGCSE Configuration**: Core/elective subjects and science track options
-- **Academic Calendar**: September start, May end with summer breaks
+**Rendering (`renderer.py`)**
+- Academics panel renders dynamic subject list from `player.subjects`.
+- Supports scrolling for long KS4/KS5 lists and grade tooltips with category detail.
 
 </details>
 
 <details>
 <summary><strong>Design Principles</strong></summary>
 
-**Realistic British Education**
-- **Key Stage Compliance**: Follows UK National Curriculum structure
-- **Age-Appropriate Progression**: Subjects match developmental stages
-- **International School Model**: Combines British curriculum with global perspective
+**Configuration-Driven**
+- Curriculum and stage structure come from external config; behavior adapts to config changes.
 
-**Modular Architecture**
-- **Separation of Concerns**: School logic isolated from agent state management
-- **Configuration-Driven**: Complete school structure defined in external configuration
-- **Extensible Design**: Easy to add new subjects, Key Stages, or school types
+**Deterministic and Testable**
+- Progression math has no random noise in monthly subject deltas.
+- Modifiers are explicit and reproducible.
+- Dedicated education test suite validates curriculum mapping, transitions, IGCSE constraints, progression behavior, report cards, and grading labels.
 
-**Deterministic Behavior**
-- **Reproducible Enrollment**: Same configuration produces identical form assignments
-- **Predictable Progression**: Academic advancement follows defined rules
-- **Consistent Calendar**: Academic year timing is fixed and reproducible
-
-**Performance Optimization**
-- **Efficient Lookups**: Dictionary-based form tracking for O(1) student queries
-- **Batch Processing**: Monthly updates process all enrolled students efficiently
-- **Minimal State**: Lightweight school objects with essential tracking data
+**Modular**
+- School, event, state, and rendering responsibilities are separated.
+- Cross-system academic mutation is centralized through shared helper functions.
 
 </details>
 

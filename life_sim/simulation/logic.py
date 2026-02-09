@@ -171,10 +171,10 @@ def _process_agent_monthly(sim_state, agent):
             # Caught skipping - apply performance penalty
             performance_penalty = penalties.get("truancy_performance_penalty", 10)
             
-            if agent.school and 'performance' in agent.school:
-                agent.school['performance'] = max(0, agent.school['performance'] - performance_penalty)
+            if agent.school:
+                school.apply_academic_delta(agent, -performance_penalty)
                 if agent.is_player:
-                    sim_state.add_log("Caught skipping! Performance penalized.", constants.COLOR_LOG_NEGATIVE)
+                    sim_state.add_log("Caught skipping! Grades and performance penalized.", constants.COLOR_LOG_NEGATIVE)
             elif agent.job:
                 # Job performance isn't fully tracked yet, so just log it
                 if agent.is_player:

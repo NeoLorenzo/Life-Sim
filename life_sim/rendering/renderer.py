@@ -78,6 +78,9 @@ class Renderer:
         
         # Tooltip zones for clickable grade areas
         self.tooltip_zones = []  # List of (Rect, subject_name) tuples
+        self.academics_scroll_offset = 0
+        self.academics_scroll_max = 0
+        self.academics_scroll_rect = None
         
         self.active_tab = "Main"
         
@@ -273,6 +276,22 @@ class Renderer:
         """
         Processes input events.
         """
+        # Scroll long academics list when cursor is over the academics viewport.
+        if sim_state and self.academics_scroll_rect and sim_state.player.school:
+            if event.type == pygame.MOUSEWHEEL:
+                mx, my = pygame.mouse.get_pos()
+                if self.academics_scroll_rect.collidepoint((mx, my)):
+                    self._adjust_academics_scroll(-event.y)
+                    return None
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if self.academics_scroll_rect.collidepoint(event.pos):
+                    if event.button == 4:  # Wheel up
+                        self._adjust_academics_scroll(-1)
+                        return None
+                    if event.button == 5:  # Wheel down
+                        self._adjust_academics_scroll(1)
+                        return None
+
         # Handle window resize events
         if event.type == pygame.VIDEORESIZE:
             self._handle_resize(event.w, event.h)
@@ -1172,35 +1191,58 @@ class Renderer:
                 elif grade >= 50: return (255, 255, 100)  # Yellow
                 else: return constants.COLOR_LOG_NEGATIVE  # Red
             
-            # Display each subject on separate lines to avoid wrapping issues
             subjects = player.subjects
-            subject_names = ["Math", "Science", "Language Arts", "History"]
-            
-            for subject in subject_names:
-                if subject in subjects:
-                    grade = int(subjects[subject]["current_grade"])
-                    color = get_grade_color(grade)
-                    
-                    # Draw subject name and grade on same line with color
-                    subject_text = f"{subject}: "
-                    grade_text = str(grade)
-                    
-                    # Render subject name
-                    subject_surf = self.font_main.render(subject_text, True, constants.COLOR_TEXT)
-                    self.screen.blit(subject_surf, (x, y))
-                    
-                    # Render grade with color right after subject name
-                    grade_x = x + subject_surf.get_width()
-                    grade_surf = self.font_main.render(grade_text, True, color)
-                    grade_rect = pygame.Rect(grade_x, y, grade_surf.get_width(), grade_surf.get_height())
-                    self.screen.blit(grade_surf, (grade_x, y))
-                    
-                    # Store click zone for tooltip
-                    self.tooltip_zones.append((grade_rect, subject))
-                    
-                    # Move to next line
-                    y += draw_text("")
-        
+            subject_names = list(subjects.keys())
+            row_height = self.font_main.get_height() + 5
+            viewport_height = 190
+            viewport_width = self.rect_left.width - 40
+            viewport_y = y
+            self.academics_scroll_rect = pygame.Rect(x - 2, viewport_y - 2, viewport_width + 4, viewport_height + 4)
+
+            pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.academics_scroll_rect, 1)
+
+            max_visible_rows = max(1, viewport_height // row_height)
+            self.academics_scroll_max = max(0, len(subject_names) - max_visible_rows)
+            self.academics_scroll_offset = max(0, min(self.academics_scroll_offset, self.academics_scroll_max))
+
+            visible_subjects = subject_names[
+                self.academics_scroll_offset:self.academics_scroll_offset + max_visible_rows
+            ]
+
+            draw_y = viewport_y
+            for subject in visible_subjects:
+                grade = int(subjects[subject]["current_grade"])
+                color = get_grade_color(grade)
+
+                # Draw subject name and grade on same line with color
+                subject_text = f"{subject}: "
+                grade_text = str(grade)
+
+                subject_surf = self.font_main.render(subject_text, True, constants.COLOR_TEXT)
+                self.screen.blit(subject_surf, (x, draw_y))
+
+                grade_x = x + subject_surf.get_width()
+                grade_surf = self.font_main.render(grade_text, True, color)
+                grade_rect = pygame.Rect(grade_x, draw_y, grade_surf.get_width(), grade_surf.get_height())
+                self.screen.blit(grade_surf, (grade_x, draw_y))
+
+                self.tooltip_zones.append((grade_rect, subject))
+                draw_y += row_height
+
+            # Scroll hint for long lists.
+            if self.academics_scroll_max > 0:
+                first_visible = self.academics_scroll_offset + 1
+                last_visible = self.academics_scroll_offset + len(visible_subjects)
+                hint = f"{first_visible}-{last_visible}/{len(subject_names)} (Mouse Wheel)"
+                hint_surf = self.font_log.render(hint, True, constants.COLOR_TEXT_DIM)
+                self.screen.blit(hint_surf, (x, viewport_y + viewport_height - hint_surf.get_height() - 2))
+
+            y = viewport_y + viewport_height + 10
+        else:
+            self.academics_scroll_rect = None
+            self.academics_scroll_offset = 0
+            self.academics_scroll_max = 0
+
         y += 20
         
         for attr in player.pinned_attributes:
@@ -1229,6 +1271,8 @@ class Renderer:
                     lines.append((f"{subject_name} Details", constants.COLOR_ACCENT))
                     lines.append((f"Current Grade: {int(subject_data['current_grade'])}", constants.COLOR_TEXT))
                     lines.append((f"Natural Aptitude: {int(subject_data['natural_aptitude'])}", constants.COLOR_TEXT))
+                    if "category" in subject_data:
+                        lines.append((f"Category: {subject_data['category']}", constants.COLOR_TEXT_DIM))
                     
                     # Monthly change with color
                     change = subject_data['monthly_change']
@@ -1278,9 +1322,23 @@ class Renderer:
                     
                     break  # Only show one tooltip at a time
 
+    def _adjust_academics_scroll(self, delta):
+        """Adjusts academics viewport scroll offset safely."""
+        if self.academics_scroll_max <= 0:
+            self.academics_scroll_offset = 0
+            return
+        self.academics_scroll_offset = max(
+            0,
+            min(self.academics_scroll_max, self.academics_scroll_offset + delta)
+        )
+
     def _draw_right_panel(self, sim_state):
         self._draw_panel_background(self.rect_right, constants.UI_OPACITY_PANEL)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_right, 1)
+
+        # Keep active tab valid when school enrollment changes.
+        if self.active_tab == "School" and sim_state and sim_state.player.school is None:
+            self.active_tab = "Main"
         
         # Draw Tabs
         for tab in self.tabs:
