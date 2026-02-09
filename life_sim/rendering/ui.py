@@ -517,3 +517,441 @@ class NumberStepper:
         
         # Draw border around entire component
         pygame.draw.rect(screen, (80, 80, 80), total_rect, 2, border_radius=4)
+
+class RelationshipPanel:
+    """A scrollable panel for displaying relationship cards."""
+    def __init__(self, x, y, w, h, font_main, font_log):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.font_main = font_main
+        self.font_log = font_log
+        self.scroll_offset = 0 
+        self.relationships = []  # List of relationship data
+        self.total_content_height = 0
+        self.card_height = 90
+        self.card_gap = 10
+        
+        # Scrollbar state
+        self.scrollbar_width = 12
+        self.scrollbar_color = (100, 100, 100)
+        self.scrollbar_hover_color = (120, 120, 120)
+        self.scrollbar_dragging = False
+        self.scrollbar_drag_start_y = 0
+        self.scrollbar_drag_start_offset = 0
+        
+    def update_position(self, x, y, w, h):
+        """Update the panel's position and size."""
+        w = max(w, 1)
+        h = max(h, 1)
+        self.rect = pygame.Rect(x, y, w, h)
+        # Recalculate content height
+        if self.relationships:
+            self.total_content_height = len(self.relationships) * (self.card_height + self.card_gap)
+    
+    def update_relationships(self, relationships):
+        """Update the relationships data and recalculate content height."""
+        # Sort relationships by total_score (highest first)
+        self.relationships = sorted(relationships, key=lambda x: x['rel'].total_score, reverse=True)
+        # Reset scroll offset if content is shorter than panel
+        if self.total_content_height < self.rect.height:
+            self.scroll_offset = 0
+    
+    def handle_event(self, event, sim_state):
+        """Handles mouse wheel scrolling, scrollbar dragging, and button clicks."""
+        if event.type == pygame.MOUSEWHEEL:
+            mouse_pos = pygame.mouse.get_pos()
+            if self.rect.collidepoint(mouse_pos):
+                # Inverted scroll: negative wheel scrolls down, positive scrolls up
+                self.scroll_offset -= event.y * 30  # Inverted direction
+                max_scroll = max(0, self.total_content_height - self.rect.height)
+                self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
+                
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left click
+                # Check for scrollbar interaction
+                if self.total_content_height > self.rect.height:
+                    scrollbar_rect = self._get_scrollbar_rect()
+                    if scrollbar_rect.collidepoint(event.pos):
+                        # Start dragging scrollbar
+                        self.scrollbar_dragging = True
+                        self.scrollbar_drag_start_y = event.pos[1]
+                        self.scrollbar_drag_start_offset = self.scroll_offset
+                        return None
+                
+                # Check for card button clicks
+                if self.rect.collidepoint(event.pos):
+                    # Calculate which relationship card was clicked
+                    click_y = event.pos[1]
+                    padding_top = 15
+                    start_y = self.rect.y + padding_top - self.scroll_offset
+                    
+                    for i, rel_data in enumerate(self.relationships):
+                        card_y = start_y + i * (self.card_height + self.card_gap)
+                        card_bottom = card_y + self.card_height
+                        
+                        if card_y <= click_y <= card_bottom:
+                            # Check if buttons were clicked
+                            x = self.rect.x + 20
+                            w = self.rect.width - 40
+                            btn_y = card_y + 50
+                            btn_w = (w - 10) // 2
+                            btn_h = 30
+                            
+                            # Attributes Button
+                            rect_attr = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
+                            # Interact Button  
+                            rect_int = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
+                            
+                            if rect_attr.collidepoint(event.pos):
+                                # Ensure the NPC exists before trying to view
+                                if rel_data['uid'] in sim_state.npcs:
+                                    return ("VIEW_AGENT", sim_state.npcs[rel_data['uid']])
+                            elif rect_int.collidepoint(event.pos):
+                                return ("INTERACT", rel_data['uid'])
+                            break
+                            
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:  # Left click release
+                # Stop scrollbar dragging
+                self.scrollbar_dragging = False
+                
+        elif event.type == pygame.MOUSEMOTION:
+            # Handle scrollbar dragging
+            if self.scrollbar_dragging:
+                self._handle_scrollbar_drag(event.pos[1])
+                
+        return None
+    
+    def draw(self, screen, sim_state):
+        """Draw the scrollable relationship panel."""
+        # Draw background
+        s = pygame.Surface((self.rect.width, self.rect.height))
+        s.set_alpha(200)  # Same as UI_OPACITY_CENTER
+        s.fill((20, 20, 20))
+        screen.blit(s, (self.rect.x, self.rect.y))
+        
+        # Clip drawing to panel bounds
+        old_clip = screen.get_clip()
+        screen.set_clip(self.rect)
+        
+        # Calculate starting Y position for cards with 15px padding
+        padding_top = 15
+        start_y = self.rect.y + padding_top - self.scroll_offset
+        
+        # Draw relationship cards
+        x = self.rect.x + 20
+        w = self.rect.width - 40
+        
+        for i, rel_data in enumerate(self.relationships):
+            card_y = start_y + i * (self.card_height + self.card_gap)
+            
+            # Skip cards outside visible area
+            if card_y + self.card_height < self.rect.y or card_y > self.rect.bottom:
+                continue
+            
+            # Draw card background
+            rect = pygame.Rect(x, card_y, w, self.card_height)
+            pygame.draw.rect(screen, (60, 60, 60), rect, border_radius=4)
+            pygame.draw.rect(screen, (80, 80, 80), rect, 1, border_radius=4)
+            
+            # Extract relationship data
+            uid = rel_data['uid']
+            rel = rel_data['rel']
+            
+            # Name & Status
+            name_color = (200, 200, 200)  # COLOR_TEXT
+            status_text = rel.rel_type
+            
+            if not rel.is_alive:
+                name_color = (120, 120, 120)  # COLOR_TEXT_DIM
+                status_text += " (Deceased)"
+            
+            name_surf = self.font_main.render(rel.target_name, True, name_color)
+            type_surf = self.font_log.render(status_text, True, (120, 120, 120))
+            
+            screen.blit(name_surf, (x + 10, card_y + 5))
+            
+            # FT Button for NPC
+            if uid in sim_state.npcs:
+                npc_agent = sim_state.npcs[uid]
+                ft_rect = pygame.Rect(x + 10 + name_surf.get_width() + 10, card_y + 5, 30, 20)
+                self._draw_ft_button(screen, ft_rect, npc_agent)
+
+            screen.blit(type_surf, (x + 10, card_y + 25))
+            
+            # Relationship Bar
+            if rel.is_alive:
+                # Define Bar Area
+                bar_w = 100
+                bar_h = 10
+                bar_x = x + w - bar_w - 10
+                bar_y = card_y + 10
+                
+                bar_bg = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
+                pygame.draw.rect(screen, (30, 30, 30), bar_bg)
+                
+                # Draw Center Line
+                center_x = bar_bg.centerx
+                pygame.draw.line(screen, (80, 80, 80), (center_x, bar_y), (center_x, bar_y + bar_h))
+                
+                val = rel.total_score
+                # Clamp for rendering safety
+                val = max(-100, min(100, val))
+                
+                if val > 0:
+                    # Draw Green to Right
+                    pct = val / 100.0
+                    fill_w = (bar_w / 2) * pct
+                    fill_rect = pygame.Rect(center_x, bar_y, fill_w, bar_h)
+                    
+                    # Color Intensity
+                    if val > 80: 
+                        col = (100, 255, 100)  # COLOR_REL_BEST
+                    else: 
+                        col = (150, 255, 150)  # COLOR_REL_FRIEND
+                    
+                    pygame.draw.rect(screen, col, fill_rect)
+                    
+                elif val < 0:
+                    # Draw Red to Left
+                    pct = abs(val) / 100.0
+                    fill_w = (bar_w / 2) * pct
+                    fill_rect = pygame.Rect(center_x - fill_w, bar_y, fill_w, bar_h)
+                    
+                    # Color Intensity
+                    if val < -50: 
+                        col = (255, 100, 100)  # COLOR_REL_ENEMY
+                    else: 
+                        col = (255, 150, 150)  # COLOR_REL_DISLIKE
+                    
+                    pygame.draw.rect(screen, col, fill_rect)
+
+                # Buttons
+                btn_y = card_y + 50
+                btn_w = (w - 10) // 2
+                btn_h = 30
+                
+                # Draw "Attributes" Button
+                attr_rect = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
+                pygame.draw.rect(screen, (40, 40, 40), attr_rect, border_radius=4)
+                pygame.draw.rect(screen, (80, 80, 80), attr_rect, 1, border_radius=4)
+                attr_txt = self.font_log.render("Attributes", True, (200, 200, 200))
+                attr_txt_rect = attr_txt.get_rect(center=attr_rect.center)
+                screen.blit(attr_txt, attr_txt_rect)
+
+                # Draw "Interact" Button
+                int_rect = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
+                pygame.draw.rect(screen, (40, 40, 40), int_rect, border_radius=4)
+                pygame.draw.rect(screen, (80, 80, 80), int_rect, 1, border_radius=4)
+                int_txt = self.font_log.render("Interact", True, (200, 200, 200))
+                int_txt_rect = int_txt.get_rect(center=int_rect.center)
+                screen.blit(int_txt, int_txt_rect)
+        
+        # Restore clip and draw border
+        screen.set_clip(old_clip)
+        pygame.draw.rect(screen, (80, 80, 80), self.rect, 1)
+        
+        # Draw scrollbar if content is scrollable
+        if self.total_content_height > self.rect.height:
+            self._draw_scrollbar(screen)
+    
+    def get_hover_info(self, mouse_pos, sim_state):
+        """Get relationship information for tooltip display."""
+        if not self.rect.collidepoint(mouse_pos):
+            return None
+            
+        # Calculate which relationship card is being hovered
+        mouse_y = mouse_pos[1]
+        padding_top = 15
+        start_y = self.rect.y + padding_top - self.scroll_offset
+        
+        for i, rel_data in enumerate(self.relationships):
+            card_y = start_y + i * (self.card_height + self.card_gap)
+            card_bottom = card_y + self.card_height
+            
+            if card_y <= mouse_y <= card_bottom:
+                # Found the hovered card
+                uid = rel_data['uid']
+                rel = rel_data['rel']
+                
+                # Get agent information
+                if uid in sim_state.npcs:
+                    agent = sim_state.npcs[uid]
+                    
+                    # Get affinity breakdown like the social graph does
+                    from ..simulation import affinity
+                    score, affinity_breakdown = affinity.get_affinity_breakdown(sim_state.player, agent)
+                    
+                    return {
+                        'name': agent.first_name,
+                        'age': agent.age,
+                        'job': agent.job,
+                        'rel_type': rel.rel_type,
+                        'rel_val': rel.total_score,
+                        'is_alive': rel.is_alive,
+                        'total_score': rel.total_score,
+                        'base_score': rel.base_affinity,
+                        'affinity_breakdown': affinity_breakdown,  # Use calculated breakdown
+                        'modifiers': [(mod.name, mod.value) for mod in rel.modifiers]
+                    }
+                break
+        
+        return None
+
+    def draw_tooltip(self, screen, mouse_pos, sim_state):
+        """Draw tooltip for hovered relationship card."""
+        info = self.get_hover_info(mouse_pos, sim_state)
+        if not info:
+            return
+            
+        lines = []
+        
+        # Header with name and age
+        age_text = f"{info['age']}" if info['is_alive'] else f"{info['age']} (Deceased)"
+        lines.append((f"{info['name']} ({age_text})", (100, 200, 255)))  # COLOR_ACCENT
+        lines.append((info['job'], (120, 120, 120)))  # COLOR_TEXT_DIM
+        
+        if info['rel_type'] != "Self":
+            # Relationship score with color coding
+            rel_txt = f"{info['rel_type']}: {info['rel_val']}/100"
+            col = self._get_relationship_color(info['rel_val'])
+            lines.append((rel_txt, col))
+            
+            # Detailed breakdown
+            lines.append(("--- Base Affinity ---", (120, 120, 120)))  # COLOR_TEXT_DIM
+            base_col = self._get_relationship_color(info['base_score'])
+            lines.append((f"Base: {info['base_score']:+.1f}", base_col))
+            
+            # Show affinity breakdown factors (like social graph)
+            for factor, val in info['affinity_breakdown']:
+                col = self._get_relationship_color(val)
+                lines.append((f"  {factor}: {val:+.1f}", col))
+
+            # Active modifiers
+            if info['modifiers']:
+                lines.append(("--- Active Modifiers ---", (120, 120, 120)))  # COLOR_TEXT_DIM
+                for mod_name, mod_val in info['modifiers']:
+                    col = self._get_relationship_color(mod_val)
+                    lines.append((f"  {mod_name}: {mod_val:+.1f}", col))
+        
+        # Calculate tooltip box size
+        mx, my = mouse_pos
+        line_height = 20
+        box_w = 0
+        box_h = len(lines) * line_height + 10
+        
+        surfaces = []
+        for text, color in lines:
+            # Ensure text is a string
+            if not isinstance(text, str):
+                text = str(text)
+            s = self.font_log.render(text, True, color)
+            box_w = max(box_w, s.get_width())
+            surfaces.append(s)
+        
+        box_w += 20  # Padding
+        
+        # Position tooltip
+        bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
+        
+        # Keep tooltip on screen
+        if bg_rect.right > screen.get_width():
+            bg_rect.x -= box_w + 30
+        if bg_rect.bottom > screen.get_height():
+            bg_rect.y -= box_h + 30
+            
+        # Draw tooltip background and border
+        pygame.draw.rect(screen, (20, 20, 20), bg_rect)
+        pygame.draw.rect(screen, (80, 80, 80), bg_rect, 1)
+        
+        # Draw text
+        curr_y = bg_rect.y + 5
+        for s in surfaces:
+            screen.blit(s, (bg_rect.x + 10, curr_y))
+            curr_y += line_height
+
+    def _get_relationship_color(self, score):
+        """Get color based on relationship score (same as social graph)."""
+        if score > 80:
+            return (100, 255, 100)  # COLOR_REL_BEST
+        elif score > 0:
+            return (150, 255, 150)  # COLOR_REL_FRIEND
+        elif score > -50:
+            return (255, 150, 150)  # COLOR_REL_DISLIKE
+        else:
+            return (255, 100, 100)  # COLOR_REL_ENEMY
+
+    def _draw_ft_button(self, screen, rect, agent):
+        """Draw a small family tree button."""
+        # Simple FT button - just draw "FT" text for now
+        ft_surf = self.font_log.render("FT", True, (150, 150, 255))
+        ft_rect = ft_surf.get_rect(center=rect.center)
+        screen.blit(ft_surf, ft_rect)
+
+    def _get_scrollbar_rect(self):
+        """Get the scrollbar handle rectangle."""
+        if self.total_content_height <= self.rect.height:
+            return None
+            
+        # Calculate scrollbar position and size
+        scrollbar_x = self.rect.right - self.scrollbar_width - 2
+        scrollbar_y = self.rect.y + 2
+        scrollbar_height = self.rect.height - 4
+        
+        # Calculate handle height (minimum 20px)
+        max_scroll = max(0, self.total_content_height - self.rect.height)
+        if max_scroll > 0:
+            handle_height = max(20, int((self.rect.height / self.total_content_height) * scrollbar_height))
+        else:
+            handle_height = scrollbar_height
+            
+        # Calculate handle position
+        if max_scroll > 0:
+            handle_y = scrollbar_y + int((self.scroll_offset / max_scroll) * (scrollbar_height - handle_height))
+        else:
+            handle_y = scrollbar_y
+            
+        return pygame.Rect(scrollbar_x, handle_y, self.scrollbar_width, handle_height)
+    
+    def _draw_scrollbar(self, screen):
+        """Draw the scrollbar."""
+        if self.total_content_height <= self.rect.height:
+            return
+            
+        # Draw scrollbar track
+        scrollbar_x = self.rect.right - self.scrollbar_width - 2
+        scrollbar_y = self.rect.y + 2
+        scrollbar_height = self.rect.height - 4
+        
+        # Draw track background
+        track_rect = pygame.Rect(scrollbar_x, scrollbar_y, self.scrollbar_width, scrollbar_height)
+        pygame.draw.rect(screen, (40, 40, 40), track_rect, border_radius=6)
+
+        # Draw handle
+        handle_rect = self._get_scrollbar_rect()
+        if handle_rect:
+            # Change color if hovering or dragging
+            mouse_pos = pygame.mouse.get_pos()
+            color = self.scrollbar_hover_color if (handle_rect.collidepoint(mouse_pos) or self.scrollbar_dragging) else self.scrollbar_color
+            pygame.draw.rect(screen, color, handle_rect, border_radius=6)
+
+    def _handle_scrollbar_drag(self, mouse_y):
+        """Handle scrollbar dragging."""
+        if self.total_content_height <= self.rect.height:
+            return
+            
+        # Calculate new scroll offset based on mouse position
+        scrollbar_y = self.rect.y + 2
+        scrollbar_height = self.rect.height - 4
+        max_scroll = max(0, self.total_content_height - self.rect.height)
+        
+        if max_scroll > 0:
+            # Calculate handle height
+            handle_height = max(20, int((self.rect.height / self.total_content_height) * scrollbar_height))
+            
+            # Calculate the ratio of mouse movement to scroll movement
+            mouse_delta = mouse_y - self.scrollbar_drag_start_y
+            scroll_ratio = mouse_delta / (scrollbar_height - handle_height)
+            new_offset = self.scrollbar_drag_start_offset + (scroll_ratio * max_scroll)
+            
+            # Clamp to valid range
+            self.scroll_offset = max(0, min(max_scroll, new_offset))

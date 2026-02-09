@@ -7,7 +7,7 @@ import pygame
 import logging
 import os
 from .. import constants
-from .ui import Button, LogPanel, APBar, NumberStepper
+from .ui import Button, LogPanel, APBar, NumberStepper, RelationshipPanel
 from .family_tree import FamilyTreeLayout
 from .social_graph import SocialGraphLayout
 from .modals import EventModal
@@ -42,6 +42,16 @@ class Renderer:
             self.rect_center.y, 
             self.rect_center.width, 
             self.rect_center.height, 
+            self.font_log
+        )
+        
+        # Initialize Relationship Panel (will be positioned in _draw_right_panel)
+        self.relationship_panel = RelationshipPanel(
+            self.rect_right.x, 
+            self.rect_right.y, 
+            self.rect_right.width, 
+            self.rect_right.height, 
+            self.font_main,
             self.font_log
         )
         
@@ -237,6 +247,10 @@ class Renderer:
         # Update log panel if it exists
         if hasattr(self, 'log_panel'):
             self.log_panel.update_position(self.rect_center.x, self.rect_center.y, self.rect_center.width, self.rect_center.height)
+        
+        # Update relationship panel if it exists
+        if hasattr(self, 'relationship_panel'):
+            self.relationship_panel.update_position(self.rect_right.x, self.rect_right.y, self.rect_right.width, self.rect_right.height)
         
         # Rebuild UI structure with new dimensions
         if hasattr(self, 'tabs') and self.tabs:
@@ -458,51 +472,16 @@ class Renderer:
             if result and result[0] == "STEP_CHANGE":
                 return ("UPDATE_SCHEDULE", {"attendance": result[1]})
 
-        # 3. Check Dynamic Relationship Buttons (Social Tab)
-        if self.active_tab == "Social" and sim_state:
-            # Re-calculate layout to find clicks (Must match _draw_relationship_list)
-            current_y = self.rect_right.y + 60
-            gap = 12
-            
-            # Calculate where the static buttons ended
-            for btn in self.buttons["Social"]:
-                # Only count visible buttons
-                rule = self.visibility_rules.get(btn.action_id)
-                if not rule or rule(sim_state.player):
-                    current_y += btn.rect.height + gap
-            
-            start_y = current_y + 10
-            x = self.rect_right.x + 20
-            w = self.rect_right.width - 40
-            card_h = 90 
-            
-            # Offset for the "Relationships" header text (Matches _draw_relationship_list)
-            start_y += 30
-
-            for uid, rel in sim_state.player.relationships.items():
-                # Button Geometry (Must match _draw_relationship_list exactly)
-                btn_y = start_y + 50
-                btn_w = (w - 10) // 2
-                btn_h = 30
-                
-                # Attributes Button
-                # Draw used: x + 5
-                rect_attr = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
-                
-                # Interact Button
-                # Draw used: x + 5 + btn_w + 5
-                rect_int = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
-                
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if rect_attr.collidepoint(event.pos):
-                        # Ensure the NPC exists before trying to view
-                        if uid in sim_state.npcs:
-                            self.viewing_agent = sim_state.npcs[uid]
-                        return None
-                    elif rect_int.collidepoint(event.pos):
-                        return f"INTERACT_{uid}"
-                
-                start_y += card_h + 10
+        # 3. Check Relationship Panel (Social Tab)
+        if self.active_tab == "Social" and sim_state and self.relationship_panel:
+            # Handle scrolling and button clicks in the relationship panel
+            result = self.relationship_panel.handle_event(event, sim_state)
+            if result:
+                if result[0] == "VIEW_AGENT":
+                    self.viewing_agent = result[1]
+                    return None
+                elif result[0] == "INTERACT":
+                    return f"INTERACT_{result[1]}"
 
         return None
 
@@ -561,6 +540,11 @@ class Renderer:
         
         # Draw tooltips on top of everything
         self._draw_grade_tooltips(sim_state)
+        
+        # Draw relationship panel tooltips if on Social tab
+        if self.active_tab == "Social" and hasattr(self, 'relationship_panel'):
+            mouse_pos = pygame.mouse.get_pos()
+            self.relationship_panel.draw_tooltip(self.screen, mouse_pos, sim_state)
         
         pygame.display.flip()
 
@@ -1329,112 +1313,31 @@ class Renderer:
 
         # Draw Relationship List (Only on Social Tab)
         if self.active_tab == "Social":
-            self._draw_relationship_list(sim_state, current_y + 10)
-
-    def _draw_relationship_list(self, sim_state, start_y):
-        """Draws the list of known people in the right panel."""
-        x = self.rect_right.x + 20
-        y = start_y
-        w = self.rect_right.width - 40
-        h = 90 # Increased height for buttons
-        
-        # Header
-        header_surf = self.font_header.render("Relationships", True, constants.COLOR_ACCENT)
-        self.screen.blit(header_surf, (x, y))
-        y += 30
-        
-        for uid, rel in sim_state.player.relationships.items():
-            # Background Box
-            rect = pygame.Rect(x, y, w, h)
-            pygame.draw.rect(self.screen, constants.COLOR_BTN_IDLE, rect, border_radius=4)
-            pygame.draw.rect(self.screen, constants.COLOR_BORDER, rect, 1, border_radius=4)
+            # Draw header outside the scrollable panel
+            header_y = current_y + 10
+            header_surf = self.font_header.render("Relationships", True, constants.COLOR_ACCENT)
+            self.screen.blit(header_surf, (self.rect_right.x + 20, header_y))
             
-            # Name & Status
-            name_color = constants.COLOR_TEXT
-            status_text = rel.rel_type
+            # Update relationship panel position and data (below header)
+            panel_y = header_y + 30  # 30px space for header
+            panel_height = self.rect_right.bottom - panel_y
             
-            if not rel.is_alive:
-                name_color = constants.COLOR_TEXT_DIM
-                status_text += " (Deceased)"
-            
-            name_surf = self.font_main.render(rel.target_name, True, name_color)
-            type_surf = self.font_log.render(status_text, True, constants.COLOR_TEXT_DIM)
-            
-            self.screen.blit(name_surf, (x + 10, y + 5))
-            
-            # FT Button for NPC
-            if uid in sim_state.npcs:
-                npc_agent = sim_state.npcs[uid]
-                ft_rect = pygame.Rect(x + 10 + name_surf.get_width() + 10, y + 5, 30, 20) # Slightly wider for icon
-                self._draw_ft_button(ft_rect, npc_agent)
-
-            self.screen.blit(type_surf, (x + 10, y + 25))
-            
-            # Relationship Bar
-            if rel.is_alive:
-                # Define Bar Area
-                bar_w = 100
-                bar_h = 10
-                bar_x = x + w - bar_w - 10
-                bar_y = y + 10
+            if panel_height > 100:  # Only show if there's enough space
+                self.relationship_panel.update_position(
+                    self.rect_right.x + 20, 
+                    panel_y, 
+                    self.rect_right.width - 40, 
+                    panel_height
+                )
                 
-                bar_bg = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
-                pygame.draw.rect(self.screen, (30, 30, 30), bar_bg)
+                # Update relationship data
+                relationships_data = []
+                for uid, rel in sim_state.player.relationships.items():
+                    relationships_data.append({'uid': uid, 'rel': rel})
+                self.relationship_panel.update_relationships(relationships_data)
                 
-                # Draw Center Line
-                center_x = bar_bg.centerx
-                pygame.draw.line(self.screen, (80, 80, 80), (center_x, bar_y), (center_x, bar_y + bar_h))
-                
-                val = rel.total_score
-                # Clamp for rendering safety
-                val = max(constants.RELATIONSHIP_MIN, min(constants.RELATIONSHIP_MAX, val))
-                
-                if val > 0:
-                    # Draw Green to Right
-                    pct = val / 100.0
-                    fill_w = (bar_w / 2) * pct
-                    fill_rect = pygame.Rect(center_x, bar_y, fill_w, bar_h)
-                    
-                    # Color Intensity
-                    if val > 80: col = constants.COLOR_REL_BEST
-                    else: col = constants.COLOR_REL_FRIEND
-                    
-                    pygame.draw.rect(self.screen, col, fill_rect)
-                    
-                elif val < 0:
-                    # Draw Red to Left
-                    pct = abs(val) / 100.0
-                    fill_w = (bar_w / 2) * pct
-                    fill_rect = pygame.Rect(center_x - fill_w, bar_y, fill_w, bar_h)
-                    
-                    # Color Intensity
-                    if val < -50: col = constants.COLOR_REL_ENEMY
-                    else: col = constants.COLOR_REL_DISLIKE
-                    
-                    pygame.draw.rect(self.screen, col, fill_rect)
-
-                # Buttons
-                btn_y = y + 50
-                btn_w = (w - 10) // 2
-                btn_h = 30
-                
-                # Draw "Attributes" Button
-                attr_rect = pygame.Rect(x + 5, btn_y, btn_w, btn_h)
-                pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, attr_rect, border_radius=4)
-                pygame.draw.rect(self.screen, constants.COLOR_BORDER, attr_rect, 1, border_radius=4)
-                attr_txt = self.font_log.render("Attributes", True, constants.COLOR_TEXT)
-                attr_txt_rect = attr_txt.get_rect(center=attr_rect.center)
-                self.screen.blit(attr_txt, attr_txt_rect)
-
-                # Draw "Interact" Button
-                int_rect = pygame.Rect(x + 5 + btn_w + 5, btn_y, btn_w, btn_h)
-                pygame.draw.rect(self.screen, constants.COLOR_PANEL_BG, int_rect, border_radius=4)
-                pygame.draw.rect(self.screen, constants.COLOR_BORDER, int_rect, 1, border_radius=4)
-                int_txt = self.font_log.render("Interact", True, constants.COLOR_TEXT)
-                int_txt_rect = int_txt.get_rect(center=int_rect.center)
-                self.screen.blit(int_txt, int_txt_rect)
-            
-            y += h + 10
+                # Draw the relationship panel
+                self.relationship_panel.draw(self.screen, sim_state)
 
     def quit(self):
         pygame.quit()

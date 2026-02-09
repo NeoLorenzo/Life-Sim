@@ -1588,6 +1588,52 @@ class SimState:
         if mod_name:
             rel_b.add_modifier(mod_name, mod_val)
         b.relationships[a.uid] = rel_b
+        
+        # 4. Store original affinity for family relationships to allow recalculation
+        if type_a_to_b in ['Parent', 'Mother', 'Father', 'Child'] or type_b_to_a in ['Parent', 'Mother', 'Father', 'Child']:
+            rel_a._original_affinity = aff_score
+            rel_b._original_affinity = aff_score
+
+    def _update_family_relationships_for_personality(self, agent):
+        """
+        Updates family relationships to use personality-based affinity when a child develops personality.
+        This replaces the neutral infant affinity with calculated personality compatibility.
+        """
+        # Find all family relationships for this agent
+        family_types = ['Parent', 'Mother', 'Father', 'Child', 'Sibling']
+        
+        for uid, rel in agent.relationships.items():
+            if rel.rel_type in family_types and hasattr(rel, '_original_affinity'):
+                # Get the other agent
+                other_agent = self.npcs.get(uid)
+                if not other_agent:
+                    continue
+                
+                # Both agents now have personalities, calculate new affinity
+                if agent.personality is not None and other_agent.personality is not None:
+                    # Calculate new affinity based on personalities
+                    new_affinity = affinity.calculate_affinity(agent, other_agent)
+                    
+                    # Update the base affinity
+                    old_base = rel.base_affinity
+                    rel.base_affinity = new_affinity
+                    
+                    # Recalculate total score
+                    rel.recalculate()
+                    
+                    # Log the change for player
+                    if agent.is_player:
+                        change = new_affinity - old_base
+                        change_text = f"+{change}" if change >= 0 else str(change)
+                        self.add_log(f"Relationship with {rel.rel_type} {other_agent.first_name} base affinity changed: {old_base} → {new_affinity} ({change_text})", constants.COLOR_LOG_POSITIVE)
+                
+                # Also update the reverse relationship
+                reverse_rel = other_agent.relationships.get(agent.uid)
+                if reverse_rel and hasattr(reverse_rel, '_original_affinity'):
+                    if agent.personality is not None and other_agent.personality is not None:
+                        new_affinity = affinity.calculate_affinity(other_agent, agent)
+                        reverse_rel.base_affinity = new_affinity
+                        reverse_rel.recalculate()
 
     def start_new_year(self, age):
         """Finalizes the current year and starts a new one."""

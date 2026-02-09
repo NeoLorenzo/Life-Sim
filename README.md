@@ -780,6 +780,10 @@ All agents (Player and NPCs) process the same monthly sequence:
 - Age increment (monthly aging)
 - Birthday check: annual biological recalculation (health capacity, hormones)
 - **Temperament-to-Personality Transition:** At age 3, temperament crystallizes into permanent Big 5 personality
+  - **Family Relationship Updates:** When personality develops, family relationships automatically recalculate base affinity using personality compatibility
+  - **Bidirectional Updates:** Both child-to-parent and parent-to-child relationships are updated simultaneously
+  - **Player Feedback:** System logs the transition from neutral infant relationships to personality-compatible relationships
+  - **Enhanced Realism:** Family dynamics now reflect personality compatibility just like peer relationships
 - **Plasticity Decay:** Infants (0-2) experience age-based plasticity reduction (100% → 60% → 30%)
 - Natural entropy: seniors (50+) experience random health decay
 
@@ -901,6 +905,20 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **E. Mortality Check**
 - Enforces health cap: `agent.health = min(agent.health, agent.max_health)`
 - Death detection: `agent.is_alive = False` if `agent.health <= 0`
+
+**F. Family Relationship Updates (Age 3 Personality Development)**
+- Personality crystallization detection: `new_age == 3 and agent.is_personality_locked == False`
+- Calls `agent.crystallize_personality()` (modifies `agent.personality`, `agent.temperament`)
+- Calls `sim_state._update_family_relationships_for_personality(agent)`:
+  - **Method Location**: `state.py` lines 1597-1636
+  - **Family Types Processed**: 'Parent', 'Mother', 'Father', 'Child', 'Sibling' relationships identified and updated
+  - **Original Affinity Check**: Only updates relationships with `_original_affinity` attribute (family relationships)
+  - **Personality Validation**: Ensures both agents have developed personalities before recalculating
+  - **Affinity Recalculation**: Uses `affinity.calculate_affinity()` for consistent personality compatibility
+  - **Bidirectional Updates**: Updates both `rel.base_affinity` and reverse relationship's base affinity
+  - **Score Recalculation**: Calls `rel.recalculate()` to update total_score after base_affinity changes
+  - **Player Logging**: Logs affinity changes with before/after values for player agents
+  - **Structural Preservation**: Maintains existing modifiers (maternal/paternal bonds) while updating base affinity
 
 #### `_simulate_npc_routine(npc)`
 **Location**: `logic.py` lines 118-140
@@ -1229,6 +1247,20 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Button**: Interactive buttons with hover states and action IDs
 - **LogPanel**: Scrollable, word-wrapped event history with collapsible year headers and responsive resizing
 - **APBar**: 24-segment visual representation of daily Action Point budget
+- **RelationshipPanel**: Scrollable relationship cards with advanced scrollbar functionality
+  - **Enhanced Scrolling System**: Professional scrollbar with multiple interaction methods
+  - **Mouse Wheel Support**: Inverted scroll direction for natural navigation
+  - **Scrollbar Dragging**: Click and drag handle for precise scrolling control
+  - **Visual Feedback**: Handle changes color on hover and during dragging
+  - **Smart Sizing**: Handle size proportional to content vs visible area
+  - **Auto-Hide**: Scrollbar only appears when content exceeds panel height
+  - **Relationship Cards**: Interactive cards showing relationship details, affinity breakdowns, and action buttons
+  - **Tooltip Integration**: Detailed relationship information on hover with personality compatibility factors
+  - **Technical Implementation**:
+    - **Scrollbar State Variables**: `scrollbar_width` (12px), `scrollbar_color`, `scrollbar_hover_color`, `scrollbar_dragging` flag
+    - **Event Priority System**: Scrollbar interactions processed before card button clicks
+    - **Drag State Tracking**: Maintains `scrollbar_drag_start_y` and `scrollbar_drag_start_offset` for smooth operations
+    - **Performance Optimization**: Efficient rendering with minimal redraws and proper clipping
 - **Responsive Design**: All UI components adapt to window size changes with proper validation
 
 **`modals.py` - Event System UI**
@@ -1267,6 +1299,11 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Pinning System**: Click attribute cards to pin them to the dashboard
 - **Real-time Physics**: Social graph updates continuously when open
 - **Infinite Canvas**: Family tree and social graph support pan/zoom navigation
+- **Advanced Scrollbar Interactions**:
+  - **Multi-Modal Control**: Mouse wheel (inverted) and drag-to-scroll functionality
+  - **Visual State Feedback**: Handle color transitions (gray → light gray) on hover/drag
+  - **Proportional Sizing**: Handle height reflects content-to-viewport ratio with 20px minimum
+  - **Smooth Drag Physics**: Linear scroll mapping based on drag distance and content dimensions
 
 </details>
 
@@ -1493,7 +1530,7 @@ The application features a comprehensive window resizing system that provides a 
 
 </details>
 
-## 🚀 Current Features (MVP 0.6)
+## 🚀 Current Features (MVP 0.2)
 
 <details>
 <summary><strong>Core Simulation & Architecture</strong></summary>
@@ -1587,6 +1624,20 @@ The application features a comprehensive window resizing system that provides a 
             *   **Performance-Optimized Paths**: Dual-function architecture with `calculate_affinity()` for bulk initialization (zero allocations) and `get_affinity_breakdown()` for detailed UI tooltips.
             *   **Constants-Driven Tuning**: All thresholds, weights, and bounds moved to `constants.py` for easy balancing without touching core logic.
             *   **Detailed Breakdown System:** The affinity engine provides comprehensive mathematical breakdowns showing exactly how each personality factor contributes to the final score, with clear labeling of positive ("Shared Interests") and negative ("Value Clash") effects.
+        *   **Family Relationship Affinity Integration:**
+            *   **Personality-Driven Family Bonds:** Family relationships (parent-child, siblings) now use the full affinity system once children develop personalities at age 3, rather than relying solely on structural bond modifiers.
+            *   **Developmental Transition:** Infants (age 0-2) have neutral base affinity (0) since they lack personality. At age 3, when temperament crystallizes into permanent Big 5 personality, family relationships automatically recalculate their base affinity using personality compatibility.
+            *   **Automatic Updates:** The `_update_family_relationships_for_personality()` method systematically updates all family relationships when a child's personality develops, ensuring both directions of the relationship reflect the new personality-based compatibility.
+            *   **Enhanced Realism:** This creates more realistic family dynamics where personality compatibility affects family relationships just like peer relationships, while preserving structural bonds (maternal/paternal bonds) as foundational modifiers.
+            *   **Player Feedback:** The system logs changes to family relationships when personality develops, showing the shift from neutral infant relationships to personality-compatible adult relationships.
+            *   **Bidirectional Updates:** Both the child's relationship to parents and parents' relationship to child are updated simultaneously, maintaining relationship consistency.
+            *   **Technical Implementation Details**:
+                - **Original Affinity Tracking**: Family relationships marked with `_original_affinity` attribute during creation for future recalculation identification
+                - **Integration Point**: Called from `_process_agent_monthly()` in `logic.py` when `new_age == 3 and agent.is_personality_locked == False`
+                - **Relationship Types Updated**: 'Parent', 'Mother', 'Father', 'Child', 'Sibling' relationships are all processed
+                - **Affinity Calculation**: Uses existing `affinity.calculate_affinity()` function for consistency with peer relationships
+                - **Score Recalculation**: Calls `rel.recalculate()` after updating `base_affinity` to update total scores
+                - **Logging Integration**: Uses `constants.COLOR_LOG_POSITIVE` for player-visible relationship change notifications
         *   **Expanded Relationship Range:** The social data model supports a range of **`-100` to `+100`**.
         *   **Structural Modifiers (The "Bond" System):**
             *   Instead of arbitrary "Base Values," relationships are initialized with specific **Structural Modifiers** that represent social contracts.

@@ -101,7 +101,12 @@ def _process_agent_monthly(sim_state, agent):
             # Crystallize temperament into permanent personality
             agent.crystallize_personality()
             if agent.is_player:
-                sim_state.add_log("Your temperament has crystallized into your permanent personality.", constants.COLOR_ACCENT)
+                sim_state.add_log(f"Your personality has crystallized! You now have permanent traits that will affect your relationships.", constants.COLOR_LOG_POSITIVE)
+            
+            # Update family relationships to use new personality-based affinity
+            sim_state._update_family_relationships_for_personality(agent)
+            if agent.is_player:
+                sim_state.add_log(f"Your family relationships now reflect your personality compatibility.", constants.COLOR_LOG_POSITIVE)
         
         # Annual Biological Updates
         old_cap = agent.max_health
