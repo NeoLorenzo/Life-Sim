@@ -7,7 +7,7 @@ Static values that do not change between simulation runs.
 # Window Settings
 SCREEN_WIDTH = 2048
 SCREEN_HEIGHT = 1088
-WINDOW_TITLE = "Life-Sim MVP 0.5"
+WINDOW_TITLE = "Life-Sim MVP 0.7"
 FPS = 60
 
 # Layout Dimensions
@@ -147,6 +147,18 @@ AP_MAX_DAILY = 24.0             # Maximum action points per day
 AP_SLEEP_DEFAULT = 8.0           # Default sleep hours required
 AP_GRANULARITY = 0.5             # Action point granularity for scheduling
 MIN_SLEEP_PERMITTED = 4.0        # Minimum sleep hours allowed
+
+# School Time (Realistic age-based 5-day week)
+# Different age groups have different daily school hours
+# Values represent average daily time including weekends
+SCHOOL_HOURS_EARLY_YEARS = 3.0    # Ages 3-4: Nursery/Reception (half-days)
+SCHOOL_HOURS_PRIMARY = 4.5        # Ages 5-10: Primary school
+SCHOOL_HOURS_SECONDARY = 6.0      # Ages 11-16: Secondary school  
+SCHOOL_HOURS_SIXTH_FORM = 6.5     # Ages 17-18: Sixth form/IB
+
+# Default fallback (was original 5.0)
+SCHOOL_HOURS_DAILY = 5.0         
+SCHOOL_HOURS_SESSION = 7.0       # Actual hours per school day (for calculations)
 
 # Medical Costs
 DOCTOR_VISIT_COST = 100         # Cost to visit doctor

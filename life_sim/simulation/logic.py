@@ -220,7 +220,7 @@ def _simulate_npc_routine(npc):
     if npc.job:
         npc.ap_locked = 8.0
     elif npc.school and npc.school["is_in_session"]:
-        npc.ap_locked = 7.0
+        npc.ap_locked = school.get_school_hours_by_age(npc.age)
     else:
         npc.ap_locked = 0.0
         

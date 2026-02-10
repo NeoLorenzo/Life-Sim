@@ -796,6 +796,7 @@ All agents (Player and NPCs) process the same monthly sequence:
 - Action Points (AP) reset to full 24.0 daily budget
 - Sleep needs recalculated based on age bracket from config
 - Locked AP allocated for mandatory obligations (School/Work)
+- **Age-Appropriate School Hours**: School time varies by age group (3.0-6.5 hours/day)
 
 **D. Economic Processing**
 - Monthly salary distribution (annual salary ÷ 12)
@@ -898,6 +899,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **C. Time Management Reset**
 - `agent.ap_used = 0.0` (reset monthly budget)
 - Calls `agent._recalculate_ap_needs()` (modifies `agent.ap_sleep`)
+- **Age-Appropriate School Hours**: School time varies by age group (3.0-6.5 hours/day)
 
 **D. Economic Processing**
 - If employed: `agent.money += int(agent.job['salary'] / 12)`
@@ -925,8 +927,14 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Applies To**: NPCs only
 **State Modifications**:
 - `npc.ap_used += npc.ap_sleep` (sleep allocation)
-- `npc.ap_locked = 8.0` if employed, `7.0` if in school, `0.0` otherwise
+- `npc.ap_locked = 8.0` if employed, age-appropriate school hours if in school, `0.0` otherwise
 - `npc.ap_used += npc.ap_locked` (obligation allocation)
+
+**Age-Based School Hours**:
+- Ages 3-4 (EYFS): 3.0 hours/day (Nursery half-days)
+- Ages 5-10 (Primary): 4.5 hours/day (Standard primary)
+- Ages 11-16 (Secondary): 6.0 hours/day (Longer secondary)
+- Ages 17-18 (Sixth Form): 6.5 hours/day (Senior school)
 
 </details>
 
@@ -1198,7 +1206,7 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 **Start of Year (`_handle_school_start`)**
 - Already enrolled:
 - marks `is_in_session = True`,
-- applies school AP lock (`ap_locked = 7.0`),
+- applies school AP lock (age-appropriate hours based on student age),
 - resets annual attendance counters,
 - refreshes labels/stage from grade index,
 - synchronizes subject portfolio for the current stage (carry/add/retire behavior),
@@ -1934,7 +1942,7 @@ The application features a comprehensive window resizing system that provides a 
 *   **Academic Calendar + AP Integration**
     *   Start of school year:
         *   `is_in_session = True`
-        *   `ap_locked = 7.0`
+        *   `ap_locked = age-appropriate hours (3.0-6.5 based on student age)`
         *   annual attendance counters reset
         *   stage labels refreshed from grade index
         *   subject portfolio synchronized to active stage
@@ -2289,7 +2297,7 @@ The following features are planned to expand the simulation depth into a compreh
     *   **Resource:** A budget of **24.0 Action Points (AP)** per turn, representing the "Average Daily Routine" for that month.
     *   **Granularity:** Supports fractional costs (e.g., 0.5 AP) for micro-tasks.
 *   **The Three Buckets:**
-    *   **Locked AP (Obligations):** Automatically deducted for School (e.g., 7 AP), Job (8 AP), and Commute.
+    *   **Locked AP (Obligations):** Automatically deducted for School (age-appropriate: 3.0-6.5 AP), Job (8 AP), and Commute.
     *   **Maintenance AP (Biology):** Reserved for Sleep (e.g., 8-14 AP depending on age).
     *   **Free AP:** The remaining balance available for player actions (`24 - Locked - Maintenance`).
 *   **"Rule Breaking" (Reclaiming AP):**

@@ -11,6 +11,20 @@ from .. import constants
 
 logger = logging.getLogger(__name__)
 
+def get_school_hours_by_age(age):
+    """
+    Returns realistic daily school hours based on age group.
+    Values represent average daily time including weekends.
+    """
+    if age <= 4:  # Ages 3-4: Early Years Foundation Stage
+        return constants.SCHOOL_HOURS_EARLY_YEARS
+    elif age <= 10:  # Ages 5-10: Primary School (Key Stage 1-2)
+        return constants.SCHOOL_HOURS_PRIMARY
+    elif age <= 16:  # Ages 11-16: Secondary School (Key Stage 3-4)
+        return constants.SCHOOL_HOURS_SECONDARY
+    else:  # Ages 17-18: Sixth Form/IB (Key Stage 5)
+        return constants.SCHOOL_HOURS_SIXTH_FORM
+
 class School:
     """
     Represents a specific school entity with a defined structure.
@@ -658,8 +672,8 @@ def _handle_school_start(sim_state, agent, school_sys):
         agent.school["is_in_session"] = True
         _reset_attendance_tracking(agent)
         
-        # Set AP locked time for school session (7 hours per day)
-        agent.ap_locked = 7.0
+        # Set AP locked time for school session (age-appropriate)
+        agent.ap_locked = get_school_hours_by_age(agent.age)
         
         # Update display labels
         grade_info = school_sys.get_grade_info(agent.school["year_index"])
@@ -717,8 +731,8 @@ def _handle_school_start(sim_state, agent, school_sys):
         }
         _sync_agent_subjects_for_current_stage(sim_state, agent, school_sys, preserve_existing=False)
         
-        # Set AP locked time for school (7 hours per day)
-        agent.ap_locked = 7.0
+        # Set AP locked time for school (age-appropriate)
+        agent.ap_locked = get_school_hours_by_age(agent.age)
         
         if agent.is_player:
             sim_state.add_log(f"Enrolled in {grade_data['name']} at {school_sys.name}.", constants.COLOR_LOG_POSITIVE)
