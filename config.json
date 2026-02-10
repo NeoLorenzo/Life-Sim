@@ -49,6 +49,13 @@
             "strength_min": 10, "strength_max": 90,
             "athleticism_min": 10, "athleticism_max": 90,
             "endurance_min": 10, "endurance_max": 90,
+            "agility_min": 10, "agility_max": 90,
+            "balance_min": 10, "balance_max": 90,
+            "coordination_min": 10, "coordination_max": 90,
+            "reaction_time_min": 10, "reaction_time_max": 90,
+            "flexibility_min": 10, "flexibility_max": 90,
+            "speed_min": 10, "speed_max": 90,
+            "power_min": 10, "power_max": 90,
             "fertility_min": 50, "fertility_max": 100,
             "libido_min": 20, "libido_max": 80,
             

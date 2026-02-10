@@ -169,6 +169,12 @@ DOCTOR_RECOVERY_MAX = 20        # Maximum health recovery from doctor
 MOTHER_YOUNG_AGE = 20           # Age threshold for "young mother" description
 
 # ---------------------------------------------------------------------------
+# Physical Attributes System
+# ---------------------------------------------------------------------------
+COORDINATION_ATTRIBUTES = ["agility", "balance", "coordination", "reaction_time"]
+PERFORMANCE_ATTRIBUTES = ["flexibility", "speed", "power"]
+
+# ---------------------------------------------------------------------------
 # Temperament System
 # ---------------------------------------------------------------------------
 TEMPERAMENT_TRAITS = ["Activity", "Regularity", "Approach_Withdrawal", "Adaptability", 

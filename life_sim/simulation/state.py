@@ -99,6 +99,17 @@ class Agent:
         self.athleticism = self._rand_attr(attr_config, "athleticism")
         self.endurance = self._rand_attr(attr_config, "endurance")
         
+        # Coordination Attributes
+        self.agility = self._rand_attr(attr_config, "agility")
+        self.balance = self._rand_attr(attr_config, "balance")
+        self.coordination = self._rand_attr(attr_config, "coordination")
+        self.reaction_time = self._rand_attr(attr_config, "reaction_time")
+        
+        # Performance Attributes
+        self.flexibility = self._rand_attr(attr_config, "flexibility")
+        self.speed = self._rand_attr(attr_config, "speed")
+        self.power = self._rand_attr(attr_config, "power")
+        
         # Genotype: The genetic peak potential (0-100)
         self._genetic_fertility_peak = self._rand_attr(attr_config, "fertility")
         self._genetic_libido_peak = self._rand_attr(attr_config, "libido")
@@ -315,6 +326,15 @@ class Agent:
         if name == "Genetic Fertility": return self._genetic_fertility_peak
         if name == "Libido": return self.libido
         if name == "Genetic Libido": return self._genetic_libido_peak
+        
+        # New Physical Attributes
+        if name == "Agility": return self.agility
+        if name == "Balance": return self.balance
+        if name == "Coordination": return self.coordination
+        if name == "Reaction Time": return self.reaction_time
+        if name == "Flexibility": return self.flexibility
+        if name == "Speed": return self.speed
+        if name == "Power": return self.power
         
         # Big 5 (Sums)
         if self.personality and name in self.personality:

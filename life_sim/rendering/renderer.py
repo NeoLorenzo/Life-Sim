@@ -841,14 +841,12 @@ class Renderer:
             y += 15 # Gap between groups
             col_y_offsets[col_idx] = y
 
-        # --- Execute Layout ---
-        
         # Check if agent is an infant (age < 3)
         if agent.age < 3:
             # Infant Layout: Vitals + Temperament
             # Column 1: Vitals, Physical, Hidden
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
             draw_group(0, "Hidden", ["Religiousness"])
             
             # Columns 1-3: Temperament (3x3 grid layout)
@@ -870,7 +868,7 @@ class Renderer:
             # Column 1: Vitals, Physical, Hidden
             # Added "Money" to Vitals for verification
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
             draw_group(0, "Hidden", ["Religiousness"])
             
             # Column 2: Openness & Conscientiousness

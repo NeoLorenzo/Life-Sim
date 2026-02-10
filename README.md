@@ -100,7 +100,9 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 <details>
 <summary><strong>Extended Attributes</strong></summary>
 
-- Physical: strength, athleticism, endurance
+- Core Physical: strength, athleticism, endurance
+- Coordination Attributes: agility, balance, coordination, reaction_time
+- Performance Attributes: flexibility, speed, power
 - Personality: Big Five model (OCEAN) with 5 main traits and 30 sub-facets
 - Hormonal curves: fertility and libido with genotype/phenotype separation
 - Hidden traits: sexuality
@@ -1690,6 +1692,13 @@ The application features a comprehensive window resizing system that provides a 
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
 *   **Formative Years Event System:**
     *   **Monthly Triggers:** Deterministic event checks occur immediately after aging up, pausing the simulation for user input.
+*   **Enhanced Physical Attributes System:**
+    *   **Core Physical Attributes:** Strength, Athleticism, Endurance (original attributes)
+    *   **Coordination Attributes:** Agility, Balance, Coordination, Reaction Time (new for sports performance)
+    *   **Performance Attributes:** Flexibility, Speed, Power (new for athletic capabilities)
+    *   **Comprehensive UI Integration:** All attributes visible in the attributes modal with progress bars and color coding
+    *   **Sport-Ready Foundation:** Attribute system designed to support realistic sport performance calculations
+    *   **Configuration-Driven Ranges:** All attributes use configurable min/max values (default 10-90)
     *   **Configurable Content:** Events are fully defined in `config.json`, supporting complex triggers (Age, Month, Stats, Flags).
     *   **Flexible UI:**
         *   **Single Choice:** Standard life scenarios (e.g., "First Words").
@@ -1774,7 +1783,9 @@ The application features a comprehensive window resizing system that provides a 
 *   **Universal Attribute System:**
     *   **IQ:** Replaces "Smarts" with a Gaussian distribution (Mean 100, SD 15).
     *   **Attributes (0-100 Scale):**
-        *   **Physical:** Strength, Athleticism, Endurance.
+        *   **Core Physical:** Strength, Athleticism, Endurance.
+        *   **Coordination Attributes:** Agility, Balance, Coordination, Reaction Time.
+        *   **Performance Attributes:** Flexibility, Speed, Power.
     *   **Hormonal Curves (Genotype vs. Phenotype):**
         *   **Genotype:** Agents are born with a hidden `_genetic_peak` (0-100) for Fertility and Libido.
         *   **Phenotype:** The expressed value is recalculated annually via `_recalculate_hormones()`:
