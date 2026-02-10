@@ -17,6 +17,7 @@
   - [Monthly Cycle](#monthly-simulation-cycle)
   - [State Mutation Contracts](#state-mutation-contracts)
 - [Current Features](#-current-features-mvp-05)
+- [Science-Backed Physical Attributes System](#-science-backed-physical-attributes-system)
 - [Cognitive Aptitude System](#-cognitive-aptitude-system)
 - [Development Tools & Settings](#️-development-tools--settings)
 - [Planned Features](#-roadmap-planned-features)
@@ -100,12 +101,28 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 <details>
 <summary><strong>Extended Attributes</strong></summary>
 
-- Core Physical: strength, athleticism, endurance
-- Coordination Attributes: agility, balance, coordination, reaction_time
-- Performance Attributes: flexibility, speed, power
-- Personality: Big Five model (OCEAN) with 5 main traits and 30 sub-facets
-- Hormonal curves: fertility and libido with genotype/phenotype separation
-- Hidden traits: sexuality
+- **Genetic Base Attributes (Set Once):**
+  - Body Frame Size: 0.8-1.2 (affects leverage and strength potential)
+  - Muscle Fiber Composition: 30-70% fast-twitch (influences power vs endurance)
+  - Genetic Aerobic Capacity: 40-80 VO₂ max potential
+  - Flexibility: Traditional genetic attribute
+  - Reaction Time: Traditional genetic attribute
+
+- **Calculated Physical Attributes (Age-Dependent):**
+  - Maximal Strength: Based on lean mass, frame size, and neural efficiency
+  - Strength Endurance: Derived from slow-twitch fibers and aerobic capacity
+  - Max Speed: Calculated from height, muscle fiber type, and coordination
+  - Acceleration: Strength-to-weight ratio for explosive movement
+  - Explosive Power: Force × Velocity relationship (70% optimal load)
+  - Cardiovascular Endurance: Blend of genetic potential and current health
+  - Muscular Endurance: Combination of strength and cardiovascular endurance
+  - Balance: Proprioception and core stability
+  - Coordination: Neuromuscular efficiency
+  - Agility: Change of direction ability
+
+- **Personality:** Big Five model (OCEAN) with 5 main traits and 30 sub-facets
+- **Hormonal curves:** Fertility and libido with genotype/phenotype separation
+- **Hidden traits:** Sexuality
 
 </details>
 
@@ -123,8 +140,8 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 <summary><strong>State Management</strong></summary>
 
 - Unique UUID and `is_player` flag for entity distinction
-- Dynamic physique calculations (height, weight, BMI based on genetics and athleticism)
-- Age-based progression with growth, puberty, and senescence phases
+- **Dynamic physique calculations (height, weight, BMI based on genetics and calculated physical attributes)**
+- **Age-based progression with growth, puberty, and senescence phases for all physical attributes**
 
 </details>
 
@@ -136,8 +153,14 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - `_init_descendant()`: Inherit traits from parents using genetic formulas
 - `_recalculate_max_health()`: Age-based health capacity calculation
 - `_recalculate_hormones()`: Puberty and aging effects on fertility/libido
-- `_recalculate_physique()`: Calculate weight, BMI from height and athleticism
-- `get_attr_value()`: Unified attribute access for UI rendering
+- `_recalculate_physique()`: Calculate weight, BMI from height and physical attributes
+- `_recalculate_physical_attributes()`: Main method for calculating all physical attributes based on age, genetics, and relationships
+- `_get_physical_age_multiplier()`: Get age-based multiplier for physical development curves
+- `_calculate_maximal_strength()`: Calculate strength from lean mass, frame size, and neural efficiency
+- `_calculate_explosive_power()`: Calculate power using force × velocity relationship
+- `_calculate_max_speed()`: Calculate speed from height, muscle fiber type, and coordination
+- `_validate_physical_attributes()`: Ensure biologically possible attribute combinations
+- `get_attr_value()`: Unified attribute access for UI rendering with backward compatibility
 - `get_personality_sum()`: Calculate Big 5 trait totals
 
 </details>
@@ -1644,7 +1667,165 @@ The application features a comprehensive window resizing system that provides a 
 
 </details>
 
-## 🚀 Current Features (MVP 0.2)
+## 🧬 Science-Backed Physical Attributes System
+
+<details>
+<summary><strong>Biomechanical Realism & Scientific Foundation</strong></summary>
+
+The physical attributes system replaces traditional RPG-style stats with a scientifically-grounded biomechanical model that ensures realistic human performance characteristics and inter-attribute relationships.
+
+### **Core Design Principles**
+
+- **Genetic Foundation**: All physical capabilities derive from inheritable genetic traits
+- **Age-Based Development**: Realistic progression curves from childhood through senescence
+- **Biomechanical Relationships**: Attributes influence each other according to exercise science principles
+- **Validation Constraints**: Prevents biologically impossible attribute combinations
+
+### **Genetic Base Attributes (Set Once)**
+
+<details>
+<summary><strong>Inherited Physical Potential</strong></summary>
+
+- **Body Frame Size** (0.8-1.2): Skeletal structure affecting leverage and strength potential
+  - *Small Frame* (0.8): Reduced leverage but better agility
+  - *Medium Frame* (1.0): Balanced characteristics
+  - *Large Frame* (1.2): Enhanced leverage for strength activities
+
+- **Muscle Fiber Composition** (30-70% fast-twitch): Genetic predisposition for power vs endurance
+  - *Fast-Twitch Dominant* (>60%): Excel in explosive activities, power sports
+  - *Balanced* (45-60%): Versatile performance capabilities
+  - *Slow-Twitch Dominant* (<45%): Excel in endurance activities, long-duration sports
+
+- **Genetic Aerobic Capacity** (40-80 VO₂ max): Cardiovascular system efficiency potential
+  - Determines baseline endurance capabilities and recovery rates
+  - Influences body fat composition and overall health metrics
+
+- **Traditional Attributes**: Flexibility and Reaction Time retained as genetic base traits
+
+</details>
+
+### **Calculated Physical Attributes**
+
+<details>
+<summary><strong>Dynamic Performance Characteristics</strong></summary>
+
+#### **Strength System**
+- **Maximal Strength**: Calculated from lean muscle mass cross-sectional area × neural efficiency
+  - Formula: `(Lean Mass/100 × 45) + (Frame Size-1.0 × 50) + (Fast-Twitch% × 0.25)`
+  - Age-multiplied according to scientific development curves
+
+- **Strength Endurance**: Slow-twitch fiber percentage × aerobic capacity
+  - Represents sustained force production capability
+  - Critical for grappling, climbing, prolonged strength activities
+
+#### **Speed & Power System**
+- **Max Speed**: Stride length (height) × stride frequency (fast-twitch) × coordination efficiency
+  - Taller agents have natural stride length advantage
+  - Fast-twitch fibers enable rapid muscle turnover
+
+- **Explosive Power**: Force × Velocity relationship at optimal load (70% of max strength)
+  - Scientifically accurate power curve implementation
+  - Peak power occurs at moderate loads, not maximum strength
+
+- **Acceleration**: Strength-to-weight ratio for explosive movement capability
+  - Determines quickness from standstill and change-of-direction speed
+
+#### **Endurance System**
+- **Cardiovascular Endurance**: Genetic VO₂ max potential blended with current health status
+  - Primary determinant of sustained activity performance
+  - Influences recovery rates and fatigue resistance
+
+- **Muscular Endurance**: Weighted combination of strength endurance and cardiovascular endurance
+  - Represents ability to perform repeated physical actions
+  - Essential for sports, labor, and extended physical activities
+
+#### **Coordination & Balance**
+- **Coordination**: Neuromuscular efficiency with age-based development curve
+  - Peaks in late 20s, influenced by muscle fiber composition
+  - Critical for complex movement patterns and skill acquisition
+
+- **Balance**: Proprioception and core stability with age factors
+  - Enhanced by coordination and core strength
+  - Declines with age but can be maintained through activity
+
+- **Agility**: Change of direction ability = (Speed × 0.4) + (Coordination × 0.4) + (Balance × 0.2)
+  - Represents overall movement fluidity and directional change capability
+
+</details>
+
+### **Age-Based Progression Curves**
+
+<details>
+<summary><strong>Scientific Development Patterns</strong></summary>
+
+#### **Maximal Strength Development**
+- **Male**: 5% (age 0) → 30% (12) → 80% (18) → 100% (25) → 95% (40) → 80% (60) → 60% (80)
+- **Female**: Similar pattern with earlier peak (age 22) and more gradual decline
+
+#### **Speed Development**
+- **Universal**: 10% (age 0) → 60% (8) → 95% (16) → 100% (20) → 95% (30) → 80% (50) → 60% (70)
+- Rapid development during childhood, peak in late teens, gradual decline thereafter
+
+#### **Aerobic Capacity**
+- **Universal**: 20% (age 0) → 80% (10) → 100% (20) → 95% (35) → 85% (50) → 70% (70)
+- Slower development than strength, maintains longer into adulthood
+
+#### **Coordination & Flexibility**
+- **Coordination**: 10% (age 0) → 40% (6) → 70% (12) → 100% (25) → 95% (40) → 80% (60) → 60% (80)
+- **Flexibility**: 80% (age 0) → 100% (10) → 95% (25) → 85% (40) → 70% (60) → 50% (80)
+
+</details>
+
+### **Biomechanical Validation System**
+
+<details>
+<summary><strong>Preventing Impossible Combinations</strong></summary>
+
+#### **Power Constraints**
+- Maximum possible power = `(Strength/100) × (Speed/100) × 80`
+- Ensures power cannot exceed realistic force-velocity limits
+- Prevents "high power, low strength" impossibilities
+
+#### **Speed-Coordination Requirements**
+- Minimum coordination = `Speed × 0.6`
+- High speed requires sufficient coordination for effective movement
+- Prevents "fast but clumsy" unrealistic combinations
+
+#### **Strength-Mass Relationship**
+- Maximum strength from lean mass = `Lean Mass × 2` (when lean mass < 30kg)
+- Ensures strength is proportional to available muscle tissue
+- Prevents "high strength, low mass" impossibilities
+
+#### **Range Enforcement**
+- All attributes clamped to 0-100 range after calculations
+- Prevents overflow and unrealistic extreme values
+- Maintains gameplay balance while preserving realism
+
+</details>
+
+### **Backward Compatibility & Integration**
+
+<details>
+<summary><strong>Seamless Migration</strong></summary>
+
+#### **Attribute Name Mapping**
+- `Strength` → `Maximal Strength` (maintains UI compatibility)
+- `Speed` → `Max Speed` (preserves existing references)
+- `Power` → `Explosive Power` (maintains functionality)
+- `Endurance` → `Muscular Endurance` (extends endurance concept)
+- `Athleticism` → `Cardiovascular Endurance` (more precise terminology)
+
+#### **System Integration**
+- All existing UI components work with new attribute system
+- No breaking changes to external interfaces
+- Enhanced accuracy for sport-specific calculations
+- Improved realism for life simulation mechanics
+
+</details>
+
+</details>
+
+## 🚀 Current Features (MVP 0.3)
 
 <details>
 <summary><strong>Core Simulation & Architecture</strong></summary>
@@ -1692,11 +1873,35 @@ The application features a comprehensive window resizing system that provides a 
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
 *   **Formative Years Event System:**
     *   **Monthly Triggers:** Deterministic event checks occur immediately after aging up, pausing the simulation for user input.
-*   **Enhanced Physical Attributes System:**
-    *   **Core Physical Attributes:** Strength, Athleticism, Endurance (original attributes)
-    *   **Coordination Attributes:** Agility, Balance, Coordination, Reaction Time (new for sports performance)
-    *   **Performance Attributes:** Flexibility, Speed, Power (new for athletic capabilities)
-    *   **Comprehensive UI Integration:** All attributes visible in the attributes modal with progress bars and color coding
+*   **Science-Backed Physical Attributes System:**
+    *   **Genetic Base Attributes:** Set once during agent initialization
+        *   **Body Frame Size:** 0.8 (small) to 1.2 (large) - affects leverage and strength potential
+        *   **Muscle Fiber Composition:** 30-70% fast-twitch fibers - influences power vs endurance capabilities
+        *   **Genetic Aerobic Capacity:** 40-80 VO₂ max potential - determines cardiovascular endurance base
+        *   **Flexibility & Reaction Time:** Traditional genetic attributes retained as base traits
+    *   **Calculated Physical Attributes:** Derived from genetic base, age, and biomechanical relationships
+        *   **Maximal Strength:** Based on lean mass cross-sectional area, body frame leverage, and neural efficiency
+        *   **Strength Endurance:** Derived from slow-twitch fiber percentage and aerobic capacity
+        *   **Max Speed:** Calculated from stride length (height), stride frequency (fast-twitch), and coordination
+        *   **Acceleration:** Strength-to-weight ratio for explosive movement capability
+        *   **Explosive Power:** Force × Velocity relationship (70% optimal load factor)
+        *   **Cardiovascular Endurance:** Blend of genetic VO₂ max potential and current health
+        *   **Muscular Endurance:** Combination of strength endurance and cardiovascular endurance
+        *   **Balance:** Proprioception and core stability, age-dependent with coordination bonus
+        *   **Coordination:** Neuromuscular efficiency, peaks in late 20s, influenced by muscle fiber type
+        *   **Agility:** Change of direction ability = (Speed + Coordination + Balance) weighted blend
+    *   **Age-Based Progression Curves:** Scientific development patterns for all physical attributes
+        *   **Maximal Strength:** Male: 5%→30%→80%→100% (age 0→12→18→25), Female: similar but earlier peak
+        *   **Max Speed:** Rapid development 8-16 years, peak 18-20, gradual decline after 30
+        *   **Aerobic Capacity:** Universal curve with 20%→100% (age 0→20), slow decline after 35
+        *   **Coordination:** Develops 6-25 years, peaks late 20s, declines after 40
+        *   **Flexibility:** High in childhood (80%), peaks adolescence (100%), declines steadily after 25
+    *   **Biomechanical Relationships:** Realistic inter-attribute dependencies
+        *   **Power Constraint:** Cannot exceed strength × speed × efficiency factor
+        *   **Speed-Coordination Link:** Minimum coordination required for effective speed utilization
+        *   **Strength-Mass Relationship:** Maximum strength limited by available lean muscle mass
+        *   **Validation System:** Prevents biologically impossible attribute combinations
+    *   **Comprehensive UI Integration:** All attributes visible in attributes modal with progress bars and color coding
     *   **Sport-Ready Foundation:** Attribute system designed to support realistic sport performance calculations
     *   **Configuration-Driven Ranges:** All attributes use configurable min/max values (default 10-90)
     *   **Configurable Content:** Events are fully defined in `config.json`, supporting complex triggers (Age, Month, Stats, Flags).

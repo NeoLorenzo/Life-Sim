@@ -91,24 +91,37 @@ class Agent:
 
         self.weight_kg = 0 # Will be calculated by _recalculate_physique
 
-        # --- Extended Attributes ---
+        # --- Genetic Base Attributes (Set Once) ---
         attr_config = agent_config.get("attributes", {})
         
-        # Physical
-        self.strength = self._rand_attr(attr_config, "strength")
-        self.athleticism = self._rand_attr(attr_config, "athleticism")
-        self.endurance = self._rand_attr(attr_config, "endurance")
+        # Body frame size: 0.8=small, 1.0=medium, 1.2=large frame
+        self.body_frame_size = random.uniform(attr_config.get("body_frame_size_min", 0.8), 
+                                             attr_config.get("body_frame_size_max", 1.2))
         
-        # Coordination Attributes
-        self.agility = self._rand_attr(attr_config, "agility")
-        self.balance = self._rand_attr(attr_config, "balance")
-        self.coordination = self._rand_attr(attr_config, "coordination")
+        # Muscle fiber composition: % fast-twitch fibers (30-70%)
+        self.muscle_fiber_composition = random.uniform(attr_config.get("muscle_fiber_composition_min", 30),
+                                                       attr_config.get("muscle_fiber_composition_max", 70))
+        
+        # Genetic aerobic capacity (VO2 max potential)
+        self.aerobic_capacity_genetic = random.uniform(attr_config.get("aerobic_capacity_genetic_min", 40),
+                                                      attr_config.get("aerobic_capacity_genetic_max", 80))
+        
+        # Flexibility and reaction time remain as genetic base attributes
+        self.flexibility = self._rand_attr(attr_config, "flexibility")
         self.reaction_time = self._rand_attr(attr_config, "reaction_time")
         
-        # Performance Attributes
-        self.flexibility = self._rand_attr(attr_config, "flexibility")
-        self.speed = self._rand_attr(attr_config, "speed")
-        self.power = self._rand_attr(attr_config, "power")
+        # --- Dynamic Physical Attributes (Calculated) ---
+        # These will be calculated by _recalculate_physical_attributes()
+        self.maximal_strength = 0
+        self.strength_endurance = 0
+        self.max_speed = 0
+        self.acceleration = 0
+        self.explosive_power = 0
+        self.cardiovascular_endurance = 0
+        self.muscular_endurance = 0
+        self.balance = 0
+        self.coordination = 0
+        self.agility = 0
         
         # Genotype: The genetic peak potential (0-100)
         self._genetic_fertility_peak = self._rand_attr(attr_config, "fertility")
@@ -118,10 +131,10 @@ class Agent:
         self.fertility = 0
         self.libido = 0
 
-        # Derived Bio-Metrics (Simple approximation based on Athleticism)
-        # Base BF: Men ~25%, Women ~35%. Athleticism reduces this.
+        # Derived Bio-Metrics (Simple approximation based on genetic aerobic capacity)
+        # Base BF: Men ~25%, Women ~35%. Higher aerobic capacity reduces this.
         base_bf = 25.0 if self.gender == "Male" else 35.0
-        reduction = (self.athleticism / 100.0) * 18.0 # Up to 18% reduction
+        reduction = (self.aerobic_capacity_genetic / 100.0) * 18.0 # Up to 18% reduction
         variance = random.uniform(-3.0, 5.0)
         self.body_fat = max(4.0, round(base_bf - reduction + variance, 1))
         
@@ -133,6 +146,7 @@ class Agent:
         # Calculate initial phenotype based on age
         self._recalculate_hormones()
         self._recalculate_physique()
+        self._recalculate_physical_attributes()
         
         # Temperament System
         if self.age < 3:
@@ -319,22 +333,33 @@ class Agent:
             return self.get_effective_aptitude(name)
         
         # Physical
-        if name == "Energy": return self.endurance
-        if name == "Fitness": return self.athleticism
-        if name == "Strength": return self.strength
+        if name == "Energy": return self.muscular_endurance
+        if name == "Fitness": return self.cardiovascular_endurance
+        if name == "Strength": return self.maximal_strength
         if name == "Fertility": return self.fertility
         if name == "Genetic Fertility": return self._genetic_fertility_peak
         if name == "Libido": return self.libido
         if name == "Genetic Libido": return self._genetic_libido_peak
         
         # New Physical Attributes
-        if name == "Agility": return self.agility
+        if name == "Maximal Strength": return self.maximal_strength
+        if name == "Strength Endurance": return self.strength_endurance
+        if name == "Max Speed": return self.max_speed
+        if name == "Speed": return self.max_speed  # Backward compatibility
+        if name == "Acceleration": return self.acceleration
+        if name == "Explosive Power": return self.explosive_power
+        if name == "Power": return self.explosive_power  # Backward compatibility
+        if name == "Cardiovascular Endurance": return self.cardiovascular_endurance
+        if name == "Muscular Endurance": return self.muscular_endurance
+        if name == "Endurance": return self.muscular_endurance  # Backward compatibility
         if name == "Balance": return self.balance
         if name == "Coordination": return self.coordination
+        if name == "Agility": return self.agility
         if name == "Reaction Time": return self.reaction_time
         if name == "Flexibility": return self.flexibility
-        if name == "Speed": return self.speed
-        if name == "Power": return self.power
+        
+        # Backward compatibility for old attribute names
+        if name == "Athleticism": return self.cardiovascular_endurance
         
         # Big 5 (Sums)
         if self.personality and name in self.personality:
@@ -471,6 +496,224 @@ class Agent:
             
             # Update phenotype
             self.aptitudes[aptitude]["phenotype"] = target_phenotype
+
+    def _get_physical_age_multiplier(self, attribute_name):
+        """Get age-based multiplier for physical attributes based on scientific development curves."""
+        # Physical development curves based on exercise science research
+        physical_curves = {
+            "maximal_strength": {
+                "male": [[0, 0.05], [12, 0.3], [18, 0.8], [25, 1.0], [40, 0.95], [60, 0.8], [80, 0.6]],
+                "female": [[0, 0.05], [12, 0.25], [16, 0.7], [22, 1.0], [35, 0.9], [55, 0.7], [75, 0.5]]
+            },
+            "max_speed": {
+                "male": [[0, 0.1], [8, 0.6], [16, 0.95], [20, 1.0], [30, 0.95], [50, 0.8], [70, 0.6]],
+                "female": [[0, 0.1], [8, 0.6], [14, 0.9], [18, 1.0], [28, 0.9], [45, 0.7], [65, 0.5]]
+            },
+            "aerobic_capacity": {
+                "universal": [[0, 0.2], [10, 0.8], [20, 1.0], [35, 0.95], [50, 0.85], [70, 0.7]]
+            },
+            "coordination": {
+                "universal": [[0, 0.1], [6, 0.4], [12, 0.7], [25, 1.0], [40, 0.95], [60, 0.8], [80, 0.6]]
+            },
+            "flexibility": {
+                "universal": [[0, 0.8], [10, 1.0], [25, 0.95], [40, 0.85], [60, 0.7], [80, 0.5]]
+            },
+            "reaction_time": {
+                "universal": [[0, 0.3], [15, 0.8], [25, 1.0], [35, 0.95], [50, 0.85], [70, 0.7]]
+            }
+        }
+        
+        def interpolate_curve(curve, age):
+            """Interpolate multiplier from age-based development curve."""
+            if not curve:
+                return 1.0
+            
+            # Find the two points to interpolate between
+            for i in range(len(curve) - 1):
+                age_point, multiplier = curve[i]
+                next_age, next_multiplier = curve[i + 1]
+                
+                if age <= age_point:
+                    return multiplier
+                elif age < next_age:
+                    # Linear interpolation between points
+                    progress = (age - age_point) / (next_age - age_point)
+                    return multiplier + progress * (next_multiplier - multiplier)
+            
+            # If age is beyond the last point, return the last multiplier
+            return curve[-1][1]
+        
+        # Get the appropriate curve
+        if attribute_name in physical_curves:
+            curve_data = physical_curves[attribute_name]
+            if self.gender.lower() in curve_data:
+                return interpolate_curve(curve_data[self.gender.lower()], self.age)
+            elif "universal" in curve_data:
+                return interpolate_curve(curve_data["universal"], self.age)
+        
+        return 1.0  # Default multiplier
+
+    def _recalculate_physical_attributes(self):
+        """Recalculate all physical attributes based on genetic base, age, and relationships."""
+        # Calculate primary attributes
+        self.maximal_strength = self._calculate_maximal_strength()
+        self.max_speed = self._calculate_max_speed()
+        self.cardiovascular_endurance = self._calculate_cardiovascular_endurance()
+        self.coordination = self._calculate_coordination()
+        
+        # Calculate secondary attributes
+        self.strength_endurance = self._calculate_strength_endurance()
+        self.acceleration = self._calculate_acceleration()
+        self.explosive_power = self._calculate_explosive_power()
+        self.muscular_endurance = self._calculate_muscular_endurance()
+        self.balance = self._calculate_balance()
+        self.agility = self._calculate_agility()
+        
+        # Apply validation constraints
+        self._validate_physical_attributes()
+
+    def _calculate_maximal_strength(self):
+        """Based on cross-sectional area of muscle fibers"""
+        # Strength ∝ Muscle Cross-sectional Area × Neural Efficiency
+        age_multiplier = self._get_physical_age_multiplier("maximal_strength")
+        
+        base_strength = (self.lean_mass / 100.0) * 45  # Muscle mass contribution
+        frame_bonus = (self.body_frame_size - 1.0) * 50  # Larger frame = more leverage
+        neural_efficiency = (self.muscle_fiber_composition / 100.0) * 25  # Fast-twitch advantage
+        
+        raw_strength = base_strength + frame_bonus + neural_efficiency
+        return min(100, max(0, raw_strength * age_multiplier))
+
+    def _calculate_strength_endurance(self):
+        """Based on slow-twitch fiber percentage and aerobic capacity"""
+        age_multiplier = self._get_physical_age_multiplier("aerobic_capacity")
+        
+        # More slow-twitch fibers = better endurance
+        slow_twitch_percentage = (100 - self.muscle_fiber_composition) / 100.0
+        aerobic_component = (self.aerobic_capacity_genetic / 100.0) * 0.6
+        fiber_component = slow_twitch_percentage * 0.4
+        
+        raw_endurance = (aerobic_component + fiber_component) * 100
+        return min(100, max(0, raw_endurance * age_multiplier))
+
+    def _calculate_max_speed(self):
+        """Based on stride length and stride frequency"""
+        age_multiplier = self._get_physical_age_multiplier("max_speed")
+        
+        # Speed = Stride Length × Stride Frequency
+        stride_length_factor = (self.height_cm / 200.0) * 40  # Taller = longer stride
+        stride_frequency = (self.muscle_fiber_composition / 100.0) * 30  # Fast-twitch = faster turnover
+        coordination_bonus = (self.coordination / 100.0) * 30  # Better coordination = more efficient movement
+        
+        raw_speed = stride_length_factor + stride_frequency + coordination_bonus
+        return min(100, max(0, raw_speed * age_multiplier))
+
+    def _calculate_acceleration(self):
+        """Based on strength-to-weight ratio"""
+        age_multiplier = self._get_physical_age_multiplier("maximal_strength")
+        
+        if self.weight_kg > 0:
+            strength_to_weight = self.maximal_strength / (self.weight_kg / 100.0)
+        else:
+            strength_to_weight = 50
+        
+        raw_acceleration = strength_to_weight * 0.5
+        return min(100, max(0, raw_acceleration * age_multiplier))
+
+    def _calculate_explosive_power(self):
+        """Force × Velocity, the cornerstone of athletic performance"""
+        age_multiplier = self._get_physical_age_multiplier("maximal_strength")
+        
+        force_component = self.maximal_strength / 100.0
+        velocity_component = self.max_speed / 100.0
+        # Power output peaks at moderate loads, not max strength
+        optimal_load_factor = 0.7  # 70% of max strength for peak power
+        
+        raw_power = (force_component * optimal_load_factor * velocity_component) * 100
+        return min(100, max(0, raw_power * age_multiplier))
+
+    def _calculate_cardiovascular_endurance(self):
+        """Aerobic performance capacity"""
+        age_multiplier = self._get_physical_age_multiplier("aerobic_capacity")
+        
+        # Mix of genetic potential and current health
+        genetic_component = (self.aerobic_capacity_genetic / 100.0) * 0.8
+        health_component = (self.health / 100.0) * 0.2
+        
+        raw_endurance = (genetic_component + health_component) * 100
+        return min(100, max(0, raw_endurance * age_multiplier))
+
+    def _calculate_muscular_endurance(self):
+        """Resistance to fatigue in repeated contractions"""
+        # Blend of strength endurance and cardiovascular endurance
+        strength_component = (self.strength_endurance / 100.0) * 0.7
+        cardio_component = (self.cardiovascular_endurance / 100.0) * 0.3
+        
+        raw_endurance = (strength_component + cardio_component) * 100
+        return min(100, max(0, raw_endurance))
+
+    def _calculate_balance(self):
+        """Based on proprioception and core stability"""
+        age_multiplier = self._get_physical_age_multiplier("coordination")
+        
+        # Base balance with age factor
+        base_balance = 50 + (age_multiplier - 1.0) * 30
+        coordination_bonus = (self.coordination / 100.0) * 20
+        core_stability = (self.maximal_strength / 100.0) * 10
+        
+        raw_balance = base_balance + coordination_bonus + core_stability
+        return min(100, max(0, raw_balance))
+
+    def _calculate_coordination(self):
+        """Neuromuscular efficiency"""
+        age_multiplier = self._get_physical_age_multiplier("coordination")
+        
+        # Base coordination with genetic factors
+        genetic_base = 50 + (self.muscle_fiber_composition - 50) * 0.3  # Fast-twitch = better motor unit recruitment
+        frame_factor = (self.body_frame_size - 1.0) * 10  # Larger frame = slightly less precise
+        
+        raw_coordination = genetic_base + frame_factor
+        return min(100, max(0, raw_coordination * age_multiplier))
+
+    def _calculate_agility(self):
+        """Change of direction ability"""
+        # Agility = (Speed + Coordination + Balance) / 3
+        speed_component = (self.max_speed / 100.0) * 0.4
+        coordination_component = (self.coordination / 100.0) * 0.4
+        balance_component = (self.balance / 100.0) * 0.2
+        
+        raw_agility = (speed_component + coordination_component + balance_component) * 100
+        return min(100, max(0, raw_agility))
+
+    def _validate_physical_attributes(self):
+        """Ensure biologically impossible combinations don't exist"""
+        # Power cannot exceed strength × speed constraints
+        max_possible_power = (self.maximal_strength / 100.0) * (self.max_speed / 100.0) * 80
+        if self.explosive_power > max_possible_power * 100:
+            self.explosive_power = max_possible_power * 100
+        
+        # Speed requires minimum coordination
+        min_coordination_for_speed = self.max_speed * 0.6
+        if self.coordination < min_coordination_for_speed:
+            self.coordination = min_coordination_for_speed
+        
+        # Strength requires muscle mass
+        if self.lean_mass < 30:
+            max_strength_from_mass = self.lean_mass * 2
+            if self.maximal_strength > max_strength_from_mass:
+                self.maximal_strength = max_strength_from_mass
+        
+        # Ensure all values are in valid range
+        self.maximal_strength = min(100, max(0, self.maximal_strength))
+        self.strength_endurance = min(100, max(0, self.strength_endurance))
+        self.max_speed = min(100, max(0, self.max_speed))
+        self.acceleration = min(100, max(0, self.acceleration))
+        self.explosive_power = min(100, max(0, self.explosive_power))
+        self.cardiovascular_endurance = min(100, max(0, self.cardiovascular_endurance))
+        self.muscular_endurance = min(100, max(0, self.muscular_endurance))
+        self.balance = min(100, max(0, self.balance))
+        self.coordination = min(100, max(0, self.coordination))
+        self.agility = min(100, max(0, self.agility))
 
     def _rand_attr(self, config, name):
         """Helper to get random attribute within config range."""
@@ -653,7 +896,7 @@ class Agent:
             "ideas": max(0, min(100, (openness.get("Ideas", 10) / 20.0) * 100)),
             "aesthetics": max(0, min(100, (openness.get("Aesthetics", 10) / 20.0) * 100)),
             "values": max(0, min(100, (openness.get("Values", 10) / 20.0) * 100)),
-            "athleticism": max(0, min(100, float(self.athleticism)))
+            "athleticism": max(0, min(100, float(self.cardiovascular_endurance)))
         }
 
     def _classify_subject_category(self, subject_name):
@@ -881,14 +1124,16 @@ class Agent:
 
     def _recalculate_physique(self):
         """
-        Updates Lean Mass, Weight, and BMI based on current Height and Athleticism.
+        Updates Lean Mass, Weight, and BMI based on current Height and physical attributes.
         Uses a 'Lean Body Mass Index' (LBMI) abstraction.
         """
         # 1. Determine Base LBMI (Lean Mass / Height^2)
         # Male range: 18 (Skinny) - 24 (Muscular)
         # Female range: 15 (Skinny) - 21 (Muscular)
         base_lbmi = 18.0 if self.gender == "Male" else 15.0
-        athletic_bonus = (self.athleticism / 100.0) * 6.0
+        
+        # Use cardiovascular endurance instead of old athleticism
+        athletic_bonus = (self.cardiovascular_endurance / 100.0) * 6.0
         current_lbmi = base_lbmi + athletic_bonus
         
         # 2. Calculate Lean Mass (LBMI * Height_m^2)
@@ -908,6 +1153,9 @@ class Agent:
             self.bmi = round(self.weight_kg / (height_m ** 2), 1)
         else:
             self.bmi = 0
+        
+        # 5. Recalculate physical attributes based on new physique
+        self._recalculate_physical_attributes()
 
     def _recalculate_ap_needs(self, time_config):
         """Calculates sleep requirements based on age."""
@@ -1003,7 +1251,7 @@ class SimState:
             looks_txt = f"{pronoun} has {possessive} mother's {self.player.eye_color.lower()} eyes and {self.player.hair_color.lower()} hair."
 
         # 2. Physical/Strength Reaction
-        if self.player.strength > 80:
+        if self.player.maximal_strength > 80:
             phys_txt = f"{pronoun} is gripping the nurse's finger tightly. Surprisingly strong!"
         elif self.player.health < 40:
             phys_txt = f"{pronoun} is breathing shallowly and looks quite frail."
@@ -1087,7 +1335,7 @@ class SimState:
                 mom_txt = f"Your mother, {m.first_name}, is currently screaming at a nurse for trying to vaccinate you, insisting on a 'natural immunity' ritual instead."
             elif m.health < 40:
                 mom_txt = f"Your mother, {m.first_name}, is pale and trembling, too weak to hold you for more than a moment."
-            elif m.athleticism > 80:
+            elif m.cardiovascular_endurance > 80:
                 mom_txt = f"Your mother, {m.first_name}, looks annoyingly fresh, as if she just finished a light pilates session rather than childbirth."
             else:
                 mom_txt = f"Your mother, {m.first_name} ({m.age}), brushes a strand of hair from her face, looking at you with a mixture of exhaustion and wonder."

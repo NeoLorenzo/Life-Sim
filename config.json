@@ -61,7 +61,11 @@
             
             "facet_min": 1, "facet_max": 20,
             
-            "religiousness_min": 0, "religiousness_max": 100
+            "religiousness_min": 0, "religiousness_max": 100,
+            
+            "body_frame_size_min": 0.8, "body_frame_size_max": 1.2,
+            "muscle_fiber_composition_min": 30, "muscle_fiber_composition_max": 70,
+            "aerobic_capacity_genetic_min": 40, "aerobic_capacity_genetic_max": 80
         }
     },
     "aptitudes": {
