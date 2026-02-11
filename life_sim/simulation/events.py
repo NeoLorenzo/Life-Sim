@@ -4,6 +4,8 @@ Event Management Module.
 Handles event evaluation, triggering, and resolution for the simulation.
 """
 import logging
+import json
+import os
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 from .. import constants
@@ -57,10 +59,19 @@ class EventManager:
         Initialize the EventManager with configuration data.
         
         Args:
-            config (dict): The loaded configuration dictionary containing event definitions.
+            config (dict): The loaded configuration dictionary (for development settings only).
         """
         self.config = config
-        raw_definitions = config.get("events", {}).get("definitions", [])
+        
+        # Load events from separate events.json file
+        events_file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "events.json"))
+        try:
+            with open(events_file_path, 'r', encoding='utf-8') as f:
+                events_data = json.load(f)
+                raw_definitions = events_data.get("definitions", [])
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.error(f"Failed to load events from {events_file_path}: {e}")
+            raw_definitions = []
         
         # Parse raw config into Event objects
         self.events: List[Event] = []

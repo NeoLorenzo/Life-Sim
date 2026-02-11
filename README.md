@@ -34,6 +34,7 @@
 Life-Sim/
 ├── main.py                    # Entry point and application bootstrap
 ├── config.json               # Simulation parameters and game configuration
+├── events.json               # Event definitions and life event data
 ├── constants.py              # Application constants and static settings
 ├── logging_setup.py          # Logging configuration and utilities
 ├── assets/                   # Static assets (icons, images, backgrounds)
@@ -68,14 +69,16 @@ Life-Sim/
 - **7 Simulation Modules**: Core game logic, state management, relationships, education, events
 - **6 Rendering Modules**: UI system, background management, visualizations, modals
 - **Configuration-Driven**: All gameplay parameters externalized to `config.json`
+- **Event-Driven**: Life events and triggers externalized to `events.json` for better SRP
 - **Modular Architecture**: Clear separation of concerns with SOLID principles
 - **Performance Optimized**: Advanced caching, spatial indexing, and viewport culling
 
 ### Architecture Overview
-- **Entry Point**: `main.py` initializes the simulation, loads configuration, and starts the main game loop
+- **Entry Point**: `main.py` initializes simulation, loads configuration, and starts the main game loop
 - **Configuration**: `config.json` contains all simulation parameters (jobs, education, personality traits, etc.)
+- **Events**: `events.json` contains all life event definitions, triggers, and choice effects
 - **Simulation Core**: The `life_sim/simulation/` package handles all game logic, agent behavior, and state management
-- **Rendering Layer**: The `life_sim/rendering/` package manages the Pygame-based UI, visualizations, and user interactions
+- **Rendering Layer**: The `life_sim/rendering/` package manages Pygame-based UI, visualizations, and user interactions
 - **Modular Design**: Each system (agents, relationships, education, rendering) is isolated in its own module following SOLID principles
 
 ## 📋 Core Modules
@@ -965,12 +968,12 @@ rel.add_modifier("New Friendship", 30, decay=5.0)  # Decays over time
 <details>
 <summary><strong>📅 events.py - Event System</strong></summary>
 
-The `events.py` module manages the monthly event system, handling triggers, user choices, and effect application.
+The `events.py` module manages monthly event system, handling triggers, user choices, and effect application.
 
 ### Data Contract
-- **Inputs**: `SimState` and `config.json` event definitions
-- **Outputs**: `EventInstance` objects for the UI, state mutations upon resolution
-- **Side Effects**: Modifies agent stats, relationships, flags, and history
+- **Inputs**: `SimState` and `events.json` event definitions
+- **Outputs**: Event objects for UI display, state modifications from resolutions
+- **External Files**: Loads event definitions from dedicated `events.json` file for SRP compliance
 
 <details>
 <summary><strong>Core Components</strong></summary>

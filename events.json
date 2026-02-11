@@ -1,0 +1,66 @@
+{
+    "definitions": [
+        {
+            "id": "EVT_IGCSE_SUBJECTS",
+            "title": "IGCSE Subject Selection",
+            "description": "Choose your IGCSE subjects. You must select between 6 and 8 subjects.",
+            "trigger": {
+                "min_age": 14,
+                "max_age": 15
+            },
+            "ui_type": "multi_select",
+            "ui_config": {
+                "min_selections": 6,
+                "max_selections": 8
+            },
+            "once_per_lifetime": true,
+            "choices": [
+                {"text": "English Language", "effects": {"stats": {"happiness": -1}}},
+                {"text": "English Literature", "effects": {"stats": {"happiness": -1}}},
+                {"text": "Mathematics", "effects": {"stats": {"happiness": -5}}},
+                {"text": "Co-ordinated Sciences (Double)", "effects": {"stats": {"happiness": -3}}},
+                {"text": "History", "effects": {"stats": {"happiness": 2}}},
+                {"text": "Geography", "effects": {"stats": {"happiness": 2}}},
+                {"text": "Global Perspectives", "effects": {"stats": {"happiness": 2}}},
+                {"text": "French", "effects": {"stats": {"happiness": 1}}},
+                {"text": "Spanish", "effects": {"stats": {"happiness": 1}}},
+                {"text": "German", "effects": {"stats": {"happiness": 1}}},
+                {"text": "Mandarin", "effects": {"stats": {"happiness": 1}}},
+                {"text": "Computer Science", "effects": {"stats": {"happiness": 3}}},
+                {"text": "ICT", "effects": {"stats": {"happiness": 2}}},
+                {"text": "Business Studies", "effects": {"stats": {"happiness": 4}}},
+                {"text": "Economics", "effects": {"stats": {"happiness": 3}}},
+                {"text": "Art & Design", "effects": {"stats": {"happiness": 5}}},
+                {"text": "Music", "effects": {"stats": {"happiness": 4}}},
+                {"text": "Drama", "effects": {"stats": {"happiness": 4}}},
+                {"text": "Design & Technology", "effects": {"stats": {"happiness": 3}}},
+                {"text": "Physical Education", "effects": {"stats": {"happiness": 3}}}
+            ]
+        },
+        {
+            "id": "EVT_INFANT_TEST",
+            "title": "Strange Noise",
+            "description": "You hear a loud bang outside.",
+            "trigger": {
+                "min_age": 0,
+                "max_age": 2
+            },
+            "ui_type": "single_select",
+            "once_per_lifetime": true,
+            "choices": [
+                {
+                    "text": "Cry loudly",
+                    "effects": {
+                        "temperament": { "Intensity": 5, "Mood": -2 }
+                    }
+                },
+                {
+                    "text": "Investigate",
+                    "effects": {
+                        "temperament": { "Approach_Withdrawal": 5 }
+                    }
+                }
+            ]
+        }
+    ]
+}
