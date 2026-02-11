@@ -123,6 +123,11 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
   - Agility: Change of direction ability
 
 - **Personality:** Big Five model (OCEAN) with 5 main traits and 30 sub-facets
+  - **Infant Temperament System**: Age 0-2 uses 9 temperament traits (Activity, Regularity, Approach_Withdrawal, Adaptability, Threshold, Intensity, Mood, Distractibility, Persistence)
+  - **Facet-Level Inheritance**: Infant temperament derived from parents' Big Five facets using weighted mappings (70% parental, 30% environmental)
+  - **Personality Crystallization**: At age 3, temperament deterministically converts to full Big Five profile through latent dimension mapping
+  - **Latent Dimensions**: Surgency, EffortfulControl, NegativeAffect, and OrientationSensitivity bridge temperament to personality
+  - **Logistic Transform**: Realistic facet distribution using sigmoid function for bounded 1-20 scale
 - **Hormonal curves:** Fertility and libido with genotype/phenotype separation
 - **Hidden traits:** Sexuality
 
@@ -164,6 +169,81 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - `_validate_physical_attributes()`: Ensure biologically possible attribute combinations
 - `get_attr_value()`: Unified attribute access for UI rendering with backward compatibility
 - `get_personality_sum()`: Calculate Big 5 trait totals
+
+</details>
+
+<details>
+<summary><strong>Infant Temperament System</strong></summary>
+
+The simulation implements a sophisticated temperament system for infants (ages 0-2) that bridges to adult personality through scientifically-grounded developmental psychology.
+
+<details>
+<summary><strong>Temperament Traits (Age 0-2)</strong></summary>
+
+**Nine Core Temperament Dimensions:**
+- **Activity**: General energy level and motor activity
+- **Regularity**: Consistency of biological functions (sleep, eating)
+- **Approach_Withdrawal**: Response to new situations and people
+- **Adaptability**: Ease of adjusting to environmental changes
+- **Threshold**: Sensitivity to stimulation intensity
+- **Intensity**: Energy level of emotional responses
+- **Mood**: General affective tone (positive/negative)
+- **Distractibility**: Susceptibility to external interference
+- **Persistence**: Ability to maintain focus despite obstacles
+
+**Inheritance Mechanism:**
+- **Facet-Level Mapping**: Each temperament trait inherits from specific Big Five facets of both parents
+- **Weighted Contributions**: 70% parental influence, 30% non-shared environment
+- **Scientific Weights**: Based on temperament research literature
+- **Inversion Support**: Some facets use inverted values (e.g., high Anxiety → low Approach)
+
+</details>
+
+<details>
+<summary><strong>Personality Crystallization (Age 3)</strong></summary>
+
+**Latent Dimension Architecture:**
+The system computes four intermediate latent dimensions that bridge temperament to personality:
+
+- **Surgency**: Combines Activity, Approach_Withdrawal, Intensity, and Mood
+- **EffortfulControl**: Integrates Persistence, Regularity, Adaptability, and inverse Distractibility
+- **NegativeAffect**: Blends inverse Threshold, inverse Mood, Intensity, inverse Adaptability, and Distractibility
+- **OrientationSensitivity**: Merges Adaptability, Approach_Withdrawal, inverse Regularity, and inverse Distractibility
+
+**Facet-Specific Models:**
+Each of the 30 Big Five facets has a unique formula combining:
+- **Latent Contributions**: Weighted inputs from the four latent dimensions
+- **Direct Temperament**: Additional weighted temperament inputs
+- **Scientific Precision**: Based on contemporary personality development research
+
+**Logistic Transform:**
+- **Sigmoid Function**: `1.0 + (19.0 / (1.0 + exp(-1.35 * raw_score))`
+- **Bounded Output**: Ensures realistic 1-20 facet distribution
+- **Central Tendency**: Creates natural clustering around moderate values
+- **Extreme Preservation**: Allows for genuine personality outliers
+
+</details>
+
+<details>
+<summary><strong>Technical Implementation</strong></summary>
+
+**Key Methods:**
+- `_generate_infant_temperament()`: Creates temperament profile for newborns
+- `crystallize_personality()`: Converts temperament to permanent Big Five at age 3
+
+**Data Flow:**
+1. **Birth**: Generate temperament from parental Big Five facets
+2. **Infancy (0-2)**: Use temperament for all personality-based calculations
+3. **Age 3 Transition**: Crystallize into permanent Big Five profile
+4. **Post-Crystallization**: Temperament data cleared, personality locked
+
+**Deterministic Properties:**
+- **Reproducible**: Same parents + seed = identical temperament
+- **Scientific**: Weightings reflect empirical research findings
+- **Bidirectional**: Both maternal and paternal influences considered
+- **Environmental**: Non-shared factors ensure individual variation
+
+</details>
 
 </details>
 
@@ -814,10 +894,13 @@ All agents (Player and NPCs) process the same monthly sequence:
 - Age increment (monthly aging)
 - Birthday check: annual biological recalculation (health capacity, hormones)
 - **Temperament-to-Personality Transition:** At age 3, temperament crystallizes into permanent Big 5 personality
-  - **Family Relationship Updates:** When personality develops, family relationships automatically recalculate base affinity using personality compatibility
-  - **Bidirectional Updates:** Both child-to-parent and parent-to-child relationships are updated simultaneously
-  - **Player Feedback:** System logs the transition from neutral infant relationships to personality-compatible relationships
-  - **Enhanced Realism:** Family dynamics now reflect personality compatibility just like peer relationships
+  - **Scientific Crystallization Model**: Complex latent dimension system (Surgency, EffortfulControl, NegativeAffect, OrientationSensitivity)
+  - **Facet-Level Precision**: Each of the 30 personality facets calculated from specific temperament weightings
+  - **Parental Influence**: Infant temperament inherits from parents' Big Five facets through sophisticated mapping
+  - **Family Relationship Updates**: When personality develops, family relationships automatically recalculate base affinity using personality compatibility
+  - **Bidirectional Updates**: Both child-to-parent and parent-to-child relationships are updated simultaneously
+  - **Player Feedback**: System logs the transition from neutral infant relationships to personality-compatible relationships
+  - **Enhanced Realism**: Family dynamics now reflect personality compatibility just like peer relationships
 - **Plasticity Decay:** Infants (0-2) experience age-based plasticity reduction (100% → 60% → 30%)
 - Natural entropy: seniors (50+) experience random health decay
 
@@ -944,7 +1027,12 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 
 **F. Family Relationship Updates (Age 3 Personality Development)**
 - Personality crystallization detection: `new_age == 3 and agent.is_personality_locked == False`
-- Calls `agent.crystallize_personality()` (modifies `agent.personality`, `agent.temperament`)
+- Calls `agent.crystallize_personality()` (modifies `agent.personality`, clears `agent.temperament`)
+  - **Method Location**: `agent.py` lines 854-959
+  - **Temperament Processing**: Normalizes 9 temperament traits to -1 to +1 scale
+  - **Latent Dimension Calculation**: Computes Surgency, EffortfulControl, NegativeAffect, OrientationSensitivity
+  - **Facet Model Application**: Applies 30 facet-specific weightings for each Big Five trait
+  - **Logistic Transform**: Uses sigmoid function for realistic 1-20 facet distribution
 - Calls `sim_state._update_family_relationships_for_personality(agent)`:
   - **Method Location**: `sim_state.py` lines 870-909
   - **Family Types Processed**: 'Parent', 'Mother', 'Father', 'Child', 'Sibling' relationships identified and updated
@@ -2007,7 +2095,12 @@ The physical attributes system replaces traditional RPG-style stats with a scien
             *   *Female Fertility:* Prime (15-30), Decline (30-45), Menopause (45-50), Sterile (50+).
             *   *Male Fertility:* Prime (18-40), followed by slow linear decay (never reaching 0).
             *   *Libido:* Spikes during "Hormonal Storm" (13-18), plateaus until 35, then decays by 1.5% annually.
-    *   **Personality (Big Five Model):** A deep psychological simulation based on the OCEAN model.
+    *   **Personality (Big Five Model):** A deep psychological simulation based on the OCEAN model with sophisticated developmental architecture.
+        *   **Infant Temperament System (Ages 0-2):** Nine scientifically-grounded temperament traits (Activity, Regularity, Approach_Withdrawal, Adaptability, Threshold, Intensity, Mood, Distractibility, Persistence) that bridge to adult personality.
+        *   **Facet-Level Inheritance:** Infant temperament derived from parents' Big Five facets using weighted mappings (70% parental, 30% environmental) based on temperament research literature.
+        *   **Personality Crystallization (Age 3):** Deterministic conversion of temperament to permanent Big Five profile through latent dimension architecture.
+        *   **Latent Dimensions:** Four intermediate constructs (Surgency, EffortfulControl, NegativeAffect, OrientationSensitivity) that bridge temperament to personality.
+        *   **Logistic Transform:** Sigmoid function ensures realistic 1-20 facet distribution with natural central tendency.
         *   **Structure:** 5 Main Traits, each composed of 6 specific sub-facets.
         *   **Scoring:** Facets range from 0-20; Main Traits range from 0-120.
         *   **Visualization:** The Attribute Modal displays the full psychometric profile with color-coded values (Green for high positive traits, Red for high negative traits like Neuroticism).

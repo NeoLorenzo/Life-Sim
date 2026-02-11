@@ -4,6 +4,7 @@ Agent model module.
 Holds the `Agent` entity and its behavior.
 """
 import logging
+import math
 import random
 import uuid
 from .. import constants
@@ -752,111 +753,205 @@ class Agent:
     def _generate_infant_temperament(self):
         """Generates temperament traits for infants (age < 3)."""
         temperament = {}
-        
-        # Simplified mapping from parent Big 5 traits to child temperament traits
-        # This is a basic mapping - could be made more sophisticated
-        parent_trait_mapping = {
-            "Activity": ["Extraversion"],
-            "Regularity": ["Conscientiousness"], 
-            "Approach_Withdrawal": ["Extraversion", "Neuroticism"],
-            "Adaptability": ["Openness", "Conscientiousness"],
-            "Threshold": ["Neuroticism"],
-            "Intensity": ["Extraversion", "Neuroticism"],
-            "Mood": ["Neuroticism"],
-            "Distractibility": ["Openness", "Neuroticism"],
-            "Persistence": ["Conscientiousness"]
+
+        # Facet-level inheritance: closer to temperament research than broad trait means.
+        # Each tuple: (Big5 trait, facet, weight, invert)
+        parent_facet_mapping = {
+            "Activity": [
+                ("Extraversion", "Activity", 0.45, False),
+                ("Extraversion", "Excitement", 0.35, False),
+                ("Conscientiousness", "Achievement", 0.20, False),
+            ],
+            "Regularity": [
+                ("Conscientiousness", "Order", 0.45, False),
+                ("Conscientiousness", "Deliberation", 0.30, False),
+                ("Conscientiousness", "Self-Discipline", 0.25, False),
+            ],
+            "Approach_Withdrawal": [
+                ("Extraversion", "Warmth", 0.35, False),
+                ("Extraversion", "Gregariousness", 0.30, False),
+                ("Neuroticism", "Anxiety", 0.35, True),
+            ],
+            "Adaptability": [
+                ("Openness", "Actions", 0.30, False),
+                ("Openness", "Values", 0.25, False),
+                ("Conscientiousness", "Deliberation", 0.20, False),
+                ("Neuroticism", "Vulnerability", 0.25, True),
+            ],
+            "Threshold": [
+                ("Neuroticism", "Vulnerability", 0.45, True),
+                ("Neuroticism", "Anxiety", 0.35, True),
+                ("Extraversion", "Positive Emotions", 0.20, False),
+            ],
+            "Intensity": [
+                ("Extraversion", "Excitement", 0.35, False),
+                ("Neuroticism", "Angry Hostility", 0.35, False),
+                ("Neuroticism", "Impulsiveness", 0.30, False),
+            ],
+            "Mood": [
+                ("Extraversion", "Positive Emotions", 0.45, False),
+                ("Neuroticism", "Depression", 0.35, True),
+                ("Neuroticism", "Anxiety", 0.20, True),
+            ],
+            "Distractibility": [
+                ("Conscientiousness", "Self-Discipline", 0.35, True),
+                ("Conscientiousness", "Order", 0.30, True),
+                ("Openness", "Ideas", 0.20, False),
+                ("Neuroticism", "Impulsiveness", 0.15, False),
+            ],
+            "Persistence": [
+                ("Conscientiousness", "Achievement", 0.40, False),
+                ("Conscientiousness", "Self-Discipline", 0.35, False),
+                ("Neuroticism", "Vulnerability", 0.25, True),
+            ],
         }
-        
+
+        parental_weight = 0.70
+        nonshared_environment_weight = 0.30
+
         for trait in constants.TEMPERAMENT_TRAITS:
             if self.parents:
-                # Child has parents - blend genetic and random factors
                 father, mother = self.parents
-                
-                # Get relevant parent Big 5 traits
-                parent_traits = parent_trait_mapping.get(trait, [])
-                parental_values = []
-                
-                for parent_trait in parent_traits:
-                    if father.personality and parent_trait in father.personality:
-                        father_sum = sum(father.personality[parent_trait].values())
-                        parental_values.append(father_sum / 6.0)  # Average of 6 facets (0-20 scale)
-                    
-                    if mother.personality and parent_trait in mother.personality:
-                        mother_sum = sum(mother.personality[parent_trait].values())
-                        parental_values.append(mother_sum / 6.0)  # Average of 6 facets (0-20 scale)
-                
-                # Calculate parental average (convert to 0-100 scale)
-                if parental_values:
-                    parental_avg = sum(parental_values) / len(parental_values) * 5.0  # Convert 0-20 to 0-100
-                else:
-                    parental_avg = 50.0
-                
-                # Generate random value with Gaussian distribution
-                random_val = random.gauss(50, 15)
-                random_val = max(0, min(100, random_val))
-                
-                # Blend parental and random values (70% genetic, 30% random)
-                final_value = (parental_avg * 0.7) + (random_val * 0.3)
-                final_value = max(0, min(100, final_value))
-                
+                mappings = parent_facet_mapping.get(trait, [])
+                parent_estimates = []
+
+                for parent in (father, mother):
+                    if not parent.personality:
+                        continue
+
+                    weighted_sum = 0.0
+                    total_weight = 0.0
+                    for big5_trait, facet, weight, invert in mappings:
+                        facet_value = parent.personality.get(big5_trait, {}).get(facet)
+                        if facet_value is None:
+                            continue
+
+                        # Facets are 1-20; normalize to 0-100.
+                        norm_value = ((float(facet_value) - 1.0) / 19.0) * 100.0
+                        if invert:
+                            norm_value = 100.0 - norm_value
+                        weighted_sum += norm_value * weight
+                        total_weight += weight
+
+                    if total_weight > 0:
+                        parent_estimates.append(weighted_sum / total_weight)
+
+                parental_avg = sum(parent_estimates) / len(parent_estimates) if parent_estimates else 50.0
+
+                # Shared environment + developmental noise (non-shared environment).
+                random_val = max(0.0, min(100.0, random.gauss(50.0, 12.0)))
+                final_value = (parental_avg * parental_weight) + (random_val * nonshared_environment_weight)
+                final_value = max(0.0, min(100.0, final_value))
             else:
                 # No parents - pure random generation
                 final_value = random.gauss(50, 15)
                 final_value = max(0, min(100, final_value))
-            
+
             temperament[trait] = round(final_value, 1)
-        
+
         return temperament
 
     def crystallize_personality(self):
-        """Converts temperament traits to Big 5 personality facets."""
+        """Converts temperament traits to a deterministic full Big Five profile."""
         if not self.temperament:
             return
-        
-        # Initialize personality structure
-        attr_config = {}  # Use default config for random generation
-        personality = self._generate_big_five(attr_config)
-        
-        # Mapping from temperament traits to Big 5 facets
-        # Convert 0-100 temperament score to 0-20 facet score
-        temperament_to_facet_mapping = {
-            # Activity -> Extraversion['Activity']
-            "Activity": ("Extraversion", "Activity"),
-            # Regularity -> Conscientiousness['Order'] 
-            "Regularity": ("Conscientiousness", "Order"),
-            # Mood -> Extraversion['Positive Emotions']
-            "Mood": ("Extraversion", "Positive Emotions"),
-            # Adaptability -> Agreeableness['Compliance']
-            "Adaptability": ("Agreeableness", "Compliance"),
-            # Threshold -> Neuroticism['Vulnerability'] (Inverse mapping)
-            "Threshold": ("Neuroticism", "Vulnerability"),
-            # Additional mappings for more comprehensive conversion
-            "Intensity": ("Extraversion", "Excitement"),
-            "Persistence": ("Conscientiousness", "Self-Discipline"),
-            "Approach_Withdrawal": ("Extraversion", "Warmth"),
-            "Distractibility": ("Openness", "Ideas")
+
+        def temp_norm(trait_name):
+            raw = float(self.temperament.get(trait_name, constants.TEMPERAMENT_DEFAULT_VALUE))
+            raw = max(0.0, min(100.0, raw))
+            return (raw - 50.0) / 50.0
+
+        t = {trait: temp_norm(trait) for trait in constants.TEMPERAMENT_TRAITS}
+        inv = {trait: -value for trait, value in t.items()}
+
+        # Latent dimensions anchored in classic temperament structure.
+        latent = {
+            "Surgency": (
+                (0.34 * t["Activity"]) +
+                (0.26 * t["Approach_Withdrawal"]) +
+                (0.20 * t["Intensity"]) +
+                (0.20 * t["Mood"])
+            ),
+            "EffortfulControl": (
+                (0.30 * t["Persistence"]) +
+                (0.25 * t["Regularity"]) +
+                (0.25 * t["Adaptability"]) +
+                (0.20 * inv["Distractibility"])
+            ),
+            "NegativeAffect": (
+                (0.30 * inv["Threshold"]) +
+                (0.25 * inv["Mood"]) +
+                (0.20 * t["Intensity"]) +
+                (0.15 * inv["Adaptability"]) +
+                (0.10 * t["Distractibility"])
+            ),
+            "OrientationSensitivity": (
+                (0.35 * t["Adaptability"]) +
+                (0.25 * t["Approach_Withdrawal"]) +
+                (0.20 * inv["Regularity"]) +
+                (0.20 * inv["Distractibility"])
+            ),
         }
-        
-        # Apply temperament mappings to personality facets
-        for temp_trait, (big5_trait, facet) in temperament_to_facet_mapping.items():
-            if temp_trait in self.temperament:
-                temp_value = self.temperament[temp_trait]
-                
-                # Convert 0-100 to 0-20 scale
-                if temp_trait == "Threshold":
-                    # Inverse mapping: Low Threshold = High Vulnerability
-                    # Threshold 0-100 -> Vulnerability 20-0
-                    facet_value = 20 - int((temp_value / 100.0) * 20)
-                else:
-                    # Direct mapping: 0-100 -> 0-20
-                    facet_value = int((temp_value / 100.0) * 20)
-                
-                # Clamp to valid range
-                facet_value = max(1, min(20, facet_value))
-                
-                # Apply to personality
-                personality[big5_trait][facet] = facet_value
-        
+
+        facet_models = {
+            "Openness": {
+                "Fantasy": {"latent": {"OrientationSensitivity": 0.65}, "temp": {"Mood": 0.25, "Activity": 0.15}},
+                "Aesthetics": {"latent": {"OrientationSensitivity": 0.60}, "temp": {"Mood": 0.30, "Intensity": 0.20}},
+                "Feelings": {"latent": {"OrientationSensitivity": 0.35, "NegativeAffect": 0.20}, "temp": {"Mood": 0.25, "Intensity": 0.15}},
+                "Actions": {"latent": {"OrientationSensitivity": 0.55}, "temp": {"Approach_Withdrawal": 0.35, "Regularity": -0.20}},
+                "Ideas": {"latent": {"OrientationSensitivity": 0.70}, "temp": {"Distractibility": 0.15, "Persistence": 0.10}},
+                "Values": {"latent": {"OrientationSensitivity": 0.55}, "temp": {"Adaptability": 0.30, "Approach_Withdrawal": 0.15}},
+            },
+            "Conscientiousness": {
+                "Competence": {"latent": {"EffortfulControl": 0.65}, "temp": {"Persistence": 0.30, "Intensity": -0.10}},
+                "Order": {"latent": {"EffortfulControl": 0.35}, "temp": {"Regularity": 0.70, "Distractibility": -0.35}},
+                "Dutifulness": {"latent": {"EffortfulControl": 0.55}, "temp": {"Adaptability": 0.25, "Intensity": -0.25}},
+                "Achievement": {"latent": {"EffortfulControl": 0.70}, "temp": {"Activity": 0.25, "Mood": 0.10}},
+                "Self-Discipline": {"latent": {"EffortfulControl": 0.75}, "temp": {"Persistence": 0.35, "Distractibility": -0.45}},
+                "Deliberation": {"latent": {"EffortfulControl": 0.40}, "temp": {"Regularity": 0.35, "Intensity": -0.40, "Threshold": 0.10}},
+            },
+            "Extraversion": {
+                "Warmth": {"latent": {"Surgency": 0.45}, "temp": {"Approach_Withdrawal": 0.35, "Mood": 0.30}},
+                "Gregariousness": {"latent": {"Surgency": 0.65}, "temp": {"Activity": 0.30, "Threshold": 0.10}},
+                "Assertiveness": {"latent": {"Surgency": 0.55}, "temp": {"Activity": 0.25, "Intensity": 0.25}},
+                "Activity": {"latent": {"Surgency": 0.35}, "temp": {"Activity": 0.85, "Mood": 0.10}},
+                "Excitement": {"latent": {"Surgency": 0.45}, "temp": {"Intensity": 0.65, "Threshold": 0.20}},
+                "Positive Emotions": {"latent": {"Surgency": 0.35, "NegativeAffect": -0.55}, "temp": {"Mood": 0.80}},
+            },
+            "Agreeableness": {
+                "Trust": {"latent": {"NegativeAffect": -0.40}, "temp": {"Adaptability": 0.45, "Mood": 0.35}},
+                "Straightforwardness": {"latent": {"EffortfulControl": 0.35, "NegativeAffect": -0.25}, "temp": {"Regularity": 0.25, "Intensity": -0.15}},
+                "Altruism": {"latent": {"NegativeAffect": -0.25}, "temp": {"Mood": 0.40, "Approach_Withdrawal": 0.30, "Adaptability": 0.30}},
+                "Compliance": {"latent": {"NegativeAffect": -0.30}, "temp": {"Adaptability": 0.65, "Intensity": -0.45}},
+                "Modesty": {"latent": {"Surgency": -0.25, "EffortfulControl": 0.20}, "temp": {"Intensity": -0.35, "Approach_Withdrawal": -0.10}},
+                "Tender-Mindedness": {"latent": {"NegativeAffect": -0.20}, "temp": {"Mood": 0.35, "Adaptability": 0.35, "Intensity": -0.20}},
+            },
+            "Neuroticism": {
+                "Anxiety": {"latent": {"NegativeAffect": 0.85}, "temp": {"Threshold": -0.35, "Mood": -0.20}},
+                "Angry Hostility": {"latent": {"NegativeAffect": 0.55}, "temp": {"Intensity": 0.45, "Adaptability": -0.35}},
+                "Depression": {"latent": {"NegativeAffect": 0.75, "Surgency": -0.20}, "temp": {"Mood": -0.55}},
+                "Self-Consciousness": {"latent": {"NegativeAffect": 0.60}, "temp": {"Approach_Withdrawal": -0.35, "Mood": -0.25}},
+                "Impulsiveness": {"latent": {"NegativeAffect": 0.35, "EffortfulControl": -0.55}, "temp": {"Intensity": 0.55}},
+                "Vulnerability": {"latent": {"NegativeAffect": 0.80}, "temp": {"Persistence": -0.35, "Threshold": -0.35}},
+            },
+        }
+
+        def to_facet(raw_score):
+            # Logistic transform creates realistic central tendency with bounded extremes.
+            scaled = 1.0 + (19.0 / (1.0 + math.exp(-1.35 * raw_score)))
+            return max(1, min(20, int(round(scaled))))
+
+        personality = {}
+        for big5_trait, facets in facet_models.items():
+            personality[big5_trait] = {}
+            for facet, model in facets.items():
+                raw = 0.0
+                for latent_name, weight in model.get("latent", {}).items():
+                    raw += latent[latent_name] * weight
+                for trait_name, weight in model.get("temp", {}).items():
+                    raw += t[trait_name] * weight
+                personality[big5_trait][facet] = to_facet(raw)
+
         # Set the new personality and clear temperament
         self.personality = personality
         self.temperament = None
