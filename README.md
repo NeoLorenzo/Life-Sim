@@ -6,7 +6,8 @@
 
 - [Project Structure](#-project-structure)
 - [Core Modules](#core-modules)
-  - [state.py - Data Models](#-statepy-module-structure)
+  - [agent.py - Agent Entity Model](#-agentpy-module-structure)
+  - [sim_state.py - Global Simulation State](#-sim_statepy-module-structure)
   - [logic.py - Simulation Engine](#️-logicpy-module-structure)
   - [affinity.py - Relationship Engine](#-affinitypy-module-structure)
   - [social.py - Social Data Structures](#-socialpy-module-structure)
@@ -43,7 +44,8 @@ Life-Sim/
 │   ├── __init__.py
 │   ├── simulation/           # Simulation logic and state management
 │   │   ├── __init__.py
-│   │   ├── state.py          # Main simulation state and agent classes
+│   │   ├── agent.py          # Agent class and individual entity logic
+│   │   ├── sim_state.py     # Global simulation state and world management
 │   │   ├── logic.py          # Core simulation loop and turn processing
 │   │   ├── affinity.py       # Relationship and personality calculations
 │   │   ├── social.py         # Social interactions and relationships
@@ -79,9 +81,9 @@ Life-Sim/
 ## 📋 Core Modules
 
 <details>
-<summary><strong>state.py - Data Models</strong></summary>
+<summary><strong>agent.py - Agent Entity Model</strong></summary>
 
-The `state.py` module contains the core data models for the simulation, managing both individual agents and the global simulation state.
+The `agent.py` module contains the `Agent` class that represents individual human entities (both player and NPCs) in the simulation.
 
 <details>
 <summary><strong>Agent Class</strong></summary>
@@ -166,6 +168,13 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 </details>
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>sim_state.py - Global Simulation State</strong></summary>
+
+The `sim_state.py` module contains the `SimState` class that serves as the central container for the entire simulation world.
 
 <details>
 <summary><strong>SimState Class</strong></summary>
@@ -483,13 +492,13 @@ These compare traits between two agents using: `(AFFINITY_DYADIC_THRESHOLD - Del
 <details>
 <summary><strong>Integration Points</strong></summary>
 
-**Family Generation** (`state.py`)
+**Family Generation** (`agent.py`, `sim_state.py`)
 - **Spouse Matching**: Base marriage score (40) + affinity + history variance
 - **Parent-Child**: Biological imperative (50) + affinity
 - **Sibling Bonds**: Base sibling score (20) + affinity
 - **In-Law Relationships**: Pure affinity-based scoring
 
-**School System** (`state.py`)
+**School System** (`sim_state.py`)
 - **Classmate Networks**: All students in a cohort are linked using affinity
 - **Relationship Types**: 
   - >20 affinity: "Acquaintance"
@@ -678,7 +687,7 @@ Provides backward compatibility with existing code:
 - **Dynamic Adjustment**: Modifiers can enhance or diminish natural compatibility
 - **Bidirectional**: Each agent maintains their own relationship object
 
-**Family Generation** (`state.py`)
+**Family Generation** (`agent.py`, `sim_state.py`)
 - **Structural Bonds**: Uses permanent modifiers for family relationships
 - **Inheritance**: Parent-child bonds get +50 biological imperative
 - **Marriage**: Spouse relationships combine affinity with +60 marriage bond
@@ -937,7 +946,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 - Personality crystallization detection: `new_age == 3 and agent.is_personality_locked == False`
 - Calls `agent.crystallize_personality()` (modifies `agent.personality`, `agent.temperament`)
 - Calls `sim_state._update_family_relationships_for_personality(agent)`:
-  - **Method Location**: `state.py` lines 1597-1636
+  - **Method Location**: `sim_state.py` lines 870-909
   - **Family Types Processed**: 'Parent', 'Mother', 'Father', 'Child', 'Sibling' relationships identified and updated
   - **Original Affinity Check**: Only updates relationships with `_original_affinity` attribute (family relationships)
   - **Personality Validation**: Ensures both agents have developed personalities before recalculating
@@ -994,7 +1003,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 <summary><strong>Agent Internal State Mutators</strong></summary>
 
 #### `Agent._recalculate_max_health()`
-**Location**: `state.py` lines 278-298
+**Location**: `agent.py` lines 414-434
 **Trigger**: Birthdays, age changes
 **State Modifications**:
 - `agent.max_health` (age-based capacity calculation)
@@ -1002,7 +1011,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Pure**: No - modifies agent health state
 
 #### `Agent._recalculate_hormones()`
-**Location**: `state.py` lines 377-435
+**Location**: `agent.py` lines 1065-1135
 **Trigger**: Birthdays, age changes
 **State Modifications**:
 - `agent.fertility` (age/gender-based calculation)
@@ -1010,7 +1019,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Pure**: No - modifies agent hormonal state
 
 #### `Agent._recalculate_physique()`
-**Location**: `state.py` lines 437-465
+**Location**: `agent.py` lines 1137-1165
 **Trigger**: Height changes, athleticism changes
 **State Modifications**:
 - `agent.lean_mass` (calculated from height and athleticism)
@@ -1019,7 +1028,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Pure**: No - modifies agent physique state
 
 #### `Agent._recalculate_ap_needs()`
-**Location**: `state.py` lines 467-483
+**Location**: `agent.py` lines 1167-1183
 **Trigger**: Birthdays, configuration changes
 **State Modifications**:
 - `agent.ap_sleep` (age-based sleep requirements from config)
@@ -1031,7 +1040,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 <summary><strong>SimState State Mutators</strong></summary>
 
 #### `SimState._link_agents()`
-**Location**: `state.py` lines 1249-1267
+**Location**: `sim_state.py` lines 845-869
 **Trigger**: Family generation, relationship creation
 **State Modifications**:
 - `agent_a.relationships[agent_b.uid]` (creates relationship object)
@@ -1039,7 +1048,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Pure**: No - modifies relationship networks
 
 #### `SimState.start_new_year()`
-**Location**: `state.py` lines 1269-1280
+**Location**: `sim_state.py` lines 911-922
 **Trigger**: Player birthdays
 **State Modifications**:
 - `self.history` (archives previous year)
@@ -1047,7 +1056,7 @@ The simulation follows a strict deterministic order during each monthly turn (`p
 **Pure**: No - modifies historical data
 
 #### `SimState.add_log()`
-**Location**: `state.py` lines 1282-1286
+**Location**: `sim_state.py` lines 924-928
 **Trigger**: Events, actions, notifications
 **State Modifications**:
 - `self.current_year_data["events"]` (adds event log entry)
@@ -1081,22 +1090,22 @@ These functions are safe to call anywhere without担心 state mutations:
 **Pure**: Yes - only reads agent personality data
 
 #### `Agent.get_attr_value(name)`
-**Location**: `state.py` lines 234-271
+**Location**: `agent.py` lines 321-358
 **Returns**: Attribute value by string name
 **Pure**: Yes - only reads agent data
 
 #### `Agent.get_personality_sum(trait)`
-**Location**: `state.py` lines 334-336
+**Location**: `agent.py` lines 866-868
 **Returns**: Sum of personality facet values
 **Pure**: Yes - only reads personality data
 
 #### `Agent.age` (property)
-**Location**: `state.py` lines 273-276
+**Location**: `agent.py` lines 397-399
 **Returns**: Age in years (calculated from age_months)
 **Pure**: Yes - computed property, no state change
 
 #### `Agent.free_ap` (property)
-**Location**: `state.py` lines 485-488
+**Location**: `agent.py` lines 1182-1185
 **Returns**: Available action points
 **Pure**: Yes - computed property, no state change
 
@@ -1112,10 +1121,10 @@ These functions are safe to call anywhere without担心 state mutations:
 4. **School processing must follow agent updates**: Academic performance depends on current agent state
 
 #### Safe Modification Patterns
-- **Adding new agent attributes**: Initialize in `Agent.__init__()`, update in appropriate `_recalculate_*()` method
-- **Adding new monthly processes**: Add to `_process_agent_monthly()` after existing updates
+- **Adding new agent attributes**: Initialize in `Agent.__init__()` in `agent.py`, update in appropriate `_recalculate_*()` method
+- **Adding new monthly processes**: Add to `_process_agent_monthly()` in `logic.py` after existing updates
 - **Adding new player actions**: Follow pattern of `work()`, `find_job()`, `visit_doctor()` - check prerequisites, modify state, log results
-- **Adding new pure functions**: Place in appropriate module (affinity.py for calculations, state.py for accessors)
+- **Adding new pure functions**: Place in appropriate module (affinity.py for calculations, agent.py for accessors)
 
 #### Dangerous Patterns to Avoid
 - **Modifying state in pure functions**: Breaks deterministic behavior
@@ -1256,7 +1265,7 @@ The `School` class is initialized from `config["education"]` and resolves the ac
 <details>
 <summary><strong>Subject Progression Engine</strong></summary>
 
-`state.py` now builds subject records dynamically from active stage portfolios.
+`agent.py` now builds subject records dynamically from active stage portfolios.
 
 **Per-Subject Data Model**
 - `current_grade` (0-100)
@@ -1325,7 +1334,7 @@ At year-end, player history receives a full report card:
 <details>
 <summary><strong>Integration Points</strong></summary>
 
-**State Management (`state.py`)**
+**State Management (`agent.py`, `sim_state.py`)**
 - Enrollment and cohort generation wire school payloads (including attendance counters) and call subject synchronization.
 - Classmate generation aligns new/existing cohort members to current stage curriculum.
 - Cohort capacity now derives from config (`forms_per_year * students_per_form`) and form assignment cycles configured `form_labels`.
@@ -1559,7 +1568,7 @@ Deterministic season calculation matching both background and narrative systems:
 - **Narrative Sync**: Birth narrative uses same season logic as background system
 - **Deterministic**: Same month always produces same season regardless of year
 - **Global Application**: Used by both background selection and story generation
-- **Implementation Detail**: Both systems use identical month-to-season mapping in `state.py` and `background.py`
+- **Implementation Detail**: Both systems use identical month-to-season mapping in `sim_state.py` and `background.py`
 
 </details>
 
@@ -2507,52 +2516,12 @@ The simulation includes development-focused configuration options to facilitate 
 The following features are planned to expand the simulation depth into a comprehensive life emulator:
 
 <details>
-<summary><strong>Core Mechanics: Dynamic Action Point (AP) System</strong></summary>
-
-*   **Concept: "The Typical Day":**
-    *   **Resource:** A budget of **24.0 Action Points (AP)** per turn, representing the "Average Daily Routine" for that month.
-    *   **Granularity:** Supports fractional costs (e.g., 0.5 AP) for micro-tasks.
-*   **The Three Buckets:**
-    *   **Locked AP (Obligations):** Automatically deducted for School (age-appropriate: 3.0-6.5 AP), Job (8 AP), and Commute.
-    *   **Maintenance AP (Biology):** Reserved for Sleep (e.g., 8-14 AP depending on age).
-    *   **Free AP:** The remaining balance available for player actions (`24 - Locked - Maintenance`).
-*   **"Rule Breaking" (Reclaiming AP):**
-    *   **Truancy:** Option to "Skip School/Work" to refund Locked AP into Free AP. *Risk:* Truancy events, grade drops, firing.
-    *   **Sleep Deprivation:** Option to "Stay Up Late" (reduce Maintenance AP). *Consequence:* Cumulative Health/Stress penalties if below required sleep threshold.
-*   **Spending Logic:**
-    *   **Standard Actions:** Study, Gym, Date (~1.0 - 2.0 AP).
-    *   **Micro Actions:** Quick Chat, Snack, Social Media (~0.5 AP).
-    *   **Constraint:** Actions are disabled if `Cost > Free AP`.
-*   **Min-Maxing:**
-    *   **Auto-Rest:** Unspent AP converts to extra Sleep/Recovery at the end of the turn.
-    *   **Crunch:** Players can sacrifice health (Sleep) for productivity (AP).
-*   **Visualization:**
-    *   **The Day Bar:** A horizontal UI element showing Red (Locked), Blue (Sleep), and Green (Free) sections.
-    *   **Dynamic Updates:** Clicking "Skip School" visually transforms Red segments into Green.
-
-</details>
-
-<details>
 <summary><strong>UX Polish & Advanced UI</strong></summary>
 
 *   **Advanced Visualization:**
     *   **Agent Portrait:** A visual representation in the Left Panel based on appearance stats.
 *   **Dynamic Menus:**
     *   **Responsive Design:** Support for true full-screen resizing.
-*   **Schedule Management System:**
-    *   **Interactive Controls:** Dedicated "Schedule" button in Left Panel toggles visibility of schedule preference controls.
-    *   **NumberStepper Widgets:** Custom UI components for precise numeric input with increment/decrement buttons.
-    *   **Target Sleep Control:** Allows users to set desired sleep hours with 0.5-hour granularity.
-    *   **Attendance Rate Control:** Enables setting school/work attendance percentage (0.0-1.0) with 0.1 precision.
-    *   **Age-Based Validation:** Sleep automatically capped at 12 hours for agents age 3+, unlimited for infants.
-    *   **Context-Aware UI:** Attendance controls are hidden when player is not enrolled in school.
-    *   **Real-Time Preview:** "Free AP" display instantly updates based on current schedule settings.
-*   **Enhanced AP Bar Visualization:**
-    *   **Dual Sleep Metrics:** Distinguishes between biological sleep requirement (`ap_sleep`) and user target (`target_sleep_hours`).
-    *   **Attendance-Based Rendering:** Shows attended school hours (red) vs total obligation (red hatched overlay for truancy).
-    *   **Sleep Deficit Indicator:** Red hatched overlay appears when biological need exceeds user target.
-    *   **Truancy Visualization:** Green hatched overlay shows skipped school/work time that becomes risky free time.
-    *   **Dynamic State Updates:** AP bar properly resets when player graduates from school (red sections disappear).
 
 </details>
 
