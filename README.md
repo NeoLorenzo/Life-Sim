@@ -1441,7 +1441,7 @@ The rendering system uses Pygame to create a responsive three-panel layout with 
 - **Modal Management**: Center panel switches between log, modals, and visualizations
 
 **Interactive Features**
-- **Tooltips**: Hover information for grades and relationships
+- **Tooltips**: Hover information for grades, relationships, and attribute cards
 - **Pinning System**: Click attribute cards to pin them to the dashboard
 - **Real-time Physics**: Social graph updates continuously when open
 - **Infinite Canvas**: Family tree and social graph support pan/zoom navigation
@@ -1910,7 +1910,7 @@ The physical attributes system replaces traditional RPG-style stats with a scien
         *   **Speed-Coordination Link:** Minimum coordination required for effective speed utilization
         *   **Strength-Mass Relationship:** Maximum strength limited by available lean muscle mass
         *   **Validation System:** Prevents biologically impossible attribute combinations
-    *   **Comprehensive UI Integration:** All attributes visible in attributes modal with progress bars and color coding
+    *   **Comprehensive UI Integration:** All player-facing attributes are visible in the attributes modal with progress bars, color coding, and contextual hover tooltips
     *   **Sport-Ready Foundation:** Attribute system designed to support realistic sport performance calculations
     *   **Configuration-Driven Ranges:** All attributes use configurable min/max values (default 10-90)
     *   **Configurable Content:** Events are fully defined in `config.json`, supporting complex triggers (Age, Month, Stats, Flags).
@@ -2308,10 +2308,20 @@ The physical attributes system replaces traditional RPG-style stats with a scien
             *   **Smart Wrapping:** Text is dynamically wrapped based on font size and panel width.
             *   **Collapsible History:** The log is structured hierarchically. Clicking year headers (e.g., `[-] Age 5`) toggles the `expanded` state in the history buffer, hiding/showing events for that year.
         *   **Attribute Modal:**
-            *   **Detailed Columns:** Renders 4 columns: Vitals/Physical, Openness/Conscientiousness, Extraversion/Agreeableness, and Neuroticism.
+            *   **Detailed Columns:** Renders 5 columns: Vitals/Physical, Openness/Conscientiousness, Extraversion/Agreeableness, Neuroticism, and a Cognitive Profile column for the six aptitude domains.
             *   **Economic Visibility:** The **Vitals** column now includes **Money** for all agents, allowing the player to verify the economic progress of NPCs (parents saving money, siblings earning wages).
             *   **Pinning System:** Clicking any attribute card toggles it into the **Pinned Attributes** list on the Left Panel (Dashboard), allowing players to track specific stats (e.g., "Fitness") without reopening the modal.
             *   **Visual Feedback:** Neuroticism traits use inverted color logic (High = Red, Low = Green), while positive traits use standard logic.
+            *   **Attribute Tooltips (Hover):** Every attribute card has a compact tooltip designed for fast readability.
+                *   **Structure:** `Attribute: Current Value` -> one-sentence definition -> `Affects:` factor list -> `Main drivers now:` summary.
+                *   **Consistency Goal:** Tooltips avoid formula dumps and use plain language so users can parse each card in a few seconds.
+                *   **Driver Summary:** `Main drivers now:` ranks the strongest currently active influences (max 2), and labels each as supportive, limiting, or neutral.
+                *   **Context Labels:** Driver lines include contextual hints where relevant (for example age phase, sleep penalty percent, low/mid/high band).
+                *   **Static Traits:** If an attribute is currently mostly inherited/static, the tooltip explicitly says so instead of repeating the current value.
+                *   **Physical Explainability:** Physical cards expose simulation-relevant dependencies (age curve, lean mass, coordination, fiber mix, etc.) in non-technical wording.
+                *   **Cognitive Explainability:** Aptitude cards expose the age-development contribution and temporary sleep-penalty pressure in the driver summary.
+                *   **Screen Safety:** Tooltip boxes are wrapped and clamped to stay inside the viewport.
+            *   **Hormone Trait Visibility:** `Genetic Fertility` and `Genetic Libido` are intentionally hidden as standalone cards; their inherited peak values are surfaced inside the `Fertility` and `Libido` tooltips.
             *   **Interactive Family Tree (Modal):**
                 *   **Topology:** Uses a **Layered Graph** approach with **Virtual Marriage Hubs** to handle complex relations (half-siblings, in-laws).
                 *   **Relationship Filtering:** The BFS traversal algorithm filters relationships to only include direct family connections (Father, Mother, Child, Spouse), preventing the merging of separate family trees that occurred through "In-Law" bridge relationships.

@@ -78,6 +78,7 @@ class Renderer:
         
         # Tooltip zones for clickable grade areas
         self.tooltip_zones = []  # List of (Rect, subject_name) tuples
+        self.attribute_tooltip_zones = []  # List of (Rect, attr_name, value, max_value)
         self.academics_scroll_offset = 0
         self.academics_scroll_max = 0
         self.academics_scroll_rect = None
@@ -508,6 +509,7 @@ class Renderer:
         """Draws the full UI."""
         self.ft_buttons = [] # Reset interactive buttons for this frame
         self.tooltip_zones = []  # Reset tooltip zones for this frame
+        self.attribute_tooltip_zones = []  # Reset attribute tooltip zones for this frame
         
         # Physics Step
         if self.viewing_social_graph:
@@ -559,6 +561,7 @@ class Renderer:
         
         # Draw tooltips on top of everything
         self._draw_grade_tooltips(sim_state)
+        self._draw_attribute_tooltips(sim_state)
         
         # Draw relationship panel tooltips if on Social tab
         if self.active_tab == "Social" and hasattr(self, 'relationship_panel'):
@@ -711,6 +714,7 @@ class Renderer:
         """Draws the detailed attributes overlay in the center panel."""
         # Reset click zones
         self.modal_click_zones = []
+        self.attribute_tooltip_zones = []
         
         # Draw Background
         self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
@@ -810,6 +814,7 @@ class Renderer:
 
             # Register Click Zone
             self.modal_click_zones.append((rect, name))
+            self.attribute_tooltip_zones.append((rect.copy(), name, value, max_val))
 
         # Helper to draw a group in a specific column
         def draw_group(col_idx, title, attrs, is_personality=False):
@@ -846,7 +851,7 @@ class Renderer:
             # Infant Layout: Vitals + Temperament
             # Column 1: Vitals, Physical, Hidden
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Libido"])
             draw_group(0, "Hidden", ["Religiousness"])
             
             # Columns 1-3: Temperament (3x3 grid layout)
@@ -868,7 +873,7 @@ class Renderer:
             # Column 1: Vitals, Physical, Hidden
             # Added "Money" to Vitals for verification
             draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Genetic Fertility", "Libido", "Genetic Libido"])
+            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Libido"])
             draw_group(0, "Hidden", ["Religiousness"])
             
             # Column 2: Openness & Conscientiousness
@@ -1253,6 +1258,412 @@ class Renderer:
                 txt = f"{attr}: {val}"
                 
             y += draw_text(txt)
+
+    def _wrap_tooltip_text(self, text, max_width):
+        """Wraps tooltip text to fit in a bounded width."""
+        if not text:
+            return []
+        words = text.split()
+        if not words:
+            return []
+        lines = []
+        current = words[0]
+        for word in words[1:]:
+            test = f"{current} {word}"
+            if self.font_log.size(test)[0] <= max_width:
+                current = test
+            else:
+                lines.append(current)
+                current = word
+        lines.append(current)
+        return lines
+
+    def _value_polarity(self, value, low=40, high=60):
+        """Returns +, -, or ~ for a scalar state."""
+        if value >= high:
+            return "+"
+        if value <= low:
+            return "-"
+        return "~"
+
+    def _age_effect_polarity(self, multiplier):
+        """Returns +, -, or ~ for age multiplier effect."""
+        if multiplier >= 1.05:
+            return "+"
+        if multiplier <= 0.95:
+            return "-"
+        return "~"
+
+    def _polarity_from_score(self, score, deadzone=0.05):
+        """Returns +, -, or ~ from a signed normalized score."""
+        if score > deadzone:
+            return "+"
+        if score < -deadzone:
+            return "-"
+        return "~"
+
+    def _impact_word(self, score):
+        """Human-readable impact strength from signed score."""
+        abs_score = abs(score)
+        if abs_score < 0.1:
+            return "neutral"
+        if score > 0:
+            return "supporting" if abs_score < 0.35 else "strong support"
+        return "limiting" if abs_score < 0.35 else "strong limit"
+
+    def _band_word(self, value, low=40.0, high=60.0):
+        """Simple low/mid/high label."""
+        if value <= low:
+            return "low"
+        if value >= high:
+            return "high"
+        return "mid"
+
+    def _age_phase_word(self, age):
+        """General age phase label for tooltip context."""
+        if age < 13:
+            return "childhood"
+        if age < 20:
+            return "adolescence"
+        if age < 36:
+            return "prime years"
+        if age < 56:
+            return "midlife"
+        return "senior years"
+
+    def _top_driver_labels(self, drivers, limit=2):
+        """Formats top driver labels from (name, signed_score[, context]) tuples."""
+        if not drivers:
+            return "Main drivers now: Stable/neutral"
+        meaningful = [item for item in drivers if abs(item[1]) >= 0.1]
+        if not meaningful:
+            return "Main drivers now: Stable/neutral"
+        ranked = sorted(meaningful, key=lambda item: abs(item[1]), reverse=True)
+        top = ranked[:limit]
+        labels = []
+        for item in top:
+            if len(item) >= 3 and item[2]:
+                name, score, context = item[0], item[1], item[2]
+                labels.append(f"{name} ({context}, {self._impact_word(score)})")
+            else:
+                name, score = item[0], item[1]
+                labels.append(f"{name} ({self._impact_word(score)})")
+        return "Main drivers now: " + ", ".join(labels)
+
+    def _get_attribute_tooltip_data(self, agent, attr_name, value, max_value):
+        """Builds concise tooltip data for an attribute card."""
+        clean_name = attr_name.replace("_", " ")
+        age = int(getattr(agent, "age", 0))
+        traits = getattr(agent, "personality", None) or {}
+
+        # Physical attributes with explicit formula dependencies.
+        physical_defs = {
+            "Strength": ("maximal_strength", "Peak force output.", ["Age", "Lean Mass", "Body Frame", "Fiber Type"]),
+            "Fitness": ("aerobic_capacity", "Aerobic stamina and recovery.", ["Age", "Genetic Aerobic Base", "Health"]),
+            "Energy": ("aerobic_capacity", "Resistance to fatigue over time.", ["Strength Endurance", "Fitness"]),
+            "Speed": ("max_speed", "Top movement speed.", ["Age", "Height", "Fiber Type", "Coordination"]),
+            "Power": ("maximal_strength", "Explosive force production.", ["Age", "Strength", "Speed"]),
+            "Agility": (None, "Change-of-direction ability.", ["Speed", "Coordination", "Balance"]),
+            "Balance": ("coordination", "Posture control and stability.", ["Age", "Coordination", "Strength"]),
+            "Coordination": ("coordination", "Neuromuscular control quality.", ["Age", "Fiber Type", "Body Frame"]),
+            "Reaction Time": (None, "Quickness to respond to stimuli.", ["Inherited Baseline"]),
+            "Flexibility": (None, "Range-of-motion capacity.", ["Inherited Baseline"]),
+        }
+
+        if clean_name in physical_defs:
+            age_curve_key, desc, factors = physical_defs[clean_name]
+            if age_curve_key:
+                age_mult = agent._get_physical_age_multiplier(age_curve_key)
+                age_score = age_mult - 1.0
+            else:
+                age_score = 0.0
+
+            if clean_name == "Strength":
+                lean = float(getattr(agent, "lean_mass", 0.0))
+                frame = float(getattr(agent, "body_frame_size", 1.0))
+                fiber = float(getattr(agent, "muscle_fiber_composition", 50.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Lean Mass", (lean - 50.0) / 50.0, f"{round(lean, 1)}kg ({self._band_word(lean, 40, 60)})"),
+                    ("Body Frame", frame - 1.0, self._band_word(frame * 100, 95, 105)),
+                    ("Fiber Type", (fiber - 50.0) / 50.0, f"{int(fiber)} ({self._band_word(fiber)})"),
+                ])
+            elif clean_name == "Fitness":
+                health = float(getattr(agent, "health", 0.0))
+                aerobic = float(getattr(agent, "aerobic_capacity_genetic", 50.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Genetic Aerobic Base", (aerobic - 50.0) / 50.0, self._band_word(aerobic)),
+                    ("Health", (health - 50.0) / 50.0, self._band_word(health)),
+                ])
+            elif clean_name == "Energy":
+                strength_end = float(getattr(agent, "strength_endurance", 50.0))
+                cardio = float(getattr(agent, "cardiovascular_endurance", 50.0))
+                now = self._top_driver_labels([
+                    ("Strength Endurance", ((strength_end - 50.0) / 50.0) * 0.7, self._band_word(strength_end)),
+                    ("Fitness", ((cardio - 50.0) / 50.0) * 0.3, self._band_word(cardio)),
+                ])
+            elif clean_name == "Speed":
+                height = float(getattr(agent, "height_cm", 170.0))
+                fiber = float(getattr(agent, "muscle_fiber_composition", 50.0))
+                coord = float(getattr(agent, "coordination", 50.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Coordination", ((coord - 50.0) / 50.0) * 0.3, self._band_word(coord)),
+                    ("Fiber Type", ((fiber - 50.0) / 50.0) * 0.3, self._band_word(fiber)),
+                    ("Height", (height - 170.0) / 70.0, f"{int(height)}cm"),
+                ])
+            elif clean_name == "Power":
+                strength = float(getattr(agent, "maximal_strength", 50.0))
+                speed = float(getattr(agent, "max_speed", 50.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Strength", (strength - 50.0) / 50.0, self._band_word(strength)),
+                    ("Speed", (speed - 50.0) / 50.0, self._band_word(speed)),
+                ])
+            elif clean_name == "Agility":
+                speed = float(getattr(agent, "max_speed", 50.0))
+                coord = float(getattr(agent, "coordination", 50.0))
+                balance = float(getattr(agent, "balance", 50.0))
+                now = self._top_driver_labels([
+                    ("Speed", ((speed - 50.0) / 50.0) * 0.4, self._band_word(speed)),
+                    ("Coordination", ((coord - 50.0) / 50.0) * 0.4, self._band_word(coord)),
+                    ("Balance", ((balance - 50.0) / 50.0) * 0.2, self._band_word(balance)),
+                ])
+            elif clean_name == "Balance":
+                coord = float(getattr(agent, "coordination", 50.0))
+                strength = float(getattr(agent, "maximal_strength", 50.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Coordination", ((coord - 50.0) / 50.0) * 0.2, self._band_word(coord)),
+                    ("Strength", ((strength - 50.0) / 50.0) * 0.1, self._band_word(strength)),
+                ])
+            elif clean_name == "Coordination":
+                fiber = float(getattr(agent, "muscle_fiber_composition", 50.0))
+                frame = float(getattr(agent, "body_frame_size", 1.0))
+                now = self._top_driver_labels([
+                    ("Age", age_score, self._age_phase_word(age)),
+                    ("Fiber Type", (fiber - 50.0) / 50.0, self._band_word(fiber)),
+                    ("Body Frame", frame - 1.0, self._band_word(frame * 100, 95, 105)),
+                ])
+            elif clean_name == "Reaction Time":
+                now = "Main drivers now: Inherited baseline (currently static)"
+            else:
+                now = "Main drivers now: Inherited baseline (currently static)"
+            return clean_name, desc, factors, now
+
+        if clean_name == "Health":
+            desc = "Overall physical condition and survivability."
+            factors = ["Age (via Max Health)", "Injuries/Illness", "Medical Care", "Lifestyle Events"]
+            cap = float(max_value) if max_value else 100.0
+            current = float(value)
+            now = self._top_driver_labels([
+                ("Current Condition", (current - 50.0) / 50.0, f"{int(current)}/{int(cap)}"),
+                ("Age Cap", ((cap / 100.0) - 1.0) * 1.2, self._age_phase_word(age)),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Happiness":
+            desc = "Current emotional wellbeing."
+            factors = ["Life Events", "School/Work Outcomes", "Relationships", "Health"]
+            health = float(getattr(agent, "health", 50.0))
+            rel_values = [getattr(rel, "total_score", 0.0) for rel in getattr(agent, "relationships", {}).values()]
+            rel_avg = (sum(rel_values) / len(rel_values)) if rel_values else 0.0
+            now = self._top_driver_labels([
+                ("Relationships", rel_avg / 100.0, self._band_word(rel_avg + 50.0)),
+                ("Health", (health - 50.0) / 50.0, self._band_word(health)),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Looks":
+            desc = "Perceived physical attractiveness."
+            factors = ["Inherited Baseline", "Life Events (if applied)"]
+            now = "Main drivers now: Inherited baseline (currently static)"
+            return clean_name, desc, factors, now
+
+        if clean_name == "Money":
+            desc = "Available cash on hand."
+            factors = ["Salary/Income", "Purchases", "Medical/School Costs", "Random Events"]
+            has_job = bool(getattr(agent, "job", None))
+            cash = float(getattr(agent, "money", 0.0))
+            now = self._top_driver_labels([
+                ("Income Flow", 0.6 if has_job else -0.6, "active" if has_job else "inactive"),
+                ("Cash Buffer", (cash - 5000.0) / 5000.0, self._band_word(cash, 500, 5000)),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Fertility":
+            desc = "Current reproductive capability."
+            factors = ["Age Curve", "Gender Curve", "Genetic Fertility Peak"]
+            peak = max(1.0, float(getattr(agent, "_genetic_fertility_peak", 1)))
+            ratio = max(0.0, min(1.0, float(value) / peak))
+            now = self._top_driver_labels([
+                ("Age Phase", ratio - 0.5, self._age_phase_word(age)),
+                ("Genetic Fertility Peak", (peak - 50.0) / 50.0, f"peak {int(peak)} ({self._band_word(peak)})"),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Genetic Fertility":
+            desc = "Ceiling fertility potential from genetics."
+            factors = ["Inherited at Birth"]
+            now = "Main drivers now: Genetics only (no live modifiers)"
+            return clean_name, desc, factors, now
+
+        if clean_name == "Libido":
+            desc = "Current sexual drive intensity."
+            factors = ["Age Curve", "Genetic Libido Peak"]
+            peak = max(1.0, float(getattr(agent, "_genetic_libido_peak", 1)))
+            ratio = max(0.0, min(1.0, float(value) / peak))
+            now = self._top_driver_labels([
+                ("Age Phase", ratio - 0.5, self._age_phase_word(age)),
+                ("Genetic Libido Peak", (peak - 50.0) / 50.0, f"peak {int(peak)} ({self._band_word(peak)})"),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Genetic Libido":
+            desc = "Ceiling libido potential from genetics."
+            factors = ["Inherited at Birth"]
+            now = "Main drivers now: Genetics only (no live modifiers)"
+            return clean_name, desc, factors, now
+
+        if clean_name == "IQ":
+            desc = "Average of the six cognitive aptitudes."
+            factors = ["Aptitude Phenotypes", "Age Development Curves"]
+            aptitudes = getattr(agent, "aptitudes", {})
+            if aptitudes:
+                strongest = sorted(
+                    [(k, float(v.get("phenotype", 100.0))) for k, v in aptitudes.items()],
+                    key=lambda item: item[1],
+                    reverse=True
+                )[:2]
+                drivers = [
+                    (name, (score - 100.0) / 100.0, self._band_word(score, 90, 110))
+                    for name, score in strongest
+                ]
+                now = self._top_driver_labels(drivers)
+            else:
+                now = "Main drivers now: Aptitude profile (insufficient data)"
+            return clean_name, desc, factors, now
+
+        if clean_name in constants.APTITUDES:
+            desc = "One cognitive domain in the aptitude model."
+            factors = ["Inherited Baseline", "Age Development Curve", "Sleep Penalty (effective value)"]
+            base = int(agent.aptitudes.get(clean_name, {}).get("phenotype", value))
+            penalty_pct = int(float(getattr(agent, "_temp_cognitive_penalty", 0.0)) * 100)
+            now = self._top_driver_labels([
+                ("Sleep Quality", -(penalty_pct / 100.0), f"{penalty_pct}% penalty"),
+                ("Age Development", (base - 100.0) / 100.0, self._age_phase_word(age)),
+            ])
+            return clean_name, desc, factors, now
+
+        if clean_name == "Religiousness":
+            desc = "Personal inclination toward religion/spirituality."
+            factors = ["Inherited Baseline", "Life Events (if applied)"]
+            now = "Main drivers now: Inherited baseline (currently static)"
+            return clean_name, desc, factors, now
+
+        if traits and clean_name in traits:
+            desc = "Big 5 main trait score (sum of six facets)."
+            factors = ["Six Facets", "Inherited Baseline", "Life Events (if applied)"]
+            trait_facets = list(traits.get(clean_name, {}).items())
+            if trait_facets:
+                strongest = sorted(trait_facets, key=lambda item: item[1], reverse=True)[:2]
+                drivers = [
+                    (facet, (float(score) - 10.0) / 10.0, self._band_word(float(score) * 5.0))
+                    for facet, score in strongest
+                ]
+                now = self._top_driver_labels(drivers)
+            else:
+                now = "Main drivers now: Facet mix (insufficient data)"
+            return clean_name, desc, factors, now
+
+        if traits:
+            for big5_trait, facets in traits.items():
+                if clean_name in facets:
+                    desc = f"{big5_trait} facet."
+                    factors = ["Inherited Baseline", "Personality Development/Events"]
+                    cluster_avg = sum(facets.values()) / max(1, len(facets))
+                    now = self._top_driver_labels([
+                        ("Facet Baseline", (float(value) - 10.0) / 10.0, self._band_word(float(value) * 5.0)),
+                        (f"{big5_trait} Cluster", (float(cluster_avg) - 10.0) / 10.0, self._band_word(float(cluster_avg) * 5.0)),
+                    ])
+                    return clean_name, desc, factors, now
+
+        if clean_name in [t.replace("_", " ") for t in constants.TEMPERAMENT_TRAITS]:
+            desc = "Infant temperament trait."
+            factors = ["Inherited Baseline", "Early Childhood Events"]
+            now = self._top_driver_labels([
+                ("Temperament Baseline", (float(value) - 50.0) / 50.0, self._band_word(float(value))),
+                ("Early Events", 0.05, "minor so far"),
+            ])
+            return clean_name, desc, factors, now
+
+        # Fallback for any unknown card
+        desc = "Current simulation attribute."
+        factors = ["Attribute-specific game logic", "Age/events where applicable"]
+        now = "Main drivers now: Attribute-specific logic"
+        return clean_name, desc, factors, now
+
+    def _draw_attribute_tooltips(self, sim_state):
+        """Draw hover tooltip for attribute cards in the attributes modal."""
+        if not self.viewing_agent or self.viewing_family_tree_agent:
+            return
+        if not self.attribute_tooltip_zones:
+            return
+
+        mx, my = pygame.mouse.get_pos()
+        for rect, attr_name, value, max_value in self.attribute_tooltip_zones:
+            if not rect.collidepoint((mx, my)):
+                continue
+
+            agent = self.viewing_agent
+            title, desc, factors, now = self._get_attribute_tooltip_data(agent, attr_name, value, max_value)
+
+            raw_lines = [
+                (f"{title}: {int(value) if isinstance(value, (int, float)) else value}", constants.COLOR_ACCENT),
+                (desc, constants.COLOR_TEXT),
+                ("Affects: " + ", ".join(factors[:5]), constants.COLOR_TEXT_DIM),
+                (now, constants.COLOR_TEXT),
+            ]
+
+            wrapped = []
+            max_line_width = 360
+            for i, (text, color) in enumerate(raw_lines):
+                if i == 0:
+                    wrapped.append((text, color))
+                    continue
+                for chunk in self._wrap_tooltip_text(text, max_line_width):
+                    wrapped.append((chunk, color))
+
+            line_height = 18
+            box_w = 0
+            surfaces = []
+            for text, color in wrapped:
+                s = self.font_log.render(text, True, color)
+                box_w = max(box_w, s.get_width())
+                surfaces.append(s)
+
+            box_w += 20
+            box_h = (len(surfaces) * line_height) + 10
+            bg_rect = pygame.Rect(mx + 15, my + 15, box_w, box_h)
+
+            if bg_rect.right > self.screen_width:
+                bg_rect.x -= box_w + 30
+            if bg_rect.bottom > self.screen_height:
+                bg_rect.y -= box_h + 30
+            if bg_rect.x < 0:
+                bg_rect.x = 0
+            if bg_rect.y < 0:
+                bg_rect.y = 0
+
+            pygame.draw.rect(self.screen, (20, 20, 20), bg_rect)
+            pygame.draw.rect(self.screen, constants.COLOR_BORDER, bg_rect, 1)
+
+            curr_y = bg_rect.y + 5
+            for s in surfaces:
+                self.screen.blit(s, (bg_rect.x + 10, curr_y))
+                curr_y += line_height
+            break
 
     def _draw_grade_tooltips(self, sim_state):
         """Draw tooltips for grade hover/click zones."""
