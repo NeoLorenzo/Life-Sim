@@ -169,6 +169,138 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - `_validate_physical_attributes()`: Ensure biologically possible attribute combinations
 - `get_attr_value()`: Unified attribute access for UI rendering with backward compatibility
 - `get_personality_sum()`: Calculate Big 5 trait totals
+- `backfill_to_age()`: Deterministically reconstruct developmental history for late-spawned agents
+
+</details>
+
+<details>
+<summary><strong>Deterministic Backfill System</strong></summary>
+
+The simulation implements a sophisticated deterministic backfill system that allows late-spawned agents (NPCs created after the simulation starts) to have complete developmental histories that are statistically comparable to continuously simulated agents.
+
+**Core Philosophy**
+- **Temporal Parity**: Agents spawned at age 15 should be indistinguishable from agents simulated from birth to age 15
+- **Deterministic Reconstruction**: Same world seed + agent UID = identical developmental trajectory
+- **Developmental Continuity**: Preserves the scientific integrity of the temperament-to-personality pipeline
+
+**Key Methods**
+
+**`_seeded_rng(world_seed, step, channel)`**
+- **Purpose**: Creates deterministic random number generators for backfill replay
+- **Seed Formula**: `"{world_seed}|{agent_uid}|{step}|{channel}"`
+- **Deterministic Properties**: 
+  - Same world seed + agent UID = identical sequence
+  - Different channels prevent interference between developmental processes
+  - Step parameter enables year-by-year reconstruction
+- **Usage Examples**:
+  - `facet-offset-{trait}-{facet}`: Permanent trait offsets
+  - `facet-year-{trait}-{facet}`: Annual personality drift
+  - `temp-{trait}`: Monthly temperament development
+
+**`_personality_backfill_plasticity(age_year)`**
+- **Purpose**: Calculates residual personality plasticity after age 3 crystallization
+- **Developmental Curve**:
+  - Ages 3-6: 20% plasticity (high developmental flexibility)
+  - Ages 7-12: 14% plasticity (middle childhood stability)
+  - Ages 13-17: 10% plasticity (adolescent refinement)
+  - Ages 18-25: 6% plasticity (early adult consolidation)
+  - Ages 26-40: 3% plasticity (mature personality stability)
+  - Age 41+: 2% plasticity (lifelong learning capacity)
+- **Scientific Basis**: Reflects established personality development research showing decreasing plasticity with age
+
+**`_temperament_latents(temperament_values)`**
+- **Purpose**: Creates shared latent scaffold bridging infant temperament to adult personality
+- **Latent Dimensions**:
+  - **Surgency**: Combines Activity (34%), Approach_Withdrawal (26%), Intensity (20%), Mood (20%)
+  - **Effortful Control**: Integrates Persistence (30%), Regularity (25%), Adaptability (25%), inverse Distractibility (20%)
+  - **Negative Affect**: Blends inverse Threshold (30%), inverse Mood (25%), Intensity (20%), inverse Adaptability (15%), Distractibility (10%)
+  - **Orientation Sensitivity**: Merges Adaptability (35%), Approach_Withdrawal (25%), inverse Regularity (20%), inverse Distractibility (20%)
+- **Direct Pass-Through**: Adaptability, Mood, Intensity preserved as individual latents
+- **Normalization**: All temperament values normalized to [-1.0, +1.0] range before calculation
+- **Developmental Continuity**: Ensures infant temperament meaningfully influences adult personality structure
+
+**`_apply_backfill_personality_year(age_year, latents, world_seed)`**
+- **Purpose**: Applies one deterministic year of age-dependent personality development
+- **Plasticity Application**: All modifications scaled by `_personality_backfill_plasticity(age_year)`
+- **Trait Target Calculation**:
+  - **Openness**: 10.0 + (2.4 × orientation) + (0.6 × surgency) - (0.4 × negative_affect)
+  - **Conscientiousness**: 10.0 + (2.8 × effortful) - (0.6 × negative_affect)
+  - **Extraversion**: 10.0 + (2.6 × surgency) - (0.5 × negative_affect)
+  - **Agreeableness**: 10.0 + (1.8 × adaptability) + (0.8 × mood) - (1.2 × intensity)
+  - **Neuroticism**: 10.0 + (2.8 × negative_affect) - (0.8 × effortful)
+- **Facet-Level Processing**:
+  - **Permanent Offset**: Each facet gets unique random offset (-1.1 to +1.1) using seeded RNG
+  - **Annual Drift**: Gaussian random walk (σ=0.9) scaled by plasticity
+  - **Mean Pull**: Regression toward trait center (55% of difference) scaled by plasticity
+  - **Bounds Enforcement**: All facets clamped to [1, 20] range
+- **Deterministic Properties**: Same seed + age + facet = identical developmental outcome
+
+**`backfill_to_age(target_age, world_seed)`**
+- **Purpose**: Main entry point for deterministic developmental reconstruction
+- **Reconstruction Process**:
+  1. **State Reset**: Clears existing personality, resets temperament, unlocks personality
+  2. **Infancy Simulation** (0-2 years): Month-by-month temperament development
+     - Applies plasticity-based temperament changes
+     - Uses Gaussian shocks (σ=1.8) and baseline regression
+     - Maintains developmental continuity with real-time simulation
+  3. **Personality Crystallization** (age 3): Converts temperament to Big Five using existing system
+  4. **Post-Crystallization Development** (3+ years): Year-by-year personality maturation
+     - Applies latent-driven trait targets with individual facet variations
+     - Maintains age-appropriate plasticity scaling
+  5. **State Tracking**: Sets `_backfilled_to_age` to prevent duplicate processing
+- **Integration Points**:
+  - **SimState._create_npc()**: Automatic backfill for NPCs with requested_age > 0
+  - **SimState._generate_lineage_structure()**: Backfill for player character when target_age > 0
+  - **World Seed Propagation**: Uses `self.world_seed` for global consistency
+
+**Technical Implementation Details**
+
+**Deterministic Architecture**
+- **Global Seed**: Each simulation run has unique `world_seed` (0-2,000,000,000)
+- **Agent-Specific Seeding**: Combines world_seed with agent_uid for agent uniqueness
+- **Channel Isolation**: Different developmental processes use unique channel identifiers
+- **Step-Based Progression**: Year/month steps enable precise reconstruction
+
+**Developmental Fidelity**
+- **Month-by-Month Infancy**: Matches real-time simulation granularity
+- **Year-by-Year Personality**: Reflects slower personality change rates
+- **Plasticity Scaling**: Scientifically-grounded age-dependent flexibility
+- **Trait Interdependencies**: Latent dimensions ensure coherent personality development
+
+**Performance Considerations**
+- **Lazy Evaluation**: Only processes when `target_age` differs from `_backfilled_to_age`
+- **Bounded Processing**: Maximum of target_age iterations, typically < 100
+- **Memory Efficiency**: Reuses existing personality/temperament data structures
+- **Deterministic Caching**: Same reconstruction parameters produce identical results
+
+**Integration with Existing Systems**
+
+**World Seed System** (`sim_state.py`)
+- **Seed Generation**: `self.world_seed = random.randint(0, 2_000_000_000)` during SimState initialization
+- **Propagation**: Passed to all backfill operations for global consistency
+- **Reproducibility**: Same world seed = identical agent developmental histories
+
+**NPC Creation Pipeline** (`sim_state.py`)
+- **Automatic Backfill**: `_create_npc()` calls `backfill_to_age()` when `requested_age > 0`
+- **Seamless Integration**: Backfilled NPCs immediately compatible with existing systems
+- **Age Verification**: Ensures requested age matches agent's actual age after backfill
+
+**Family Generation System** (`sim_state.py`)
+- **Player Backfill**: When `target_age > 0`, player character undergoes backfill
+- **Consistent Development**: All family members use same world_seed for coherence
+- **Relationship Compatibility**: Backfilled personalities work with existing affinity calculations
+
+**Scientific Validity**
+- **Developmental Psychology**: Based on established temperament-to-personality research
+- **Age-Appropriate Plasticity**: Reflects real personality development timelines
+- **Individual Differences**: Maintains agent uniqueness through deterministic variation
+- **Developmental Continuity**: Preserves meaningful connections between early and later traits
+
+**Use Cases**
+- **Late-Spawned NPCs**: Agents created during gameplay (new classmates, coworkers)
+- **Age-Specific Scenarios**: Starting simulation at non-zero ages
+- **Testing & Debugging**: Reproducible agent development for scientific validation
+- **Performance Optimization**: Avoid simulating entire childhood for background NPCs
 
 </details>
 
@@ -283,6 +415,7 @@ The `SimState` class serves as the central container for the entire simulation w
 - `year`: Current simulation year
 - `history`: Log of all life events organized by year
 - `config`: Reference to global configuration data
+- `world_seed`: Global deterministic seed for reproducible agent development (0-2,000,000,000)
 
 </details>
 
@@ -293,10 +426,10 @@ The `SimState` class serves as the central container for the entire simulation w
 - `_assign_form_to_student()`: Helper function for form assignment using configured `form_labels`
 - `_link_agents()`: Creates bidirectional relationships with optional modifiers
 - `_setup_family_and_player()`: Generates multi-generational family trees
-- `_create_npc()`: Instantiates and registers new NPCs
+- `_create_npc()`: Instantiates and registers new NPCs with automatic backfill for age > 0
 - `start_new_year()`: Archives current year and starts new one
-- `__init__()`: Initialize simulation world and generate family
-- `add_log()`: Add events to the history buffer with color coding
+- `__init__()`: Initialize simulation world, generate world seed, and generate family
+- `add_log()`: Add events to history buffer with color coding
 
 </details>
 
@@ -304,11 +437,12 @@ The `SimState` class serves as the central container for the entire simulation w
 <summary><strong>Initialization Process</strong></summary>
 
 1. Load configuration and create school system
-2. Set random start month for variety
-3. Generate complete family tree (grandparents → parents → player)
-4. Initialize player's relationships with all family members
-5. Generate narrative birth story based on family context
-6. Populate school classmates if player is enrolled
+2. Generate world seed for deterministic agent development (0-2,000,000,000)
+3. Set random start month for variety
+4. Generate complete family tree (grandparents → parents → player)
+5. Initialize player's relationships with all family members
+6. Generate narrative birth story based on family context
+7. Populate school classmates if player is enrolled
 
 </details>
 
@@ -2072,6 +2206,19 @@ The physical attributes system replaces traditional RPG-style stats with a scien
             *   **The Grandparent Bridge:** Paternal and Maternal sides of the family are now linked. Grandparents have "In-Law" relationships with their counterparts.
             *   **Marriage-Driven Sentiment:** The starting score for Grandparent-In-Laws is calculated as `Civil_Base (+10) + (Parent_Marriage_Score * 0.5)`. If the parents have a toxic marriage, the extended family network naturally fractures as grandparents "take sides."
             *   **Siblings-in-Law:** Aunts and Uncles are automatically linked to their siblings' spouses (In-Laws) using the affinity engine.
+    *   **Deterministic Backfill System for Late-Spawned Agents:**
+        *   **Temporal Parity Principle**: Agents spawned at age 15 should be indistinguishable from agents simulated from birth to age 15
+        *   **World Seed Integration**: Each simulation generates `world_seed` (0-2,000,000,000) for global deterministic consistency
+        *   **Agent-Specific Seeding**: Combines world_seed with agent_uid for unique developmental trajectories
+        *   **Developmental Reconstruction**: 
+            - **Infancy (0-2 years)**: Month-by-month temperament development using plasticity-based changes
+            - **Personality Crystallization (age 3)**: Converts temperament to Big Five using existing system
+            - **Post-Crystallization (3+ years)**: Year-by-year personality maturation with age-appropriate plasticity
+        *   **Age-Dependent Plasticity**: Scientifically-grounded developmental flexibility (20% at age 3 → 2% at age 41+)
+        *   **Latent Dimension Bridge**: Temperament traits map to personality through Surgency, Effortful Control, Negative Affect, and Orientation Sensitivity
+        *   **Automatic Integration**: `_create_npc()` automatically calls `backfill_to_age()` when `requested_age > 0`
+        *   **Performance Optimization**: Avoids simulating entire childhood for background NPCs while maintaining developmental fidelity
+        *   **Scientific Validity**: Based on established developmental psychology research for personality formation
     *   **Anthropometry & Growth:**
         *   **Height Inheritance:**
             *   *Lineage Heads:* Generated via Gaussian distribution (Male: 176cm/7SD, Female: 163cm/6SD).

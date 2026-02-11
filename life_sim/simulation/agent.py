@@ -958,6 +958,113 @@ class Agent:
         self.is_personality_locked = True
         self.plasticity = 0.0
 
+    def _seeded_rng(self, world_seed, step, channel):
+        """Deterministic per-agent RNG for backfill replay."""
+        seed = f"{world_seed}|{self.uid}|{step}|{channel}"
+        return random.Random(seed)
+
+    def _personality_backfill_plasticity(self, age_year):
+        """Age-based residual personality plasticity after age 3."""
+        if age_year <= 6:
+            return 0.20
+        if age_year <= 12:
+            return 0.14
+        if age_year <= 17:
+            return 0.10
+        if age_year <= 25:
+            return 0.06
+        if age_year <= 40:
+            return 0.03
+        return 0.02
+
+    def _temperament_latents(self, temperament_values):
+        """Shared latent scaffold for developmental continuity."""
+        def norm(name):
+            raw = float(temperament_values.get(name, constants.TEMPERAMENT_DEFAULT_VALUE))
+            raw = max(0.0, min(100.0, raw))
+            return (raw - 50.0) / 50.0
+
+        t = {trait: norm(trait) for trait in constants.TEMPERAMENT_TRAITS}
+        inv = {trait: -value for trait, value in t.items()}
+        latents = {
+            "surgency": (0.34 * t["Activity"]) + (0.26 * t["Approach_Withdrawal"]) + (0.20 * t["Intensity"]) + (0.20 * t["Mood"]),
+            "effortful": (0.30 * t["Persistence"]) + (0.25 * t["Regularity"]) + (0.25 * t["Adaptability"]) + (0.20 * inv["Distractibility"]),
+            "negative_affect": (0.30 * inv["Threshold"]) + (0.25 * inv["Mood"]) + (0.20 * t["Intensity"]) + (0.15 * inv["Adaptability"]) + (0.10 * t["Distractibility"]),
+            "orientation": (0.35 * t["Adaptability"]) + (0.25 * t["Approach_Withdrawal"]) + (0.20 * inv["Regularity"]) + (0.20 * inv["Distractibility"]),
+            "adaptability": t["Adaptability"],
+            "mood": t["Mood"],
+            "intensity": t["Intensity"],
+        }
+        return latents
+
+    def _apply_backfill_personality_year(self, age_year, latents, world_seed):
+        """Applies one deterministic year of age-dependent personality drift."""
+        if not self.personality:
+            return
+
+        p = self._personality_backfill_plasticity(age_year)
+        trait_targets = {
+            "Openness": 10.0 + (2.4 * latents["orientation"]) + (0.6 * latents["surgency"]) - (0.4 * latents["negative_affect"]),
+            "Conscientiousness": 10.0 + (2.8 * latents["effortful"]) - (0.6 * latents["negative_affect"]),
+            "Extraversion": 10.0 + (2.6 * latents["surgency"]) - (0.5 * latents["negative_affect"]),
+            "Agreeableness": 10.0 + (1.8 * latents["adaptability"]) + (0.8 * latents["mood"]) - (1.2 * latents["intensity"]),
+            "Neuroticism": 10.0 + (2.8 * latents["negative_affect"]) - (0.8 * latents["effortful"]),
+        }
+
+        for trait_name, facets in self.personality.items():
+            trait_center = max(2.0, min(18.0, trait_targets.get(trait_name, 10.0)))
+            for facet_name, current in facets.items():
+                offset_rng = self._seeded_rng(world_seed, 0, f"facet-offset-{trait_name}-{facet_name}")
+                facet_offset = offset_rng.uniform(-1.1, 1.1)
+                target = max(1.0, min(20.0, trait_center + facet_offset))
+
+                step_rng = self._seeded_rng(world_seed, age_year, f"facet-year-{trait_name}-{facet_name}")
+                random_walk = step_rng.gauss(0.0, 0.9) * p
+                mean_pull = (target - float(current)) * 0.55 * p
+                updated = float(current) + mean_pull + random_walk
+                self.personality[trait_name][facet_name] = max(1, min(20, int(round(updated))))
+
+    def backfill_to_age(self, target_age, world_seed=0):
+        """
+        Deterministically reconstructs developmental history from birth to target age.
+        Used for late-spawned agents so they remain comparable to continuously simulated agents.
+        """
+        target_age = max(0, int(target_age))
+        if target_age <= 0:
+            self._backfilled_to_age = 0
+            return
+        if getattr(self, "_backfilled_to_age", None) == target_age:
+            return
+
+        # Rebuild early development from birth state.
+        self.personality = None
+        self.temperament = self._generate_infant_temperament()
+        self.is_personality_locked = False
+        self.plasticity = 1.0
+
+        months_until_three = min(target_age * 12, 36)
+        for month in range(months_until_three):
+            age_year = month // 12
+            self.plasticity = constants.PLASTICITY_DECAY.get(age_year, 0.0)
+            for trait_name in constants.TEMPERAMENT_TRAITS:
+                rng = self._seeded_rng(world_seed, month, f"temp-{trait_name}")
+                current = float(self.temperament.get(trait_name, constants.TEMPERAMENT_DEFAULT_VALUE))
+                shock = rng.gauss(0.0, 1.8) * self.plasticity
+                baseline_pull = (constants.TEMPERAMENT_DEFAULT_VALUE - current) * 0.03 * self.plasticity
+                updated = max(0.0, min(100.0, current + shock + baseline_pull))
+                self.temperament[trait_name] = round(updated, 1)
+
+        if target_age >= 3:
+            infant_snapshot = dict(self.temperament)
+            self.crystallize_personality()
+            latents = self._temperament_latents(infant_snapshot)
+            for age_year in range(3, target_age):
+                self._apply_backfill_personality_year(age_year, latents, world_seed)
+        else:
+            self.plasticity = constants.PLASTICITY_DECAY.get(target_age, self.plasticity)
+
+        self._backfilled_to_age = target_age
+
     def get_personality_sum(self, trait):
         """Returns the sum (0-120) of a main trait."""
         if not self.personality:

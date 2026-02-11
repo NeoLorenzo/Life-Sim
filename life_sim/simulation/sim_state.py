@@ -27,6 +27,7 @@ class SimState:
         self.month_index = random.randint(0, 11) # 0 = Jan, 11 = Dec
         self.birth_month_index = self.month_index # Store birth month for age calculation
         self.year = constants.START_YEAR
+        self.world_seed = random.randint(0, 2_000_000_000)
         
         # Generate Family & Player (Order matters for genetics)
         self.player = self._setup_family_and_player()
@@ -503,6 +504,9 @@ class SimState:
     def _create_npc(self, **kwargs):
         """Helper to instantiate, register, and return an NPC."""
         agent = Agent(self.config["agent"], is_player=False, **kwargs)
+        requested_age = int(kwargs.get("age", agent.age))
+        if requested_age > 0:
+            agent.backfill_to_age(requested_age, world_seed=self.world_seed)
         self.npcs[agent.uid] = agent
         return agent
 
@@ -756,6 +760,8 @@ class SimState:
             child = Agent(agent_conf, is_player=True, parents=(father, mother),
                           age=target_age, last_name=last_name, city=city, country=country,
                           time_config=self.config.get("time_management", {}))
+            if target_age > 0:
+                child.backfill_to_age(target_age, world_seed=self.world_seed)
         else:
             # For NPCs, we use _create_npc to register them in self.npcs
             child = self._create_npc(age=target_age, parents=(father, mother),
