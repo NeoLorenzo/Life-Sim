@@ -97,6 +97,11 @@ class Renderer:
         
         # Storage for interactive rects in the modal (recalculated every frame)
         self.modal_click_zones = [] 
+        self.attr_modal_tab_zones = []
+        self.attr_modal_scroll_offset = 0
+        self.attr_modal_scroll_max = 0
+        self.attr_modal_scroll_rect = None
+        self.attr_modal_active_category = "Overview"
         
         # Load Assets
         self.icon_ft = None
@@ -277,6 +282,21 @@ class Renderer:
         """
         Processes input events.
         """
+        # Attributes modal scrolling has priority while modal is open.
+        if self.viewing_agent and not self.viewing_family_tree_agent and self.attr_modal_scroll_rect:
+            if event.type == pygame.MOUSEWHEEL:
+                mx, my = pygame.mouse.get_pos()
+                if self.attr_modal_scroll_rect.collidepoint((mx, my)):
+                    self._adjust_attr_modal_scroll(-event.y * 36)
+                    return None
+            elif event.type == pygame.MOUSEBUTTONDOWN and self.attr_modal_scroll_rect.collidepoint(event.pos):
+                if event.button == 4:
+                    self._adjust_attr_modal_scroll(-36)
+                    return None
+                if event.button == 5:
+                    self._adjust_attr_modal_scroll(36)
+                    return None
+
         # Scroll long academics list when cursor is over the academics viewport.
         if sim_state and self.academics_scroll_rect and sim_state.player.school:
             if event.type == pygame.MOUSEWHEEL:
@@ -397,6 +417,8 @@ class Renderer:
                         if clicked_agent:
                             # Open Attributes
                             self.viewing_agent = clicked_agent
+                            self.attr_modal_active_category = "Overview"
+                            self.attr_modal_scroll_offset = 0
                             # Close FT? Or keep it open? 
                             # For now, let's close FT to show attributes, 
                             # or we could overlay. Let's close FT for simplicity.
@@ -425,7 +447,19 @@ class Renderer:
             close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
             if close_rect.collidepoint(event.pos):
                 self.viewing_agent = None
+                self.attr_modal_scroll_offset = 0
+                self.attr_modal_scroll_max = 0
+                self.attr_modal_scroll_rect = None
+                self.attr_modal_tab_zones = []
                 return None
+
+            # Check category tabs
+            for rect, category in self.attr_modal_tab_zones:
+                if rect.collidepoint(event.pos):
+                    if self.attr_modal_active_category != category:
+                        self.attr_modal_active_category = category
+                        self.attr_modal_scroll_offset = 0
+                    return None
             
             # Check Attribute Cards (Pinning)
             # Only allow pinning if viewing the Player
@@ -499,6 +533,8 @@ class Renderer:
             if result:
                 if result[0] == "VIEW_AGENT":
                     self.viewing_agent = result[1]
+                    self.attr_modal_active_category = "Overview"
+                    self.attr_modal_scroll_offset = 0
                     return None
                 elif result[0] == "INTERACT":
                     return f"INTERACT_{result[1]}"
@@ -573,8 +609,14 @@ class Renderer:
     def toggle_attributes(self, target=None):
         if target:
             self.viewing_agent = target
+            self.attr_modal_scroll_offset = 0
+            self.attr_modal_active_category = "Overview"
         elif self.viewing_agent:
             self.viewing_agent = None
+            self.attr_modal_scroll_offset = 0
+            self.attr_modal_scroll_max = 0
+            self.attr_modal_scroll_rect = None
+            self.attr_modal_tab_zones = []
         else:
             # Default to player if opening from main menu
             # We need access to player, but this method is usually called from main.py
@@ -712,183 +754,249 @@ class Renderer:
 
     def _draw_attributes_modal(self, sim_state):
         """Draws the detailed attributes overlay in the center panel."""
-        # Reset click zones
+        # Reset per-frame zones.
         self.modal_click_zones = []
         self.attribute_tooltip_zones = []
+        self.attr_modal_tab_zones = []
         
-        # Draw Background
+        # Draw background container.
         self._draw_panel_background(self.rect_center, constants.UI_OPACITY_CENTER)
         pygame.draw.rect(self.screen, constants.COLOR_BORDER, self.rect_center, 1)
         
         agent = self.viewing_agent
         is_player = (agent == sim_state.player)
-        
-        # --- Header ---
-        header_text = f"{agent.first_name}'s Attributes"
-        if is_player: header_text += " (Click to Pin)"
-        header_surf = self.font_header.render(header_text, True, constants.COLOR_ACCENT)
-        self.screen.blit(header_surf, (self.rect_center.x + 20, self.rect_center.y + 15))
-        
-        # FT Button in Modal
-        ft_rect = pygame.Rect(self.rect_center.x + 20 + header_surf.get_width() + 15, self.rect_center.y + 15, 30, header_surf.get_height())
+        # Header.
+        header_rect = pygame.Rect(self.rect_center.x, self.rect_center.y, self.rect_center.width, 54)
+        pygame.draw.rect(self.screen, (28, 28, 28), header_rect)
+        pygame.draw.line(self.screen, constants.COLOR_BORDER, (header_rect.x, header_rect.bottom), (header_rect.right, header_rect.bottom))
+
+        title_text = f"{agent.first_name}'s Attributes"
+        title_surf = self.font_header.render(title_text, True, constants.COLOR_ACCENT)
+        self.screen.blit(title_surf, (self.rect_center.x + 18, self.rect_center.y + 12))
+
+        hint = "Click cards to pin on dashboard" if is_player else "Inspect read-only profile"
+        hint_surf = self.font_log.render(hint, True, constants.COLOR_TEXT_DIM)
+        self.screen.blit(hint_surf, (self.rect_center.x + 20, header_rect.bottom + 8))
+
+        close_rect = pygame.Rect(self.rect_center.right - 30, self.rect_center.y + 10, 20, 20)
+        pygame.draw.rect(self.screen, constants.COLOR_DEATH, close_rect, border_radius=3)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.topleft, close_rect.bottomright, 2)
+        pygame.draw.line(self.screen, constants.COLOR_TEXT, close_rect.bottomleft, close_rect.topright, 2)
+
+        # Family tree shortcut button.
+        ft_x = min(self.rect_center.x + 18 + title_surf.get_width() + 14, close_rect.x - 40)
+        ft_rect = pygame.Rect(ft_x, self.rect_center.y + 9, 28, 28)
         self._draw_ft_button(ft_rect, agent)
-        
-        # --- Static Bio Text (Top Section) ---
-        bio_x = self.rect_center.x + 20
-        bio_y = self.rect_center.y + 50
-        
-        # Line 1: Identity
-        line1 = f"{agent.gender}, {agent.age} years old. Born in {agent.city}, {agent.country}."
-        self.screen.blit(self.font_main.render(line1, True, constants.COLOR_TEXT), (bio_x, bio_y))
-        
-        # Line 2: Appearance
-        line2 = f"{agent.sexuality}. {agent.eye_color} Eyes, {agent.hair_color} Hair, {agent.skin_tone} Skin."
-        self.screen.blit(self.font_main.render(line2, True, constants.COLOR_TEXT), (bio_x, bio_y + 25))
-        
-        # Line 3: Body
-        line3 = f"Height: {agent.height_cm}cm | Weight: {agent.weight_kg}kg | BMI: {agent.bmi}"
-        self.screen.blit(self.font_main.render(line3, True, constants.COLOR_TEXT), (bio_x, bio_y + 50))
 
-        # --- Columnar Layout Configuration ---
-        start_x = self.rect_center.x + 20
-        start_y = bio_y + 90 
-        
-        # 5 Columns (added Cognitive Profile)
-        col_count = 5
-        col_w = (self.rect_center.width - 40) // col_count
-        card_w = col_w - 10
-        card_h = 40 # Compact height
-        gap_y = 8
-        
-        # Track Y position for each column
-        col_y_offsets = [start_y] * col_count
+        # Identity chips.
+        chip_y = header_rect.bottom + 34
+        chip_h = 24
+        chip_gap = 8
+        chip_x = self.rect_center.x + 18
+        chips = [
+            f"{agent.gender}, {agent.age}y",
+            f"{agent.city}, {agent.country}",
+            f"{agent.height_cm}cm / {agent.weight_kg}kg / BMI {agent.bmi}",
+            f"{agent.sexuality}",
+            f"{agent.eye_color} eyes, {agent.hair_color} hair",
+        ]
+        for chip in chips:
+            chip_surf = self.font_log.render(chip, True, constants.COLOR_TEXT)
+            chip_w = chip_surf.get_width() + 20
+            if chip_x + chip_w > self.rect_center.right - 18:
+                chip_x = self.rect_center.x + 18
+                chip_y += chip_h + 6
+            chip_rect = pygame.Rect(chip_x, chip_y, chip_w, chip_h)
+            pygame.draw.rect(self.screen, (48, 48, 48), chip_rect, border_radius=12)
+            pygame.draw.rect(self.screen, constants.COLOR_BORDER, chip_rect, 1, border_radius=12)
+            self.screen.blit(chip_surf, (chip_rect.x + 10, chip_rect.y + 4))
+            chip_x += chip_w + chip_gap
 
-        # Helper to draw a card at specific coordinates
-        def draw_card_at(x, y, name, value, max_val=100, is_header=False):
-            rect = pygame.Rect(x, y, card_w, card_h)
-            
-            # Background
-            bg_col = constants.COLOR_PANEL_BG
-            if is_player and name in agent.pinned_attributes:
-                bg_col = (60, 60, 70)
-            
-            if is_header:
-                pygame.draw.rect(self.screen, (30, 30, 30), rect, border_radius=5)
-                pygame.draw.rect(self.screen, constants.COLOR_ACCENT, rect, 1, border_radius=5)
-            else:
-                pygame.draw.rect(self.screen, bg_col, rect, border_radius=5)
-                pygame.draw.rect(self.screen, constants.COLOR_BORDER, rect, 1, border_radius=5)
-            
-            # Text
-            name_surf = self.font_main.render(name, True, constants.COLOR_TEXT)
-            val_surf = self.font_header.render(str(value), True, constants.COLOR_ACCENT)
-            
-            self.screen.blit(name_surf, (rect.x + 10, rect.y + 5))
-            self.screen.blit(val_surf, (rect.right - val_surf.get_width() - 10, rect.y + 5))
-            
-            # Progress Bar (Skip for IQ)
-            if name != "IQ":
-                bar_bg = pygame.Rect(rect.x + 10, rect.bottom - 8, rect.width - 20, 4)
-                pygame.draw.rect(self.screen, (10, 10, 10), bar_bg)
-                
-                pct = max(0, min(1, value / max_val))
-                bar_fill = pygame.Rect(rect.x + 10, rect.bottom - 8, (rect.width - 20) * pct, 4)
-                
-                # Color Logic
-                bar_col = constants.COLOR_ACCENT
-                # Check if this is a neuroticism-related stat
-                is_neuro = (name == "Neuroticism" or (agent.personality and name in agent.personality.get("Neuroticism", {})))
-                
-                if is_neuro:
-                    if value > (max_val * 0.75): bar_col = constants.COLOR_LOG_NEGATIVE
-                    elif value < (max_val * 0.25): bar_col = constants.COLOR_LOG_POSITIVE
-                else:
-                    if value < (max_val * 0.25): bar_col = constants.COLOR_LOG_NEGATIVE
-                    elif value > (max_val * 0.75): bar_col = constants.COLOR_LOG_POSITIVE
-                    
-                pygame.draw.rect(self.screen, bar_col, bar_fill)
-            
-            # Pin Icon
-            if is_player and name in agent.pinned_attributes:
-                pygame.draw.circle(self.screen, constants.COLOR_TEXT, (rect.right - 8, rect.top + 8), 3)
+        # Category tabs.
+        categories = ["Overview", "Mind"]
+        if self.attr_modal_active_category not in categories:
+            self.attr_modal_active_category = categories[0]
+            self.attr_modal_scroll_offset = 0
 
-            # Register Click Zone
-            self.modal_click_zones.append((rect, name))
-            self.attribute_tooltip_zones.append((rect.copy(), name, value, max_val))
+        accent_by_category = {
+            "Overview": constants.COLOR_ACCENT,
+            "Mind": constants.COLOR_LOG_HEADER,
+        }
+        cat_accent = accent_by_category.get(self.attr_modal_active_category, constants.COLOR_ACCENT)
 
-        # Helper to draw a group in a specific column
-        def draw_group(col_idx, title, attrs, is_personality=False):
-            x = start_x + (col_idx * col_w)
-            y = col_y_offsets[col_idx]
-            
-            # Draw Header
-            if title:
-                if is_personality:
-                    # Personality Headers are clickable cards (The Main Trait)
-                    val = agent.get_personality_sum(title)
-                    draw_card_at(x, y, title, val, 120, is_header=True)
-                    y += card_h + gap_y
-                else:
-                    # Standard Text Header
-                    head_surf = self.font_header.render(title, True, constants.COLOR_TEXT_DIM)
-                    self.screen.blit(head_surf, (x, y))
-                    y += 30
-            
-            # Draw Attributes
+        tabs_y = chip_y + chip_h + 12
+        tab_x = self.rect_center.x + 18
+        for category in categories:
+            tab_label = self.font_log.render(category, True, constants.COLOR_TEXT)
+            tab_w = max(116, tab_label.get_width() + 26)
+            tab_rect = pygame.Rect(tab_x, tabs_y, tab_w, 28)
+            is_active = (category == self.attr_modal_active_category)
+            fill = (44, 44, 44) if not is_active else (60, 60, 60)
+            border = constants.COLOR_BORDER if not is_active else cat_accent
+            pygame.draw.rect(self.screen, fill, tab_rect, border_radius=8)
+            pygame.draw.rect(self.screen, border, tab_rect, 1, border_radius=8)
+            self.screen.blit(tab_label, (tab_rect.x + 12, tab_rect.y + 5))
+            self.attr_modal_tab_zones.append((tab_rect, category))
+            tab_x += tab_w + 8
+
+        # Scrollable content viewport.
+        content_rect = pygame.Rect(
+            self.rect_center.x + 14,
+            tabs_y + 38,
+            self.rect_center.width - 28,
+            self.rect_center.bottom - (tabs_y + 54),
+        )
+        self.attr_modal_scroll_rect = content_rect
+        pygame.draw.rect(self.screen, (16, 16, 16), content_rect, border_radius=6)
+        pygame.draw.rect(self.screen, constants.COLOR_BORDER, content_rect, 1, border_radius=6)
+        if content_rect.height < 40:
+            self.attr_modal_scroll_max = 0
+            return
+
+        col_count = 3
+        col_gap = 12
+        side_padding = 12
+        col_w = (content_rect.width - (side_padding * 2) - (col_gap * (col_count - 1))) // col_count
+        card_h = 48
+        row_gap = 8
+        section_gap = 16
+        bar_h = 6
+        col_y = [10, 10, 10]  # Raw content Y inside viewport.
+
+        def col_x(col_idx):
+            return content_rect.x + side_padding + (col_idx * (col_w + col_gap))
+
+        def _bar_color(name, value, max_val):
+            bar_col = cat_accent
+            is_neuro = (name == "Neuroticism" or (agent.personality and name in agent.personality.get("Neuroticism", {})))
+            if max_val <= 0:
+                return bar_col
+            if is_neuro:
+                if value > (max_val * 0.75):
+                    return constants.COLOR_LOG_NEGATIVE
+                if value < (max_val * 0.25):
+                    return constants.COLOR_LOG_POSITIVE
+                return bar_col
+            if value < (max_val * 0.25):
+                return constants.COLOR_LOG_NEGATIVE
+            if value > (max_val * 0.75):
+                return constants.COLOR_LOG_POSITIVE
+            return bar_col
+
+        def draw_section_header(col_idx, title):
+            raw_y = col_y[col_idx]
+            rect = pygame.Rect(col_x(col_idx), content_rect.y + raw_y - self.attr_modal_scroll_offset, col_w, 22)
+            if rect.colliderect(content_rect):
+                pygame.draw.rect(self.screen, (26, 26, 26), rect, border_radius=5)
+                pygame.draw.line(self.screen, cat_accent, (rect.x + 8, rect.bottom - 2), (rect.right - 8, rect.bottom - 2), 2)
+                txt = self.font_log.render(title, True, constants.COLOR_TEXT_DIM)
+                self.screen.blit(txt, (rect.x + 8, rect.y + 2))
+            col_y[col_idx] += 28
+
+        def draw_attr_card(col_idx, name, value, max_val=100, show_bar=True):
+            raw_y = col_y[col_idx]
+            rect = pygame.Rect(col_x(col_idx), content_rect.y + raw_y - self.attr_modal_scroll_offset, col_w, card_h)
+            is_pinned = is_player and name in agent.pinned_attributes
+            card_bg = (38, 38, 38)
+            border = constants.COLOR_BORDER if not is_pinned else cat_accent
+
+            if rect.colliderect(content_rect):
+                pygame.draw.rect(self.screen, card_bg, rect, border_radius=6)
+                pygame.draw.rect(self.screen, border, rect, 1, border_radius=6)
+
+                value_text = str(int(value)) if isinstance(value, (int, float)) else str(value)
+                name_surf = self.font_log.render(name, True, constants.COLOR_TEXT)
+                val_surf = self.font_main.render(value_text, True, cat_accent)
+                self.screen.blit(name_surf, (rect.x + 10, rect.y + 6))
+                self.screen.blit(val_surf, (rect.right - val_surf.get_width() - 10, rect.y + 4))
+
+                if show_bar and max_val > 0:
+                    bar_bg = pygame.Rect(rect.x + 10, rect.bottom - 12, rect.width - 20, bar_h)
+                    pygame.draw.rect(self.screen, (10, 10, 10), bar_bg, border_radius=2)
+                    pct = max(0.0, min(1.0, float(value) / float(max_val)))
+                    fill_w = max(1, int((rect.width - 20) * pct))
+                    bar_fill = pygame.Rect(rect.x + 10, rect.bottom - 12, fill_w, bar_h)
+                    pygame.draw.rect(self.screen, _bar_color(name, float(value), float(max_val)), bar_fill, border_radius=2)
+
+                self.modal_click_zones.append((rect.copy(), name))
+                self.attribute_tooltip_zones.append((rect.copy(), name, value, max_val))
+
+            col_y[col_idx] += card_h + row_gap
+
+        def draw_attr_list(col_idx, title, attrs, default_max=100, show_bar=True):
+            draw_section_header(col_idx, title)
             for attr in attrs:
                 val = agent.get_attr_value(attr)
-                max_v = 20 if is_personality else 100
-                if attr == "Health": max_v = agent.max_health
-                
-                draw_card_at(x, y, attr, val, max_v)
-                y += card_h + gap_y
-        
-            y += 15 # Gap between groups
-            col_y_offsets[col_idx] = y
+                max_val = default_max
+                card_show_bar = show_bar
+                if attr == "Health":
+                    max_val = max(1, agent.max_health)
+                elif attr in constants.APTITUDES:
+                    max_val = constants.APTITUDE_MAX
+                elif attr == "IQ":
+                    max_val = constants.APTITUDE_MAX
+                elif attr == "Money":
+                    max_val = max(1000.0, float(val) * 1.1)
+                    card_show_bar = False
+                draw_attr_card(col_idx, attr, val, max_val=max_val, show_bar=card_show_bar)
+            col_y[col_idx] += section_gap
 
-        # Check if agent is an infant (age < 3)
-        if agent.age < 3:
-            # Infant Layout: Vitals + Temperament
-            # Column 1: Vitals, Physical, Hidden
-            draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Libido"])
-            draw_group(0, "Hidden", ["Religiousness"])
-            
-            # Columns 1-3: Temperament (3x3 grid layout)
-            temperament_traits = list(agent.temperament.keys())
-            for i in range(3):  # 3 columns
-                start_idx = i * 3
-                end_idx = start_idx + 3
-                col_traits = temperament_traits[start_idx:end_idx]
-                
-                # Draw temperament header for first column only
-                title = "Temperament" if i == 0 else None
-                draw_group(i + 1, title, col_traits)
-            
-            # Column 4: Cognitive Profile (Aptitudes) - also show for infants
-            draw_group(4, "Cognitive Profile", ["Analytical Reasoning", "Verbal Abilities", "Spatial Abilities", "Working Memory", "Long-term Memory", "Secondary Cognitive"])
-                
-        else:
-            # Adult Layout: Vitals + Big 5 Personality
-            # Column 1: Vitals, Physical, Hidden
-            # Added "Money" to Vitals for verification
-            draw_group(0, "Vitals", ["Health", "Happiness", "IQ", "Looks", "Money"])
-            draw_group(0, "Physical", ["Energy", "Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power", "Fertility", "Libido"])
-            draw_group(0, "Hidden", ["Religiousness"])
-            
-            # Column 2: Openness & Conscientiousness
-            draw_group(1, "Openness", list(agent.personality["Openness"].keys()), is_personality=True)
-            draw_group(1, "Conscientiousness", list(agent.personality["Conscientiousness"].keys()), is_personality=True)
-            
-            # Column 3: Extraversion & Agreeableness
-            draw_group(2, "Extraversion", list(agent.personality["Extraversion"].keys()), is_personality=True)
-            draw_group(2, "Agreeableness", list(agent.personality["Agreeableness"].keys()), is_personality=True)
-            
-            # Column 4: Neuroticism
-            draw_group(3, "Neuroticism", list(agent.personality["Neuroticism"].keys()), is_personality=True)
-            
-            # Column 5: Cognitive Profile (Aptitudes)
-            draw_group(4, "Cognitive Profile", ["Analytical Reasoning", "Verbal Abilities", "Spatial Abilities", "Working Memory", "Long-term Memory", "Secondary Cognitive"])
+        # Render category content.
+        old_clip = self.screen.get_clip()
+        self.screen.set_clip(content_rect)
+
+        if self.attr_modal_active_category == "Overview":
+            draw_attr_list(0, "Vitals", ["Health", "Happiness", "Energy", "Fertility", "Libido", "Looks", "Money"])
+            draw_attr_list(1, "Physical", ["Fitness", "Strength", "Agility", "Balance", "Coordination", "Reaction Time", "Flexibility", "Speed", "Power"])
+        elif self.attr_modal_active_category == "Mind":
+            # Mind page:
+            # Adults -> 3-column x 2-row sections (5 Big Five traits + Cognitive Profile).
+            # Infants -> cognitive profile + temperament.
+            if agent.age >= 3 and getattr(agent, "personality", None):
+                section_order = [
+                    ("Openness", "trait"),
+                    ("Conscientiousness", "trait"),
+                    ("Extraversion", "trait"),
+                    ("Agreeableness", "trait"),
+                    ("Neuroticism", "trait"),
+                    ("Cognitive Profile", "cognitive"),
+                ]
+                for idx, (title, kind) in enumerate(section_order):
+                    col_idx = idx % 3
+                    draw_section_header(col_idx, title)
+                    if kind == "trait":
+                        if title in agent.personality:
+                            draw_attr_card(col_idx, title, agent.get_personality_sum(title), max_val=120, show_bar=True)
+                            for facet in agent.personality.get(title, {}).keys():
+                                draw_attr_card(col_idx, facet, agent.get_attr_value(facet), max_val=20, show_bar=True)
+                    else:
+                        for attr in ["IQ"] + list(constants.APTITUDES):
+                            val = agent.get_attr_value(attr)
+                            draw_attr_card(col_idx, attr, val, max_val=constants.APTITUDE_MAX, show_bar=True)
+                    col_y[col_idx] += section_gap
+            else:
+                draw_attr_list(0, "Cognitive Profile", ["IQ"] + list(constants.APTITUDES), default_max=constants.APTITUDE_MAX)
+                temp_traits = list(agent.temperament.keys()) if getattr(agent, "temperament", None) else [t.replace("_", " ") for t in constants.TEMPERAMENT_TRAITS]
+                draw_attr_list(1, "Temperament", temp_traits, default_max=100)
+
+        self.screen.set_clip(old_clip)
+
+        # Scroll bounds and simple scrollbar.
+        content_height = max(col_y) + 8
+        self.attr_modal_scroll_max = max(0, int(content_height - content_rect.height))
+        if self.attr_modal_scroll_offset > self.attr_modal_scroll_max:
+            self.attr_modal_scroll_offset = self.attr_modal_scroll_max
+
+        if self.attr_modal_scroll_max > 0:
+            track = pygame.Rect(content_rect.right - 6, content_rect.y + 4, 3, content_rect.height - 8)
+            pygame.draw.rect(self.screen, (35, 35, 35), track, border_radius=2)
+            thumb_h = max(28, int(track.height * (content_rect.height / float(content_height))))
+            if self.attr_modal_scroll_max > 0:
+                thumb_y = track.y + int((self.attr_modal_scroll_offset / float(self.attr_modal_scroll_max)) * (track.height - thumb_h))
+            else:
+                thumb_y = track.y
+            thumb = pygame.Rect(track.x, thumb_y, track.width, thumb_h)
+            pygame.draw.rect(self.screen, cat_accent, thumb, border_radius=2)
 
     def _draw_dashed_rect(self, surface, color, rect, width=2, dash_len=5):
         """Helper to draw a dashed rectangle."""
@@ -1779,6 +1887,16 @@ class Renderer:
         self.academics_scroll_offset = max(
             0,
             min(self.academics_scroll_max, self.academics_scroll_offset + delta)
+        )
+
+    def _adjust_attr_modal_scroll(self, delta):
+        """Adjusts attributes modal scroll offset safely."""
+        if self.attr_modal_scroll_max <= 0:
+            self.attr_modal_scroll_offset = 0
+            return
+        self.attr_modal_scroll_offset = max(
+            0,
+            min(self.attr_modal_scroll_max, self.attr_modal_scroll_offset + delta)
         )
 
     def _draw_right_panel(self, sim_state):

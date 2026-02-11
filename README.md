@@ -2307,21 +2307,33 @@ The physical attributes system replaces traditional RPG-style stats with a scien
         *   **LogPanel Widget:**
             *   **Smart Wrapping:** Text is dynamically wrapped based on font size and panel width.
             *   **Collapsible History:** The log is structured hierarchically. Clicking year headers (e.g., `[-] Age 5`) toggles the `expanded` state in the history buffer, hiding/showing events for that year.
-        *   **Attribute Modal:**
-            *   **Detailed Columns:** Renders 5 columns: Vitals/Physical, Openness/Conscientiousness, Extraversion/Agreeableness, Neuroticism, and a Cognitive Profile column for the six aptitude domains.
-            *   **Economic Visibility:** The **Vitals** column now includes **Money** for all agents, allowing the player to verify the economic progress of NPCs (parents saving money, siblings earning wages).
-            *   **Pinning System:** Clicking any attribute card toggles it into the **Pinned Attributes** list on the Left Panel (Dashboard), allowing players to track specific stats (e.g., "Fitness") without reopening the modal.
-            *   **Visual Feedback:** Neuroticism traits use inverted color logic (High = Red, Low = Green), while positive traits use standard logic.
-            *   **Attribute Tooltips (Hover):** Every attribute card has a compact tooltip designed for fast readability.
-                *   **Structure:** `Attribute: Current Value` -> one-sentence definition -> `Affects:` factor list -> `Main drivers now:` summary.
-                *   **Consistency Goal:** Tooltips avoid formula dumps and use plain language so users can parse each card in a few seconds.
-                *   **Driver Summary:** `Main drivers now:` ranks the strongest currently active influences (max 2), and labels each as supportive, limiting, or neutral.
-                *   **Context Labels:** Driver lines include contextual hints where relevant (for example age phase, sleep penalty percent, low/mid/high band).
-                *   **Static Traits:** If an attribute is currently mostly inherited/static, the tooltip explicitly says so instead of repeating the current value.
-                *   **Physical Explainability:** Physical cards expose simulation-relevant dependencies (age curve, lean mass, coordination, fiber mix, etc.) in non-technical wording.
-                *   **Cognitive Explainability:** Aptitude cards expose the age-development contribution and temporary sleep-penalty pressure in the driver summary.
-                *   **Screen Safety:** Tooltip boxes are wrapped and clamped to stay inside the viewport.
-            *   **Hormone Trait Visibility:** `Genetic Fertility` and `Genetic Libido` are intentionally hidden as standalone cards; their inherited peak values are surfaced inside the `Fertility` and `Libido` tooltips.
+        *   **Advanced Attributes Modal:**
+            *   **Tabbed Interface:** Organized into "Overview" and "Mind" categories for better navigation
+            *   **Overview Tab:** Comprehensive agent profile including:
+                - **Identity Chips:** Gender, age, location, physical stats (height/weight/BMI), sexuality, appearance
+                - **Vitals Column:** Health, Happiness, Energy, Fertility, Libido, Looks, Money with progress bars
+                - **Physical Column:** Fitness, Strength, Agility, Balance, Coordination, Reaction Time, Flexibility, Speed, Power
+            *   **Mind Tab:** Psychological and cognitive profiling:
+                - **Adults (Age 3+):** Full Big Five personality display with traits and facets, plus Cognitive Profile (IQ + aptitudes)
+                - **Infants (Age 0-2):** Temperament traits display with 3×3 grid layout
+                - **Dynamic Content:** Automatically switches from temperament to personality at age 3 crystallization
+            *   **Interactive Features:**
+                - **Pinning System:** Click attribute cards to pin them to left panel dashboard (player only)
+                - **Advanced Tooltips:** Hover over any attribute card for detailed explanations including:
+                    - Current value and definition
+                    - Affecting factors and main drivers
+                    - Age-phase context and temporary effects
+                    - Physical attribute dependencies (genetics, coordination, etc.)
+                - **Smart Color Coding:** Progress bars use contextual colors (green for positive, red for negative, special handling for Neuroticism)
+            *   **Scrolling System:**
+                - **Smooth Scrolling:** Mouse wheel and drag-to-scroll functionality with inverted wheel control
+                - **Visual Feedback:** Scrollbar with proportional handle sizing and hover state changes
+                - **Content Management:** Automatic scroll bounds calculation and viewport clipping
+            *   **Layout Optimization:**
+                - **3-Column Grid:** Responsive card layout with automatic wrapping
+                - **Section Headers:** Clear visual separation between attribute categories
+                - **Family Tree Integration:** Quick-access button to view agent's family tree
+                - **Modal Management:** Close button and proper state cleanup on exit
             *   **Interactive Family Tree (Modal):**
                 *   **Topology:** Uses a **Layered Graph** approach with **Virtual Marriage Hubs** to handle complex relations (half-siblings, in-laws).
                 *   **Relationship Filtering:** The BFS traversal algorithm filters relationships to only include direct family connections (Father, Mother, Child, Spouse), preventing the merging of separate family trees that occurred through "In-Law" bridge relationships.
