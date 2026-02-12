@@ -21,7 +21,7 @@ class Event:
     id: str
     title: str
     description: str
-    trigger: Dict[str, Any]  # Contains min_age, max_age, etc.
+    trigger: Dict[str, Any]  # Contains min/max age in years or months.
     ui_type: str  # single_select, multi_select, etc.
     choices: List[Dict[str, Any]]  # List of choice dictionaries with text and effects
     once_per_lifetime: bool = False  # Whether event can only trigger once per game
@@ -235,6 +235,7 @@ class EventManager:
             Event object if an event should be triggered, None otherwise.
         """
         player_age = sim_state.player.age
+        player_age_months = sim_state.player.age_months
         
         # Check each event for age-based triggers
         for event in self.events:
@@ -243,15 +244,22 @@ class EventManager:
                 if event.id in sim_state.event_history:
                     continue
             
-            trigger = event.trigger
-            min_age = trigger.get("min_age", 0)
-            max_age = trigger.get("max_age", 999)
-            
-            # Check if player age falls within event's age range
-            if min_age <= player_age <= max_age:
+            trigger = event.trigger or {}
+            min_age = int(trigger.get("min_age", 0))
+            max_age = int(trigger.get("max_age", 999))
+            min_age_months = int(trigger.get("min_age_months", min_age * 12))
+            # Year-based max_age used player.age integer before; preserve equivalent month range.
+            max_age_months = int(trigger.get("max_age_months", ((max_age + 1) * 12) - 1))
+
+            # Check if player age in months falls within event's age window.
+            # Keep year value available for logs and compatibility.
+            if min_age_months <= player_age_months <= max_age_months:
                 if event.id == "EVT_IGCSE_SUBJECTS":
                     return self._build_igcse_event(event, sim_state)
-                logger.info(f"Event '{event.id}' triggered for player age {player_age}")
+                logger.info(
+                    f"Event '{event.id}' triggered for player age {player_age} "
+                    f"({player_age_months} months)"
+                )
                 return event
         
         # No matching events found

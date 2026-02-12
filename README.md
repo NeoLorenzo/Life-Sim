@@ -968,7 +968,7 @@ rel.add_modifier("New Friendship", 30, decay=5.0)  # Decays over time
 <details>
 <summary><strong>📅 events.py - Event System</strong></summary>
 
-The `events.py` module manages monthly event system, handling triggers, user choices, and effect application.
+The `events.py` module manages a comprehensive life event system, handling age-based triggers, user choices, and complex effect application including temperament development and educational decisions.
 
 ### Data Contract
 - **Inputs**: `SimState` and `events.json` event definitions
@@ -979,14 +979,41 @@ The `events.py` module manages monthly event system, handling triggers, user cho
 <summary><strong>Core Components</strong></summary>
 
 **`EventManager` Class**
-- **Singleton Controller**: Manages the lifecycle of events from loading to resolution.
-- **Trigger Evaluation**: Checks age, month, stats, and flags against event definitions.
-- **Deterministic RNG**: Uses a seeded random instance derived from the master seed + total months lived.
-- **Resolution Logic**: Applies complex effects (stats, flags, school subjects) based on user choices.
+- **Configuration Loader**: Parses and validates event definitions from `events.json`
+- **Trigger Evaluation**: Checks age in months, stats, and lifetime flags against event definitions
+- **Resolution Logic**: Applies complex effects (temperament, stats, school subjects) based on user choices
+- **IGCSE Builder**: Dynamically constructs educational events from school configuration
+- **Effect Application**: Handles temperament plasticity for infants and stat changes for all agents
 
-**`Event` & `EventInstance`**
-- **Event**: Static definition loaded from config (ID, title, requirements).
-- **EventInstance**: Runtime object representing an active event waiting for input.
+**`Event` Dataclass**
+- **Static Definition**: ID, title, description, trigger conditions, UI configuration
+- **Choice System**: Supports both single-select and multi-select paradigms
+- **Effect Structure**: Nested effects for temperament, stats, and academic subjects
+- **Lifetime Control**: `once_per_lifetime` flag prevents duplicate triggers
+
+</details>
+
+<details>
+<summary><strong>Event Categories & Features</strong></summary>
+
+**Infant Development Events (Ages 0-35 months)**
+- **35+ Unique Events**: One event per month of infant development
+- **Temperament Focus**: All infant events target the 9 temperament traits
+- **Plasticity Application**: Effects scaled by age-appropriate plasticity (100% → 60% → 30%)
+- **Narrative Richness**: Each event features descriptive storytelling with meaningful choices
+- **Examples**: "The Orange Mash of Destiny", "The Other Baby in the Glass", "The Sky Drums"
+
+**Educational Events**
+- **IGCSE Subject Selection**: Multi-select event for ages 14-15
+- **Dynamic Generation**: Choice list built from school curriculum configuration
+- **Validation Engine**: Enforces core requirements, elective limits, and science track rules
+- **Academic Effects**: Subject-specific performance impacts and happiness modifiers
+
+**Age-Based Triggering System**
+- **Month Precision**: Events trigger based on exact age in months
+- **Range Support**: `min_age_months` and `max_age_months` for flexible windows
+- **Year Compatibility**: Automatic conversion between year-based and month-based triggers
+- **Lifetime Tracking**: Prevents retriggering of once-per-lifetime events
 
 </details>
 
@@ -994,16 +1021,44 @@ The `events.py` module manages monthly event system, handling triggers, user cho
 <summary><strong>Event Mechanics</strong></summary>
 
 **Triggering Flow**
-1.  **Age Up**: Player advances the month.
-2.  **Evaluation**: `EventManager` scans valid events for the new age/month.
-3.  **Priority**: Highest priority event wins (if multiple qualify).
-4.  **Blocking**: Simulation pauses, and the UI displays the `EventModal`.
+1. **Monthly Evaluation**: `EventManager.evaluate_month()` scans all events after age advancement
+2. **Age Window Check**: Player's age in months compared against event trigger ranges
+3. **Lifetime Filter**: Skip events already triggered if `once_per_lifetime` is true
+4. **Special Handling**: IGCSE events built dynamically from school system configuration
+5. **Modal Display**: Highest priority qualifying event blocks simulation for user input
+
+**Effect Application System**
+- **Temperament Effects**: Applied to infants (ages 0-2) with plasticity scaling
+- **Stat Effects**: Direct health, happiness, and other attribute modifications
+- **Subject Effects**: Targeted academic performance changes via school system
+- **Validation**: IGCSE selections enforce curriculum requirements before application
+- **Logging**: All changes logged with before/after values for transparency
 
 **Configuration Schema**
-- **Triggers**: `min_age`, `max_age`, `month`, `required_flags`, `required_stats`.
-- **UI Types**: `single_select` (Radio) or `multi_select` (Checkbox).
-- **Constraints**: `min_selections`, `max_selections` (e.g., for Subject Selection).
-- **Effects**: Modify stats, relationships, add flags, or set special data (e.g., school subjects).
+```json
+{
+  "id": "EVT_INFANT_NEW_FOOD_01",
+  "title": "The Orange Mash of Destiny",
+  "description": "A glowing spoon of mashed carrot approaches...",
+  "trigger": {
+    "min_age_months": 1,
+    "max_age_months": 1
+  },
+  "ui_type": "single_select",
+  "once_per_lifetime": true,
+  "choices": [
+    {
+      "text": "Grab the spoon with both hands...",
+      "effects": {
+        "temperament": {
+          "Activity": 7,
+          "Intensity": 4
+        }
+      }
+    }
+  ]
+}
+```
 
 </details>
 </details>
@@ -2105,8 +2160,22 @@ The physical attributes system replaces traditional RPG-style stats with a scien
         *   **Shared Economy:** NPCs earn monthly salaries, accumulate wealth, and pay costs exactly like the player.
         *   **Automated Routine:** NPCs possess a simulated Action Point (AP) budget. A passive routine automatically "spends" their AP on mandatory obligations (Work, School, Sleep) to maintain a valid state for future AI decision-making.
     *   **Desynchronized Aging:** NPCs are initialized with randomized birth months (0-11 offset) to ensure biological updates occur naturally throughout the year rather than synchronizing perfectly with the player's birthday.
-*   **Formative Years Event System:**
-    *   **Monthly Triggers:** Deterministic event checks occur immediately after aging up, pausing the simulation for user input.
+*   **Comprehensive Life Event System:**
+    *   **35+ Infant Development Events:** One unique event per month from birth to age 3 (35 months), each targeting temperament development with narrative-rich storytelling
+    *   **Educational Decision Events:** IGCSE Subject Selection with dynamic curriculum integration and validation
+    *   **Age-Precision Triggering:** Events trigger based on exact age in months with flexible range support
+    *   **Multi-Modal Effect System:**
+        *   **Temperament Effects:** Infant events (ages 0-2) modify the 9 temperament traits with plasticity scaling
+        *   **Stat Effects:** Direct health, happiness, and attribute modifications for all ages
+        *   **Subject Effects:** Targeted academic performance changes through school system integration
+        *   **Plasticity Scaling:** Infant temperament effects scaled by age-appropriate plasticity (100% → 60% → 30%)
+    *   **Advanced UI Paradigms:**
+        *   **Single Choice:** Standard life scenarios with radio button selection
+        *   **Multi-Choice:** Complex selections like IGCSE Subject Selection (6-8 subjects with validation)
+        *   **Dynamic Generation:** IGCSE choices built from school curriculum configuration
+    *   **Lifetime Event Management:** Once-per-lifetime tracking prevents duplicate triggers
+    *   **Configuration-Driven Content:** All events fully defined in `events.json` with complex triggers and effects
+    *   **Enhanced Logging:** Detailed before/after value tracking for all effect applications
 *   **Science-Backed Physical Attributes System:**
     *   **Genetic Base Attributes:** Set once during agent initialization
         *   **Body Frame Size:** 0.8 (small) to 1.2 (large) - affects leverage and strength potential
@@ -2138,20 +2207,6 @@ The physical attributes system replaces traditional RPG-style stats with a scien
     *   **Comprehensive UI Integration:** All player-facing attributes are visible in the attributes modal with progress bars, color coding, and contextual hover tooltips
     *   **Sport-Ready Foundation:** Attribute system designed to support realistic sport performance calculations
     *   **Configuration-Driven Ranges:** All attributes use configurable min/max values (default 10-90)
-    *   **Configurable Content:** Events are fully defined in `config.json`, supporting complex triggers (Age, Month, Stats, Flags).
-    *   **Flexible UI:**
-        *   **Single Choice:** Standard life scenarios (e.g., "First Words").
-        *   **Multi-Choice:** Complex selections like **IGCSE Subject Selection** (Choose 6-8 subjects).
-        *   **Infant-Specific Events:** Age-targeted events with temperament effects (e.g., "Strange Noise" for ages 0-2)
-    *   **Enhanced Effect System:** 
-        *   **Stats Effects:** Traditional modifications to Happiness, Health, etc.
-        *   **Temperament Effects:** Age 0-2 events can modify infant temperament traits directly
-        *   **Plasticity Scaling:** All temperament effects are multiplied by the agent's current plasticity value (100% → 60% → 30% → 0%)
-        *   **Range Clamping:** Temperament values automatically clamped to 0-100 range with decimal precision
-        *   **Developmental Impact:** Early choices shape personality formation through the crystallization process
-        *   **Logging Integration:** Detailed logging of temperament changes with before/after values
-        *   **Example Event:** "Strange Noise" (ages 0-2) offers choices like "Cry loudly" (+Intensity, -Mood) or "Investigate" (+Approach_Withdrawal)
-    *   **History Tracking:** Prevents "Once per Lifetime" events from repeating and enables chain events via flags.
 
 </details>
 
