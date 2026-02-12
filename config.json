@@ -3,6 +3,29 @@
     "development": {
         "disable_events": false
     },
+    "npc_brain": {
+        "enabled": true,
+        "events_enabled": true,
+        "infant_event_backfill_enabled": true,
+        "ap_enabled": false,
+        "player_mimic_enabled": false,
+        "debug_logging": false,
+        "infant_event_backfill_debug_logging": false,
+        "player_mimic": {
+            "ema_beta": 0.15,
+            "alpha_default_player": 0.0,
+            "alpha_default_npc": 0.1,
+            "alpha_by_relation": {
+                "Mother": 0.35,
+                "Father": 0.35,
+                "Sibling": 0.3,
+                "Spouse": 0.3,
+                "Classmate": 0.2,
+                "Acquaintance": 0.15,
+                "Rival": 0.05
+            }
+        }
+    },
     "logging": {
         "level": "DEBUG",
         "save_to_file": true

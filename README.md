@@ -17,6 +17,7 @@
 - [Simulation Flow](#simulation-flow)
   - [Monthly Cycle](#monthly-simulation-cycle)
   - [State Mutation Contracts](#state-mutation-contracts)
+- [NPC Brain System](#npc-brain-system)
 - [Current Features](#-current-features-mvp-05)
 - [Science-Backed Physical Attributes System](#-science-backed-physical-attributes-system)
 - [Cognitive Aptitude System](#-cognitive-aptitude-system)
@@ -186,6 +187,7 @@ The simulation implements a sophisticated deterministic backfill system that all
 - **Temporal Parity**: Agents spawned at age 15 should be indistinguishable from agents simulated from birth to age 15
 - **Deterministic Reconstruction**: Same world seed + agent UID = identical developmental trajectory
 - **Developmental Continuity**: Preserves the scientific integrity of the temperament-to-personality pipeline
+- **Month-Precision Fidelity**: Backfill operates on `age_months` to avoid year-rounding precision loss and trigger-window drift
 
 **Key Methods**
 
@@ -252,8 +254,10 @@ The simulation implements a sophisticated deterministic backfill system that all
      - Applies latent-driven trait targets with individual facet variations
      - Maintains age-appropriate plasticity scaling
   5. **State Tracking**: Sets `_backfilled_to_age` and `_backfilled_to_age_months` to prevent duplicate processing
+  6. **Optional Infancy Callback Hook**: `infant_month_callback(agent, age_month_cursor)` fires each infant month to support deterministic month-locked replay systems (used by NPC infancy event backfill)
 - **Integration Points**:
   - **SimState._create_npc()**: Automatic backfill for NPCs with `requested_age_months > 0`
+  - **SimState._npc_infant_backfill_callback()**: Optional month-by-month infancy event replay during backfill (flag-gated)
   - **SimState._generate_lineage_structure()**: Backfill for player character when target_age > 0
   - **World Seed Propagation**: Uses `self.world_seed` for global consistency
 
@@ -290,6 +294,7 @@ The simulation implements a sophisticated deterministic backfill system that all
 - **Deterministic IDs**: Assigns reproducible UIDs via `SimState._next_uid()`
 - **Seamless Integration**: Backfilled NPCs immediately compatible with existing systems
 - **Age Verification**: Ensures requested age matches agent's actual age after backfill
+- **Infancy Event Replay Hook**: When enabled, backfill invokes a per-month callback that replays infant events through `EventManager` using the NPC brain and per-agent event history
 
 **Family Generation System** (`sim_state.py`)
 - **Player Backfill**: When `target_age > 0`, player character undergoes backfill
@@ -489,6 +494,117 @@ The main simulation loop that advances time by one month:
 </details>
 
 </details>
+
+## NPC Brain System
+
+The NPC brain system is a deterministic decision layer designed to maximize behavioral parity with the player-facing simulation while preserving reproducibility.
+
+### Design Goals
+
+- **Strict parity first**: NPCs should use the same world rules, timing model, event definitions, and effect pipelines as the player.
+- **Deterministic replay**: same world seed + same UID + same simulation timeline should produce the same NPC decisions.
+- **Incremental rollout safety**: brain behavior is feature-flagged and defaults conservative/off in `config.json`.
+- **No hidden simulation tracks**: NPC event choices resolve through the same `EventManager` effect application contracts used for player events.
+
+### Core Architecture
+
+- **Decision primitives** (`life_sim/simulation/brain.py`)
+  - Canonical decision features and default base weights.
+  - Utility-style option scoring.
+  - Deterministic decision RNG via keyed domains and stable seed inputs.
+- **Per-agent brain profile** (`life_sim/simulation/sim_state.py`)
+  - Created in `_build_brain_profile(uid, is_player=False)`.
+  - Includes:
+    - `drives`
+    - `decision_style` (temperature/inertia/noise scaffold)
+    - `base_weights`
+    - `player_mimic` config payload
+    - lightweight history counters.
+- **Player-style mimic scaffold**
+  - `SimState.player_style_tracker` tracks an EMA of observed player choice features.
+  - `get_effective_brain_weights()` blends base NPC weights with player style weights using configured alpha logic.
+  - Relation-aware alpha overrides are supported through `alpha_by_relation`.
+- **Agent-scoped event infrastructure**
+  - Event history is tracked per-agent through `sim_state.agent_event_history[uid]`.
+  - Event evaluation and resolution are agent-scoped (`evaluate_month_for_agent`, `apply_resolution_to_agent`) while player wrappers remain available for UI flow compatibility.
+
+### Deterministic Event Decisioning
+
+- `_choose_indices_with_brain(...)` in `life_sim/simulation/events.py` is the central chooser for NPC event decisions.
+- Determinism is controlled by:
+  - `world_seed`
+  - `agent.uid`
+  - decision age-month cursor
+  - decision domain string (for separation of runtime and replay decision streams)
+  - event ID decision key.
+- IGCSE subject selection remains constraint-safe under brain selection via explicit validation and deterministic fallback selection when needed.
+
+### Strict Parity Policy (Current)
+
+- **Biological/economic parity**: Player and NPCs both run the same monthly state mutation path in `logic.process_turn()` and `_process_agent_monthly(...)`.
+- **Event parity**: both use the same `events.json` definitions and the same effect application code path in `EventManager`.
+- **AP parity (intentionally strict)**:
+  - `_simulate_npc_routine(...)` currently delegates to `_simulate_npc_routine_legacy(...)`.
+  - No NPC-only discretionary AP behavior is active in the live loop yet.
+  - `npc_brain.ap_enabled` exists as a rollout/config placeholder but discretionary AP remains intentionally disabled to avoid capability mismatch with player controls.
+
+### Infant Event Backfill Replay (High-Fidelity NPC Spawn Parity)
+
+This session added deterministic infancy-only event replay during NPC backfill so late-spawned classmates/NPCs do not skip ages 0-35 month event exposure.
+
+#### Why this exists
+
+- NPCs spawned directly at age >= 3 previously missed all infant event choices.
+- That created personality divergence versus continuously simulated agents because infancy events shape temperament before crystallization.
+- Goal: preserve the same developmental pressure for spawned-at-age NPCs without opening player modal flow during backfill.
+
+#### Implementation Path
+
+1. **Month-precision backfill callback** (`life_sim/simulation/agent.py`)
+   - `Agent.backfill_to_age_months(..., infant_month_callback=None)` now exposes a per-month callback during the infancy loop.
+   - Callback receives a 1-based age-month cursor (`1..36` loop context, replay bounded to infant events at months `1..35`).
+2. **Backfill wiring in SimState** (`life_sim/simulation/sim_state.py`)
+   - `_create_npc(...)` conditionally passes `_npc_infant_backfill_callback` into `backfill_to_age_months(...)` when feature flags are enabled.
+   - `agent_event_history` is initialized early in `SimState.__init__` so backfill replay has a valid per-agent store even during family generation.
+   - `_get_event_manager_for_backfill()` lazily instantiates a dedicated `EventManager` for this replay path.
+3. **Explicit month-cursor replay APIs** (`life_sim/simulation/events.py`)
+   - `evaluate_infant_event_for_agent_at_month(...)`
+   - `resolve_infant_event_for_agent_at_month(...)`
+   - `replay_infant_events_for_agent(...)` helper for full month sweeps.
+   - Replay decisions use separate RNG domain (`event_choice_backfill`) to avoid accidental coupling with live-turn event streams.
+4. **Effect application parity**
+   - Replay uses `apply_resolution_to_agent(..., emit_output=False)` so the exact same effect code mutates temperament/stats/history.
+   - Player modal state (`pending_event`) is not hijacked during NPC replay.
+
+#### Behavioral Contract
+
+- Backfill replay is **infancy-only** and replays at most month `1..35`.
+- Replay is **deterministic** under fixed seed and UID.
+- Replay is **flag-gated** and off by default.
+- Replay writes to per-agent event history, preserving once-per-lifetime semantics.
+
+### Config Flags (`config.json`)
+
+- `npc_brain.enabled`: master switch for NPC brain subsystems.
+- `npc_brain.events_enabled`: enables NPC event auto-resolution and replay-capable pathways.
+- `npc_brain.infant_event_backfill_enabled`: enables deterministic infancy event replay during `_create_npc()` backfill.
+- `npc_brain.ap_enabled`: reserved for discretionary NPC AP rollout; strict-parity mode currently keeps legacy AP routine active.
+- `npc_brain.player_mimic_enabled`: enables blending player-style tracker weights into effective NPC weights.
+- `npc_brain.debug_logging`: baseline debug logging for NPC brain event/AP flows.
+- `npc_brain.infant_event_backfill_debug_logging`: additional debug logging specific to infancy backfill replay.
+- `npc_brain.player_mimic.ema_beta`: EMA smoothing parameter for player-style tracker updates.
+- `npc_brain.player_mimic.alpha_default_player`: default mimic alpha for player profile.
+- `npc_brain.player_mimic.alpha_default_npc`: default mimic alpha for NPC profiles.
+- `npc_brain.player_mimic.alpha_by_relation`: relation-specific mimic alpha overrides.
+
+### Validation and Regression Coverage
+
+- Phase-based test suites validate deterministic behavior and backward compatibility.
+- Dedicated infancy replay tests validate:
+  - replay-on behavior (history populated with infant events),
+  - replay-off behavior (no infant replay history injection),
+  - seed determinism across separate simulation instances.
+- Existing NPC event autoresolve tests and rollout tests continue to pass with the infancy replay integration.
 
 <details>
 <summary><strong>Agent Processing Functions</strong></summary>

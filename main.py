@@ -77,6 +77,12 @@ def main():
                         
                         # Update background immediately after turn processing
                         renderer.background_manager.update(sim_state)
+
+                        # Phase 6: Auto-resolve NPC events using brain policy.
+                        if not config.get("development", {}).get("disable_events", False):
+                            npc_events = event_manager.auto_resolve_npc_events(sim_state)
+                            if npc_events > 0:
+                                logger.info(f"Auto-resolved {npc_events} NPC events")
                         
                         # Second: Check if player is alive
                         if sim_state.player.is_alive:

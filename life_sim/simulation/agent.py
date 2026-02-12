@@ -7,9 +7,11 @@ import logging
 import math
 import random
 import uuid
+import copy
 from .. import constants
 from . import school, affinity
 from .social import Relationship # Import new class
+from .brain import CANONICAL_FEATURE_KEYS, DEFAULT_BASE_WEIGHTS
 
 class Agent:
     """
@@ -23,6 +25,40 @@ class Agent:
         self.logger = logging.getLogger(__name__)
         self.uid = kwargs.get("uid", str(uuid.uuid4()))
         self.is_player = kwargs.get("is_player", False)
+        self.brain = copy.deepcopy(
+            kwargs.get(
+                "brain",
+                {
+                    "version": "phase2_scaffold_v1",
+                    "enabled": False,
+                    "events_enabled": False,
+                    "ap_enabled": False,
+                    "player_mimic_enabled": False,
+                    "drives": {
+                        "comfort": 0.5,
+                        "achievement": 0.5,
+                        "social": 0.5,
+                        "risk_avoidance": 0.5,
+                        "novelty": 0.5,
+                        "discipline": 0.5,
+                    },
+                    "decision_style": {
+                        "temperature": 1.0,
+                        "inertia": 0.5,
+                        "noise": 0.1,
+                    },
+                    "player_mimic": {
+                        "alpha": 0.0,
+                    },
+                    "base_weights": dict(DEFAULT_BASE_WEIGHTS),
+                    "player_style_weights": {k: 0.0 for k in CANONICAL_FEATURE_KEYS},
+                    "history": {
+                        "event_decisions": 0,
+                        "ap_decisions": 0,
+                    },
+                },
+            )
+        )
         
         # Form attribute (single character string, default: None)
         self.form = kwargs.get("form", None)
@@ -1024,7 +1060,7 @@ class Agent:
                 updated = float(current) + mean_pull + random_walk
                 self.personality[trait_name][facet_name] = max(1, min(20, int(round(updated))))
 
-    def backfill_to_age_months(self, target_age_months, world_seed=0):
+    def backfill_to_age_months(self, target_age_months, world_seed=0, infant_month_callback=None):
         """
         Deterministically reconstructs developmental history from birth to target age in months.
         Used for late-spawned agents so they remain comparable to continuously simulated agents.
@@ -1054,6 +1090,9 @@ class Agent:
                 baseline_pull = (constants.TEMPERAMENT_DEFAULT_VALUE - current) * 0.03 * self.plasticity
                 updated = max(0.0, min(100.0, current + shock + baseline_pull))
                 self.temperament[trait_name] = round(updated, 1)
+            if callable(infant_month_callback):
+                # Callback receives 1-based age month cursor to align with event triggers.
+                infant_month_callback(self, month + 1)
 
         if target_age_months >= 36:
             infant_snapshot = dict(self.temperament)

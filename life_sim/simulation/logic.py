@@ -48,7 +48,7 @@ def process_turn(sim_state: SimState):
             continue
         
         _process_agent_monthly(sim_state, npc)
-        _simulate_npc_routine(npc) # Auto-spend AP for mandatory tasks
+        _simulate_npc_routine(sim_state, npc) # Auto-spend AP with brain policy when enabled
         
         # NPC Death Notification
         if not npc.is_alive:
@@ -207,10 +207,9 @@ def _process_agent_monthly(sim_state, agent):
             sim_state.add_log("You have died.", constants.COLOR_DEATH)
             logger.info(f"Player died at age {agent.age}")
 
-def _simulate_npc_routine(npc):
+def _simulate_npc_routine_legacy(npc):
     """
-    Simulates the NPC spending AP on mandatory tasks.
-    This ensures their state (AP Used) is valid for future AI logic.
+    Legacy NPC AP routine.
     """
     # 1. Sleep (Maintenance)
     npc.ap_used += npc.ap_sleep
@@ -229,6 +228,15 @@ def _simulate_npc_routine(npc):
     # 3. Free Time (Abstracted)
     # In the future, AI will spend 'npc.free_ap'.
     # For now, we leave it as 'Free' or assume they spent it on leisure.
+
+
+def _simulate_npc_routine(sim_state, npc):
+    """
+    Strict parity mode:
+    NPC AP routine mirrors currently implemented player AP behavior and does not
+    run internal-only discretionary actions until player discretionary AP exists.
+    """
+    _simulate_npc_routine_legacy(npc)
 
 def work(sim_state: SimState):
     """Agent performs overtime if employed."""

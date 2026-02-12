@@ -10,6 +10,13 @@ from .. import constants
 from . import school, affinity
 from .social import Relationship # Import new class
 from .agent import Agent
+from .brain import (
+    CANONICAL_FEATURE_KEYS,
+    DEFAULT_BASE_WEIGHTS,
+    default_player_style_tracker,
+    update_player_style_tracker,
+    blend_weights,
+)
 
 class SimState:
     """
@@ -29,6 +36,9 @@ class SimState:
         self.year = constants.START_YEAR
         self.world_seed = random.randint(0, 2_000_000_000)
         self._uid_counter = 0
+        self.player_style_tracker = self._init_player_style_tracker()
+        self._event_manager_backfill = None
+        self.agent_event_history = {}
         
         # Generate Family & Player (Order matters for genetics)
         self.player = self._setup_family_and_player()
@@ -42,6 +52,9 @@ class SimState:
         # Event System
         self.pending_event = None  # Active event instance
         self.event_history = []     # IDs of past events
+        self.agent_event_history.setdefault(self.player.uid, [])
+        for npc_uid in self.npcs.keys():
+            self.agent_event_history.setdefault(npc_uid, [])
         self.flags = set()          # String flags for conditional logic
         
         # --- Narrative Generation (Restored) ---
@@ -408,16 +421,144 @@ class SimState:
         gap = int(random.gauss(mu, sigma))
         return max(min_rep, min(max_rep, gap))
 
+    def _build_brain_profile(self, uid, is_player=False):
+        """
+        Builds a deterministic brain profile scaffold for an agent.
+        Phase 2 wires data only; decision usage lands in later phases.
+        """
+        cfg = self.config.get("npc_brain", {}) or {}
+        rng = random.Random(f"{self.world_seed}|{uid}|brain-profile-v1")
+
+        def clamp01(v):
+            return max(0.0, min(1.0, float(v)))
+
+        def draw_drive(mu=0.5, sigma=0.16):
+            return round(clamp01(rng.gauss(mu, sigma)), 4)
+
+        mimic_cfg = cfg.get("player_mimic", {}) or {}
+        alpha_default_npc = float(mimic_cfg.get("alpha_default_npc", 0.10))
+        alpha_default_player = float(mimic_cfg.get("alpha_default_player", 0.0))
+        alpha_default = alpha_default_player if is_player else alpha_default_npc
+        if not bool(cfg.get("player_mimic_enabled", False)):
+            alpha_default = 0.0
+
+        return {
+            "version": "phase2_scaffold_v1",
+            "enabled": bool(cfg.get("enabled", False)),
+            "events_enabled": bool(cfg.get("events_enabled", False)),
+            "ap_enabled": bool(cfg.get("ap_enabled", False)),
+            "player_mimic_enabled": bool(cfg.get("player_mimic_enabled", False)),
+            "drives": {
+                "comfort": draw_drive(),
+                "achievement": draw_drive(),
+                "social": draw_drive(),
+                "risk_avoidance": draw_drive(),
+                "novelty": draw_drive(),
+                "discipline": draw_drive(),
+            },
+            "decision_style": {
+                "temperature": round(max(0.05, rng.uniform(0.7, 1.3)), 4),
+                "inertia": round(clamp01(rng.uniform(0.25, 0.75)), 4),
+                "noise": round(clamp01(rng.uniform(0.02, 0.2)), 4),
+            },
+            "player_mimic": {
+                "alpha": round(clamp01(alpha_default), 4),
+                "alpha_by_relation": dict(mimic_cfg.get("alpha_by_relation", {}) or {}),
+            },
+            "base_weights": dict(DEFAULT_BASE_WEIGHTS),
+            "player_style_weights": {k: 0.0 for k in CANONICAL_FEATURE_KEYS},
+            "history": {
+                "event_decisions": 0,
+                "ap_decisions": 0,
+            },
+        }
+
+    def _init_player_style_tracker(self):
+        cfg = self.config.get("npc_brain", {}) or {}
+        mimic_cfg = cfg.get("player_mimic", {}) or {}
+        beta = float(mimic_cfg.get("ema_beta", 0.15))
+        return default_player_style_tracker(beta=beta)
+
+    def _update_player_style_tracker(self, observed_features):
+        self.player_style_tracker = update_player_style_tracker(
+            self.player_style_tracker,
+            observed_features or {},
+        )
+        return self.player_style_tracker
+
+    def _get_mimic_alpha(self, brain_profile, relationship_type=None):
+        cfg = self.config.get("npc_brain", {}) or {}
+        if not bool(cfg.get("player_mimic_enabled", False)):
+            return 0.0
+        if not isinstance(brain_profile, dict):
+            return 0.0
+        mimic = brain_profile.get("player_mimic", {}) or {}
+        alpha = float(mimic.get("alpha", 0.0))
+        rel_map = mimic.get("alpha_by_relation", {}) or {}
+        if relationship_type is not None and relationship_type in rel_map:
+            alpha = float(rel_map.get(relationship_type, alpha))
+        return max(0.0, min(1.0, alpha))
+
+    def get_effective_brain_weights(self, agent, relationship_type=None):
+        """
+        Returns blended effective weights for an agent using current player style tracker.
+        """
+        brain = getattr(agent, "brain", {}) or {}
+        base = brain.get("base_weights", {}) or {}
+        style = (self.player_style_tracker or {}).get("weights", {}) or {}
+        alpha = self._get_mimic_alpha(brain, relationship_type=relationship_type)
+        return blend_weights(base, style, alpha)
+
     def _create_npc(self, **kwargs):
         """Helper to instantiate, register, and return an NPC."""
         if "uid" not in kwargs:
             kwargs["uid"] = self._next_uid("npc")
+        if "brain" not in kwargs:
+            kwargs["brain"] = self._build_brain_profile(kwargs["uid"], is_player=False)
         agent = Agent(self.config["agent"], is_player=False, **kwargs)
+        if hasattr(self, "agent_event_history") and isinstance(self.agent_event_history, dict):
+            self.agent_event_history.setdefault(agent.uid, [])
         requested_age_months = int(kwargs.get("age_months", agent.age_months))
         if requested_age_months > 0:
-            agent.backfill_to_age_months(requested_age_months, world_seed=self.world_seed)
+            cfg = self.config.get("npc_brain", {}) or {}
+            replay_enabled = (
+                bool(cfg.get("enabled", False))
+                and bool(cfg.get("events_enabled", False))
+                and bool(cfg.get("infant_event_backfill_enabled", False))
+            )
+            callback = self._npc_infant_backfill_callback if replay_enabled else None
+            agent.backfill_to_age_months(
+                requested_age_months,
+                world_seed=self.world_seed,
+                infant_month_callback=callback,
+            )
         self.npcs[agent.uid] = agent
         return agent
+
+    def _get_event_manager_for_backfill(self):
+        """
+        Lazily construct event manager used by deterministic NPC infancy replay.
+        """
+        if self._event_manager_backfill is None:
+            from .events import EventManager
+
+            self._event_manager_backfill = EventManager(self.config)
+        return self._event_manager_backfill
+
+    def _npc_infant_backfill_callback(self, agent, age_months):
+        """
+        Per-month callback invoked by agent backfill to replay infancy events with NPC brain.
+        """
+        if not hasattr(self, "agent_event_history") or not isinstance(self.agent_event_history, dict):
+            self.agent_event_history = {}
+        history_store = self.agent_event_history.setdefault(getattr(agent, "uid", "unknown-agent"), [])
+        manager = self._get_event_manager_for_backfill()
+        manager.resolve_infant_event_for_agent_at_month(
+            self,
+            agent,
+            int(age_months),
+            history_store=history_store,
+        )
 
     def _assign_job(self, npc):
         """Assigns a random suitable job to an NPC."""
@@ -555,8 +696,10 @@ class SimState:
         
         # 1. Focus Child (Player or NPC)
         if is_player:
+            player_uid = self._next_uid("player")
             child = Agent(agent_conf, is_player=True, parents=(father, mother),
-                          uid=self._next_uid("player"),
+                          uid=player_uid,
+                          brain=self._build_brain_profile(player_uid, is_player=True),
                           age=target_age, last_name=last_name, city=city, country=country,
                           time_config=self.config.get("time_management", {}))
             if target_age > 0:
