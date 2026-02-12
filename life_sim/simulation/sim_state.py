@@ -28,6 +28,7 @@ class SimState:
         self.birth_month_index = self.month_index # Store birth month for age calculation
         self.year = constants.START_YEAR
         self.world_seed = random.randint(0, 2_000_000_000)
+        self._uid_counter = 0
         
         # Generate Family & Player (Order matters for genetics)
         self.player = self._setup_family_and_player()
@@ -392,6 +393,11 @@ class SimState:
         """Backward compatibility for logic/renderer until refactor is complete."""
         return self.player
 
+    def _next_uid(self, prefix="agent"):
+        """Deterministic monotonic ID to keep seeded simulations reproducible."""
+        self._uid_counter += 1
+        return f"{prefix}-{self._uid_counter:08d}"
+
     def _get_reproductive_gap(self, repro_conf):
         """Calculates a realistic generation gap using Gaussian distribution."""
         min_rep = repro_conf.get("min_reproductive_age", 16)
@@ -402,224 +408,16 @@ class SimState:
         gap = int(random.gauss(mu, sigma))
         return max(min_rep, min(max_rep, gap))
 
-    def _setup_family_and_player(self):
-        """
-        Procedurally generates the family tree.
-        Algorithm: Backwards Age Calculation -> Forwards Entity Generation.
-        """
-        agent_conf = self.config["agent"]
-        repro_conf = self.config.get("reproduction", {})
-        
-        # 1. Determine Ages (Backwards from Player)
-        player_age = agent_conf.get("initial_age", 0)
-        
-        # Parents
-        father_age = player_age + self._get_reproductive_gap(repro_conf)
-        mother_age = player_age + self._get_reproductive_gap(repro_conf)
-        
-        # Grandparents
-        p_gpa_age = father_age + self._get_reproductive_gap(repro_conf)
-        p_gma_age = father_age + self._get_reproductive_gap(repro_conf)
-        m_gpa_age = mother_age + self._get_reproductive_gap(repro_conf)
-        m_gma_age = mother_age + self._get_reproductive_gap(repro_conf)
-        
-        # Shared Bio Data
-        last_name = random.choice(agent_conf["bio"].get("last_names", ["Doe"]))
-        country = random.choice(agent_conf["bio"].get("countries", ["Unknown"]))
-        city = random.choice(agent_conf["bio"].get("cities", ["Unknown"]))
-        
-        # --- Generation 2: Grandparents (Lineage Heads) ---
-        # Paternal
-        p_gpa = self._create_npc(age=p_gpa_age, gender="Male", last_name=last_name, city=city, country=country)
-        p_gma = self._create_npc(age=p_gma_age, gender="Female", last_name=last_name, city=city, country=country)
-        
-        # Affinity Calculation
-        aff_p = affinity.calculate_affinity(p_gpa, p_gma)
-        # Base Marriage (+40) + Affinity + History Variance (+/- 20)
-        score_p = 40 + aff_p + random.randint(-20, 20)
-        self._link_agents(p_gpa, p_gma, "Spouse", "Spouse", score_p)
-        
-        # Maternal
-        # Maternal side often has different last name (Grandfather's name)
-        mat_last_name = random.choice(agent_conf["bio"].get("last_names", ["Smith"]))
-        m_gpa = self._create_npc(age=m_gpa_age, gender="Male", last_name=mat_last_name, city=city, country=country)
-        m_gma = self._create_npc(age=m_gma_age, gender="Female", last_name=mat_last_name, city=city, country=country)
-        
-        aff_m = affinity.calculate_affinity(m_gpa, m_gma)
-        score_m = 40 + aff_m + random.randint(-20, 20)
-        self._link_agents(m_gpa, m_gma, "Spouse", "Spouse", score_m)
-        
-        # --- Generation 1: Parents & Aunts/Uncles ---
-        
-        # 1. Father (Guaranteed Child of Paternal GPs)
-        father = self._create_npc(age=father_age, gender="Male", parents=(p_gpa, p_gma), 
-                                  last_name=last_name, city=city, country=country)
-        self._assign_job(father)
-        self._link_parent_child(p_gpa, p_gma, father)
-
-        # 2. Mother (Guaranteed Child of Maternal GPs)
-        mother = self._create_npc(age=mother_age, gender="Female", parents=(m_gpa, m_gma),
-                                  last_name=mat_last_name, city=city, country=country)
-        self._assign_job(mother)
-        self._link_parent_child(m_gpa, m_gma, mother)
-
-        # 3. Link Parents
-        aff_parents = affinity.calculate_affinity(father, mother)
-        score_parents = 40 + aff_parents + random.randint(-20, 20)
-        self._link_agents(father, mother, "Spouse", "Spouse", score_parents)
-
-        # 4. Paternal Aunts/Uncles (Siblings of Father)
-        # Link them to Mother as In-Laws
-        self._generate_siblings_for(father, p_gpa, p_gma, repro_conf, city, country, last_name, in_law=mother)
-        
-        # 5. Maternal Aunts/Uncles (Siblings of Mother)
-        # Link them to Father as In-Laws
-        self._generate_siblings_for(mother, m_gpa, m_gma, repro_conf, city, country, mat_last_name, in_law=father)
-
-        # --- Bridge Grandparents ---
-        # Formula: Civil_Base (+10) + (Parent_Marriage_Score * 0.5)
-        gp_bridge_score = 10 + (score_parents * 0.5)
-        
-        # Paternal GPA <-> Maternal GPA/GMA
-        self._link_agents(p_gpa, m_gpa, "In-Law", "In-Law", gp_bridge_score)
-        self._link_agents(p_gpa, m_gma, "In-Law", "In-Law", gp_bridge_score)
-        # Paternal GMA <-> Maternal GPA/GMA
-        self._link_agents(p_gma, m_gpa, "In-Law", "In-Law", gp_bridge_score)
-        self._link_agents(p_gma, m_gma, "In-Law", "In-Law", gp_bridge_score)
-
-        # --- Generation 0: Player & Siblings ---
-        
-        # 1. Player (Guaranteed Child)
-        player = Agent(agent_conf, is_player=True, parents=(father, mother),
-                       age=player_age, last_name=last_name, city=city, country=country,
-                       time_config=self.config.get("time_management", {}))
-        self._link_parent_child(father, mother, player)
-        
-        # 2. Player Siblings
-        # Note: Player takes the "Guaranteed" slot. Extra siblings start at base probability.
-        self._generate_siblings_for(player, father, mother, repro_conf, city, country, last_name, is_player_gen=True)
-        
-        return player
-
     def _create_npc(self, **kwargs):
         """Helper to instantiate, register, and return an NPC."""
+        if "uid" not in kwargs:
+            kwargs["uid"] = self._next_uid("npc")
         agent = Agent(self.config["agent"], is_player=False, **kwargs)
-        requested_age = int(kwargs.get("age", agent.age))
-        if requested_age > 0:
-            agent.backfill_to_age(requested_age, world_seed=self.world_seed)
+        requested_age_months = int(kwargs.get("age_months", agent.age_months))
+        if requested_age_months > 0:
+            agent.backfill_to_age_months(requested_age_months, world_seed=self.world_seed)
         self.npcs[agent.uid] = agent
         return agent
-
-    def _link_parent_child(self, father, mother, child):
-        """Links a child to both parents."""
-        # Biological Imperative (+50) + Affinity
-        # Note: We calculate affinity separately for Father and Mother
-        
-        aff_f = affinity.calculate_affinity(father, child)
-        score_f = 50 + aff_f
-        
-        aff_m = affinity.calculate_affinity(mother, child)
-        score_m = 50 + aff_m
-        
-        self._link_agents(child, father, "Father", "Child", score_f)
-        self._link_agents(child, mother, "Mother", "Child", score_m)
-
-    def _generate_siblings_for(self, focal_child, father, mother, repro_conf, city, country, last_name, is_player_gen=False, in_law=None):
-        """
-        Generates siblings for the focal_child based on probability decay.
-        Also handles Cousin generation if the sibling is an adult (Aunt/Uncle).
-        """
-        prob = repro_conf.get("sibling_prob_base", 0.25)
-        decay = repro_conf.get("sibling_prob_decay", 0.5)
-        min_rep = repro_conf.get("min_reproductive_age", 16)
-        
-        # We are generating the "Next" sibling, so we loop until RNG fails
-        while random.random() < prob:
-            # Determine Age
-            # Sibling must be a valid child of the parents.
-            # Parent Age is fixed. Sibling Age = Parent Age - Gap.
-            # We use the mother's age as the constraint.
-            gap = self._get_reproductive_gap(repro_conf)
-            sib_age = mother.age - gap
-            
-            # Sanity check: Age must be >= 0
-            if sib_age < 0:
-                prob *= decay
-                continue
-                
-            # Create Sibling
-            sib = self._create_npc(age=sib_age, parents=(father, mother),
-                                   last_name=last_name, city=city, country=country)
-            self._link_parent_child(father, mother, sib)
-            
-            # Link to Focal Child (Sibling <-> Sibling)
-            aff_sib = affinity.calculate_affinity(focal_child, sib)
-            # Sibling Base (+20) + Affinity
-            score_sib = 20 + aff_sib
-            self._link_agents(focal_child, sib, "Sibling", "Sibling", score_sib)
-
-            # Link to In-Law (Sibling-in-Law)
-            if in_law:
-                aff_il = affinity.calculate_affinity(sib, in_law)
-                # In-Law Base (0) + Affinity
-                type_sib = "Brother-in-Law" if sib.gender == "Male" else "Sister-in-Law"
-                type_il = "Brother-in-Law" if in_law.gender == "Male" else "Sister-in-Law"
-                self._link_agents(sib, in_law, type_il, type_sib, aff_il)
-            
-            # Link to existing siblings of focal child? 
-            # Ideally yes, but for MVP we just link to focal. 
-            # (The Family Tree layout handles implicit sibling relationships visually via shared parents).
-            
-            self._assign_initial_schooling(sib)
-            self._assign_job(sib)
-            
-            # --- Cousin Generation (If this sibling is an Aunt/Uncle) ---
-            if not is_player_gen and sib.age >= min_rep:
-                self._generate_cousins_for(sib, repro_conf, city, country)
-
-            # Decay probability for next sibling
-            prob *= decay
-
-    def _generate_cousins_for(self, aunt_uncle, repro_conf, city, country):
-        """
-        Decides if an Aunt/Uncle has a family (Spouse + Kids).
-        """
-        # 50% chance to have a family (First kid)
-        cousin_prob = repro_conf.get("cousin_prob_base", 0.5)
-        
-        if random.random() < cousin_prob:
-            # 1. Generate Spouse (In-Law)
-            # Spouse needs to be roughly same age
-            spouse_age = aunt_uncle.age + random.randint(-5, 5)
-            spouse_last = random.choice(self.config["agent"]["bio"].get("last_names", ["Jones"]))
-            
-            spouse = self._create_npc(age=spouse_age, gender="Female" if aunt_uncle.gender == "Male" else "Male",
-                                      last_name=spouse_last, city=city, country=country)
-            self._assign_job(spouse)
-            
-            aff_c = affinity.calculate_affinity(aunt_uncle, spouse)
-            score_c = 40 + aff_c + random.randint(-20, 20)
-            self._link_agents(aunt_uncle, spouse, "Spouse", "Spouse", score_c)
-            
-            # 2. Generate First Cousin (Guaranteed since we passed the 50% check)
-            # Determine parents for the cousin
-            father = aunt_uncle if aunt_uncle.gender == "Male" else spouse
-            mother = aunt_uncle if aunt_uncle.gender == "Female" else spouse
-            
-            gap = self._get_reproductive_gap(repro_conf)
-            c1_age = mother.age - gap
-            
-            if c1_age >= 0:
-                c1 = self._create_npc(age=c1_age, parents=(father, mother),
-                                      last_name=father.last_name, city=city, country=country)
-                self._link_parent_child(father, mother, c1)
-                self._assign_initial_schooling(c1)
-                self._assign_job(c1)
-                
-                # 3. Generate Additional Cousins (Decaying Probability)
-                # Pass c1 as focal to link siblings
-                self._generate_siblings_for(c1, father, mother, repro_conf, city, country, father.last_name, is_player_gen=True) 
-                # Note: is_player_gen=True prevents infinite recursion of cousins-of-cousins
 
     def _assign_job(self, npc):
         """Assigns a random suitable job to an NPC."""
@@ -758,6 +556,7 @@ class SimState:
         # 1. Focus Child (Player or NPC)
         if is_player:
             child = Agent(agent_conf, is_player=True, parents=(father, mother),
+                          uid=self._next_uid("player"),
                           age=target_age, last_name=last_name, city=city, country=country,
                           time_config=self.config.get("time_management", {}))
             if target_age > 0:

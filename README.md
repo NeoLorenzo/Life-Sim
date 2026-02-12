@@ -149,7 +149,7 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 <details>
 <summary><strong>State Management</strong></summary>
 
-- Unique UUID and `is_player` flag for entity distinction
+- Deterministic string `uid` and `is_player` flag for entity distinction
 - **Dynamic physique calculations (height, weight, BMI based on genetics and calculated physical attributes)**
 - **Age-based progression with growth, puberty, and senescence phases for all physical attributes**
 
@@ -172,7 +172,8 @@ The `Agent` class represents all human entities (Player and NPCs) with a unified
 - `_validate_physical_attributes()`: Ensure biologically possible attribute combinations
 - `get_attr_value()`: Unified attribute access for UI rendering with backward compatibility
 - `get_personality_sum()`: Calculate Big 5 trait totals
-- `backfill_to_age()`: Deterministically reconstruct developmental history for late-spawned agents
+- `backfill_to_age_months()`: Deterministically reconstruct developmental history (month-precision) for late-spawned agents
+- `backfill_to_age()`: Compatibility wrapper that delegates to month-precision backfill
 
 </details>
 
@@ -190,7 +191,7 @@ The simulation implements a sophisticated deterministic backfill system that all
 
 **`_seeded_rng(world_seed, step, channel)`**
 - **Purpose**: Creates deterministic random number generators for backfill replay
-- **Seed Formula**: `"{world_seed}|{agent_uid}|{step}|{channel}"`
+- **Seed Formula**: `"{world_seed}|{uid}|{step}|{channel}"`
 - **Deterministic Properties**: 
   - Same world seed + agent UID = identical sequence
   - Different channels prevent interference between developmental processes
@@ -238,8 +239,8 @@ The simulation implements a sophisticated deterministic backfill system that all
   - **Bounds Enforcement**: All facets clamped to [1, 20] range
 - **Deterministic Properties**: Same seed + age + facet = identical developmental outcome
 
-**`backfill_to_age(target_age, world_seed)`**
-- **Purpose**: Main entry point for deterministic developmental reconstruction
+**`backfill_to_age_months(target_age_months, world_seed)`**
+- **Purpose**: Main entry point for deterministic developmental reconstruction with month precision
 - **Reconstruction Process**:
   1. **State Reset**: Clears existing personality, resets temperament, unlocks personality
   2. **Infancy Simulation** (0-2 years): Month-by-month temperament development
@@ -250,9 +251,9 @@ The simulation implements a sophisticated deterministic backfill system that all
   4. **Post-Crystallization Development** (3+ years): Year-by-year personality maturation
      - Applies latent-driven trait targets with individual facet variations
      - Maintains age-appropriate plasticity scaling
-  5. **State Tracking**: Sets `_backfilled_to_age` to prevent duplicate processing
+  5. **State Tracking**: Sets `_backfilled_to_age` and `_backfilled_to_age_months` to prevent duplicate processing
 - **Integration Points**:
-  - **SimState._create_npc()**: Automatic backfill for NPCs with requested_age > 0
+  - **SimState._create_npc()**: Automatic backfill for NPCs with `requested_age_months > 0`
   - **SimState._generate_lineage_structure()**: Backfill for player character when target_age > 0
   - **World Seed Propagation**: Uses `self.world_seed` for global consistency
 
@@ -260,7 +261,7 @@ The simulation implements a sophisticated deterministic backfill system that all
 
 **Deterministic Architecture**
 - **Global Seed**: Each simulation run has unique `world_seed` (0-2,000,000,000)
-- **Agent-Specific Seeding**: Combines world_seed with agent_uid for agent uniqueness
+- **Agent-Specific Seeding**: Combines world_seed with deterministic `uid` for agent uniqueness
 - **Channel Isolation**: Different developmental processes use unique channel identifiers
 - **Step-Based Progression**: Year/month steps enable precise reconstruction
 
@@ -271,7 +272,7 @@ The simulation implements a sophisticated deterministic backfill system that all
 - **Trait Interdependencies**: Latent dimensions ensure coherent personality development
 
 **Performance Considerations**
-- **Lazy Evaluation**: Only processes when `target_age` differs from `_backfilled_to_age`
+- **Lazy Evaluation**: Only processes when `target_age_months` differs from `_backfilled_to_age_months`
 - **Bounded Processing**: Maximum of target_age iterations, typically < 100
 - **Memory Efficiency**: Reuses existing personality/temperament data structures
 - **Deterministic Caching**: Same reconstruction parameters produce identical results
@@ -284,7 +285,9 @@ The simulation implements a sophisticated deterministic backfill system that all
 - **Reproducibility**: Same world seed = identical agent developmental histories
 
 **NPC Creation Pipeline** (`sim_state.py`)
-- **Automatic Backfill**: `_create_npc()` calls `backfill_to_age()` when `requested_age > 0`
+- **Automatic Backfill**: `_create_npc()` calls `backfill_to_age_months()` when `requested_age_months > 0`
+- **Month Precision**: Uses `agent.age_months` (or explicit `age_months`) to avoid year truncation
+- **Deterministic IDs**: Assigns reproducible UIDs via `SimState._next_uid()`
 - **Seamless Integration**: Backfilled NPCs immediately compatible with existing systems
 - **Age Verification**: Ensures requested age matches agent's actual age after backfill
 
@@ -419,6 +422,7 @@ The `SimState` class serves as the central container for the entire simulation w
 - `history`: Log of all life events organized by year
 - `config`: Reference to global configuration data
 - `world_seed`: Global deterministic seed for reproducible agent development (0-2,000,000,000)
+- `_uid_counter`: Monotonic counter used by `_next_uid()` for deterministic agent IDs
 
 </details>
 
@@ -429,7 +433,8 @@ The `SimState` class serves as the central container for the entire simulation w
 - `_assign_form_to_student()`: Helper function for form assignment using configured `form_labels`
 - `_link_agents()`: Creates bidirectional relationships with optional modifiers
 - `_setup_family_and_player()`: Generates multi-generational family trees
-- `_create_npc()`: Instantiates and registers new NPCs with automatic backfill for age > 0
+- `_create_npc()`: Instantiates and registers new NPCs with deterministic UID assignment and automatic month-precision backfill
+- `sim_state.py` family generation methods are single-definition (no legacy shadowed duplicates)
 - `start_new_year()`: Archives current year and starts new one
 - `__init__()`: Initialize simulation world, generate world seed, and generate family
 - `add_log()`: Add events to history buffer with color coding
@@ -824,8 +829,8 @@ Represents temporary or permanent factors that affect relationship scores:
 Represents a social connection between two agents with dynamic scoring:
 
 **Core Properties**
-- `owner_uid`: UUID of the agent who owns this relationship
-- `target_uid`: UUID of the agent this relationship points to
+- `owner_uid`: UID string of the agent who owns this relationship
+- `target_uid`: UID string of the agent this relationship points to
 - `rel_type`: Relationship type ("Friend", "Spouse", "Classmate", "Rival", etc.)
 - `target_name`: Human-readable name of the target agent
 - `is_alive`: Boolean indicating if target agent is still living
@@ -2155,7 +2160,7 @@ The physical attributes system replaces traditional RPG-style stats with a scien
     *   **No Magic Numbers:** All gameplay variables (initial stats, costs, salary multipliers) are loaded from `config.json`.
     *   **Static Constants:** Visualization settings (Screen Size, Colors, FPS) and Time settings (Start Year, Month Names) are decoupled in `constants.py`.
 *   **Multi-Agent Architecture:**
-    *   **Unified Entity Model:** The `Agent` class supports both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and unique UUIDs.
+    *   **Unified Entity Model:** The `Agent` class supports both the **Player** and **NPCs** (Non-Player Characters). All agents share the same biological DNA (Attributes, Health, Inventory), distinguished only by an `is_player` flag and deterministic unique UIDs.
     *   **Full Fidelity Simulation (Unified Loop):** The "Truman Show" optimization has been removed in favor of total simulation parity. NPCs now process the exact same biological, economic, and time-management logic as the Player every month.
         *   **Shared Economy:** NPCs earn monthly salaries, accumulate wealth, and pay costs exactly like the player.
         *   **Automated Routine:** NPCs possess a simulated Action Point (AP) budget. A passive routine automatically "spends" their AP on mandatory obligations (Work, School, Sleep) to maintain a valid state for future AI decision-making.
@@ -2267,14 +2272,14 @@ The physical attributes system replaces traditional RPG-style stats with a scien
     *   **Deterministic Backfill System for Late-Spawned Agents:**
         *   **Temporal Parity Principle**: Agents spawned at age 15 should be indistinguishable from agents simulated from birth to age 15
         *   **World Seed Integration**: Each simulation generates `world_seed` (0-2,000,000,000) for global deterministic consistency
-        *   **Agent-Specific Seeding**: Combines world_seed with agent_uid for unique developmental trajectories
+        *   **Agent-Specific Seeding**: Combines world_seed with deterministic agent UID for unique developmental trajectories
         *   **Developmental Reconstruction**: 
             - **Infancy (0-2 years)**: Month-by-month temperament development using plasticity-based changes
             - **Personality Crystallization (age 3)**: Converts temperament to Big Five using existing system
             - **Post-Crystallization (3+ years)**: Year-by-year personality maturation with age-appropriate plasticity
         *   **Age-Dependent Plasticity**: Scientifically-grounded developmental flexibility (20% at age 3 → 2% at age 41+)
         *   **Latent Dimension Bridge**: Temperament traits map to personality through Surgency, Effortful Control, Negative Affect, and Orientation Sensitivity
-        *   **Automatic Integration**: `_create_npc()` automatically calls `backfill_to_age()` when `requested_age > 0`
+        *   **Automatic Integration**: `_create_npc()` automatically calls `backfill_to_age_months()` when `requested_age_months > 0`
         *   **Performance Optimization**: Avoids simulating entire childhood for background NPCs while maintaining developmental fidelity
         *   **Scientific Validity**: Based on established developmental psychology research for personality formation
     *   **Anthropometry & Growth:**

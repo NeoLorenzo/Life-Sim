@@ -21,7 +21,7 @@ class Agent:
     """
     def __init__(self, agent_config: dict, **kwargs):
         self.logger = logging.getLogger(__name__)
-        self.uid = str(uuid.uuid4())
+        self.uid = kwargs.get("uid", str(uuid.uuid4()))
         self.is_player = kwargs.get("is_player", False)
         
         # Form attribute (single character string, default: None)
@@ -1024,16 +1024,17 @@ class Agent:
                 updated = float(current) + mean_pull + random_walk
                 self.personality[trait_name][facet_name] = max(1, min(20, int(round(updated))))
 
-    def backfill_to_age(self, target_age, world_seed=0):
+    def backfill_to_age_months(self, target_age_months, world_seed=0):
         """
-        Deterministically reconstructs developmental history from birth to target age.
+        Deterministically reconstructs developmental history from birth to target age in months.
         Used for late-spawned agents so they remain comparable to continuously simulated agents.
         """
-        target_age = max(0, int(target_age))
-        if target_age <= 0:
+        target_age_months = max(0, int(target_age_months))
+        if target_age_months <= 0:
             self._backfilled_to_age = 0
+            self._backfilled_to_age_months = 0
             return
-        if getattr(self, "_backfilled_to_age", None) == target_age:
+        if getattr(self, "_backfilled_to_age_months", None) == target_age_months:
             return
 
         # Rebuild early development from birth state.
@@ -1042,7 +1043,7 @@ class Agent:
         self.is_personality_locked = False
         self.plasticity = 1.0
 
-        months_until_three = min(target_age * 12, 36)
+        months_until_three = min(target_age_months, 36)
         for month in range(months_until_three):
             age_year = month // 12
             self.plasticity = constants.PLASTICITY_DECAY.get(age_year, 0.0)
@@ -1054,16 +1055,26 @@ class Agent:
                 updated = max(0.0, min(100.0, current + shock + baseline_pull))
                 self.temperament[trait_name] = round(updated, 1)
 
-        if target_age >= 3:
+        if target_age_months >= 36:
             infant_snapshot = dict(self.temperament)
             self.crystallize_personality()
             latents = self._temperament_latents(infant_snapshot)
-            for age_year in range(3, target_age):
+            target_age_years = target_age_months // 12
+            for age_year in range(3, target_age_years):
                 self._apply_backfill_personality_year(age_year, latents, world_seed)
         else:
-            self.plasticity = constants.PLASTICITY_DECAY.get(target_age, self.plasticity)
+            target_age_years = target_age_months // 12
+            self.plasticity = constants.PLASTICITY_DECAY.get(target_age_years, self.plasticity)
 
-        self._backfilled_to_age = target_age
+        self._backfilled_to_age = target_age_months // 12
+        self._backfilled_to_age_months = target_age_months
+
+    def backfill_to_age(self, target_age, world_seed=0):
+        """
+        Deterministically reconstructs developmental history from birth to target age.
+        Used for late-spawned agents so they remain comparable to continuously simulated agents.
+        """
+        self.backfill_to_age_months(int(target_age) * 12, world_seed=world_seed)
 
     def get_personality_sum(self, trait):
         """Returns the sum (0-120) of a main trait."""
