@@ -79,7 +79,8 @@ def main():
                         renderer.background_manager.update(sim_state)
 
                         # Phase 6: Auto-resolve NPC events using brain policy.
-                        if not config.get("development", {}).get("disable_events", False):
+                        npc_brain_config = config.get("npc_brain", {})
+                        if npc_brain_config.get("events_enabled", False):
                             npc_events = event_manager.auto_resolve_npc_events(sim_state)
                             if npc_events > 0:
                                 logger.info(f"Auto-resolved {npc_events} NPC events")

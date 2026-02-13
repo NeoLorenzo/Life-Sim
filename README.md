@@ -19,7 +19,7 @@
   - [Monthly Cycle](#monthly-simulation-cycle)
   - [State Mutation Contracts](#state-mutation-contracts)
 - [NPC Brain System](#npc-brain-system)
-- [Current Features](#-current-features-mvp-05)
+- [Current Features](#-current-features-mvp-07)
 - [Science-Backed Physical Attributes System](#-science-backed-physical-attributes-system)
 - [Cognitive Aptitude System](#-cognitive-aptitude-system)
 - [Development Tools & Settings](#️-development-tools--settings)
@@ -77,7 +77,7 @@ Life-Sim/
 - **Performance Optimized**: Advanced caching, spatial indexing, and viewport culling
 
 ### Architecture Overview
-- **Entry Point**: `main.py` initializes simulation, loads configuration, and starts the main game loop
+- **Entry Point**: `main.py` initializes simulation, loads configuration, and starts the main game loop with granular event control
 - **Configuration**: `config.json` contains all simulation parameters (jobs, education, personality traits, etc.)
 - **Events**: `events.json` contains all life event definitions, triggers, and choice effects
 - **Simulation Core**: The `life_sim/simulation/` package handles all game logic, agent behavior, and state management
@@ -367,6 +367,13 @@ Each of the 30 Big Five facets has a unique formula combining:
 - **Bounded Output**: Ensures realistic 1-20 facet distribution
 - **Central Tendency**: Creates natural clustering around moderate values
 - **Extreme Preservation**: Allows for genuine personality outliers
+- **Crystallization Gain**: Applied to raw scores before transform to reduce compression and preserve personality variation (default: 1.2)
+
+**Enhanced Personality Variation:**
+- **Reduced Compression**: The crystallization_gain parameter (1.2) amplifies personality differences before the logistic transform
+- **Preserved Extremes**: Maintains stronger personality distinctions from temperament inputs
+- **Balanced Distribution**: Prevents excessive clustering around moderate values while maintaining realistic bounds
+- **Scientific Calibration**: Gain factor tuned to maintain personality validity while increasing variation
 
 </details>
 
@@ -3335,36 +3342,37 @@ The simulation includes development-focused configuration options to facilitate 
 
 ### Event System Control
 
-*   **Development Mode:** Configurable setting to disable all events for uninterrupted testing
-*   **Usage:** Set `"disable_events": true` in the development section of config.json
+*   **Granular Event Control:** Separate configuration options for player and NPC events
+*   **Player Events:** Controlled by `"development": {"disable_events": true/false}` in config.json
+*   **NPC Events:** Controlled by `"npc_brain": {"events_enabled": true/false}` in config.json
+*   **Independent Operation:** Disabling player events does not affect NPC event processing
 *   **Benefits:**
-    *   Uninterrupted aging and development testing
-    *   Observe cognitive development across different ages
-    *   Performance testing without event system overhead
-    *   Rapid iteration on features
+    *   Uninterrupted aging and development testing for player
+    *   NPCs continue to experience life events for world dynamism
+    *   Observe cognitive development across different ages without player event interruptions
+    *   Performance testing with selective event system overhead
+    *   Rapid iteration on features while maintaining NPC world simulation
 
 ### Configuration Structure
 
 ```json
 {
     "development": {
-        "disable_events": true  // Set to false to enable events for normal gameplay
+        "disable_events": false  // Controls player events only
+    },
+    "npc_brain": {
+        "events_enabled": true   // Controls NPC events only
     }
 }
 ```
 
-### Debug Logging
-
-*   **Event Disabled Message:** Debug log entry when events are disabled
-*   **Normal Operation:** Standard event processing when disabled is false
-*   **Non-Intrusive:** Setting doesn't affect other game systems
-
 ### Testing Scenarios
 
-*   **Aptitude Development:** Age through multiple years to observe cognitive changes
-*   **Performance Testing:** Test game mechanics without event interruptions
-*   **Feature Validation:** Verify new systems work without event interference
-*   **Quick Iteration:** Rapidly test changes without waiting for event resolutions
+*   **Player-Focused Testing:** Disable player events while keeping NPC world active
+*   **World Dynamics:** Study NPC behavior and event patterns without player interference
+*   **Performance Analysis:** Test game mechanics with selective event processing
+*   **Feature Validation:** Verify new systems work with controlled event environments
+*   **Development Workflow:** Rapid iteration on player features while maintaining NPC simulation
 
 </details>
 

@@ -961,35 +961,52 @@ class Agent:
             return (raw - 50.0) / 50.0
 
         t = {trait: temp_norm(trait) for trait in constants.TEMPERAMENT_TRAITS}
-        inv = {trait: -value for trait, value in t.items()}
 
-        # Latent dimensions anchored in classic temperament structure.
+        def variance_preserving_blend(coefficients, values):
+            """
+            Deterministic weighted blend that preserves input scale.
+            Weighted sums compress variance as terms are averaged; dividing by
+            sqrt(sum(w^2)) keeps the blend magnitude comparable to source traits.
+            """
+            weighted = 0.0
+            norm_sq = 0.0
+            for key, weight in coefficients.items():
+                weighted += float(weight) * float(values.get(key, 0.0))
+                norm_sq += float(weight) * float(weight)
+            if norm_sq <= 0.0:
+                return 0.0
+            return weighted / math.sqrt(norm_sq)
+
+        latent_specs = {
+            "Surgency": {
+                "Activity": 0.34,
+                "Approach_Withdrawal": 0.26,
+                "Intensity": 0.20,
+                "Mood": 0.20,
+            },
+            "EffortfulControl": {
+                "Persistence": 0.30,
+                "Regularity": 0.25,
+                "Adaptability": 0.25,
+                "Distractibility": -0.20,
+            },
+            "NegativeAffect": {
+                "Threshold": -0.30,
+                "Mood": -0.25,
+                "Intensity": 0.20,
+                "Adaptability": -0.15,
+                "Distractibility": 0.10,
+            },
+            "OrientationSensitivity": {
+                "Adaptability": 0.35,
+                "Approach_Withdrawal": 0.25,
+                "Regularity": -0.20,
+                "Distractibility": -0.20,
+            },
+        }
         latent = {
-            "Surgency": (
-                (0.34 * t["Activity"]) +
-                (0.26 * t["Approach_Withdrawal"]) +
-                (0.20 * t["Intensity"]) +
-                (0.20 * t["Mood"])
-            ),
-            "EffortfulControl": (
-                (0.30 * t["Persistence"]) +
-                (0.25 * t["Regularity"]) +
-                (0.25 * t["Adaptability"]) +
-                (0.20 * inv["Distractibility"])
-            ),
-            "NegativeAffect": (
-                (0.30 * inv["Threshold"]) +
-                (0.25 * inv["Mood"]) +
-                (0.20 * t["Intensity"]) +
-                (0.15 * inv["Adaptability"]) +
-                (0.10 * t["Distractibility"])
-            ),
-            "OrientationSensitivity": (
-                (0.35 * t["Adaptability"]) +
-                (0.25 * t["Approach_Withdrawal"]) +
-                (0.20 * inv["Regularity"]) +
-                (0.20 * inv["Distractibility"])
-            ),
+            latent_name: variance_preserving_blend(coeffs, t)
+            for latent_name, coeffs in latent_specs.items()
         }
 
         facet_models = {
@@ -1035,21 +1052,24 @@ class Agent:
             },
         }
 
+        crystallization_gain = 1.2
+
         def to_facet(raw_score):
             # Logistic transform creates realistic central tendency with bounded extremes.
             scaled = 1.0 + (19.0 / (1.0 + math.exp(-1.35 * raw_score)))
             return max(1, min(20, int(round(scaled))))
 
         personality = {}
+        blended_inputs = dict(t)
+        blended_inputs.update(latent)
         for big5_trait, facets in facet_models.items():
             personality[big5_trait] = {}
             for facet, model in facets.items():
-                raw = 0.0
-                for latent_name, weight in model.get("latent", {}).items():
-                    raw += latent[latent_name] * weight
-                for trait_name, weight in model.get("temp", {}).items():
-                    raw += t[trait_name] * weight
-                personality[big5_trait][facet] = to_facet(raw)
+                coefficients = {}
+                coefficients.update(model.get("latent", {}))
+                coefficients.update(model.get("temp", {}))
+                raw = variance_preserving_blend(coefficients, blended_inputs)
+                personality[big5_trait][facet] = to_facet(raw * crystallization_gain)
 
         # Set the new personality and clear temperament
         self.personality = personality
