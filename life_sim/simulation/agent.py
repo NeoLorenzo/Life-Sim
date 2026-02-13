@@ -59,6 +59,7 @@ class Agent:
                 },
             )
         )
+        self._ensure_brain_contract()
         
         # Form attribute (single character string, default: None)
         self.form = kwargs.get("form", None)
@@ -243,6 +244,68 @@ class Agent:
         
         # Recalculate aptitudes based on age development curves
         self._recalculate_aptitudes()
+
+    def _ensure_brain_contract(self):
+        """
+        Backward-compatible brain schema normalization.
+        Adds phase-2 infant-v2 scaffold keys without changing active behavior.
+        """
+        if not isinstance(self.brain, dict):
+            self.brain = {}
+
+        self.brain.setdefault("version", "phase2_scaffold_v1")
+        self.brain.setdefault("enabled", False)
+        self.brain.setdefault("events_enabled", False)
+        self.brain.setdefault("ap_enabled", False)
+        self.brain.setdefault("player_mimic_enabled", False)
+        self.brain.setdefault("drives", {})
+        self.brain.setdefault("decision_style", {})
+        self.brain.setdefault("player_mimic", {})
+        self.brain.setdefault("base_weights", dict(DEFAULT_BASE_WEIGHTS))
+        self.brain.setdefault("player_style_weights", {k: 0.0 for k in CANONICAL_FEATURE_KEYS})
+        self.brain.setdefault("history", {})
+
+        drives = self.brain.get("drives", {}) or {}
+        for key in ("comfort", "achievement", "social", "risk_avoidance", "novelty", "discipline"):
+            drives.setdefault(key, 0.5)
+        self.brain["drives"] = drives
+
+        decision_style = self.brain.get("decision_style", {}) or {}
+        decision_style.setdefault("temperature", 1.0)
+        decision_style.setdefault("inertia", 0.5)
+        decision_style.setdefault("noise", 0.1)
+        self.brain["decision_style"] = decision_style
+
+        player_mimic = self.brain.get("player_mimic", {}) or {}
+        player_mimic.setdefault("alpha", 0.0)
+        self.brain["player_mimic"] = player_mimic
+
+        history = self.brain.get("history", {}) or {}
+        history.setdefault("event_decisions", 0)
+        history.setdefault("ap_decisions", 0)
+        self.brain["history"] = history
+
+        # Phase 2 infant-v2 scaffold: data contract only, no selection logic use yet.
+        self.brain.setdefault("infant_brain_version", "v2_spec_2026_02")
+        self.brain.setdefault("infant_brain_v2_enabled", False)
+        self.brain.setdefault("infant_params", {})
+        self.brain.setdefault("infant_state", {})
+
+        infant_params = self.brain.get("infant_params", {}) or {}
+        infant_params.setdefault("novelty_tolerance", 0.5)
+        infant_params.setdefault("threat_sensitivity", 0.5)
+        infant_params.setdefault("energy_budget", 0.5)
+        infant_params.setdefault("self_regulation", 0.5)
+        infant_params.setdefault("comfort_bias", 0.5)
+        self.brain["infant_params"] = infant_params
+
+        infant_state = self.brain.get("infant_state", {}) or {}
+        infant_state.setdefault("energy_level", 0.65)
+        infant_state.setdefault("satiety_level", 0.60)
+        infant_state.setdefault("security_level", 0.70)
+        infant_state.setdefault("stimulation_load", 0.25)
+        infant_state.setdefault("last_event_novelty", 0.20)
+        self.brain["infant_state"] = infant_state
 
     def _init_aptitudes(self, agent_config):
         """Initialize aptitudes with proper heritability from parents or random generation."""

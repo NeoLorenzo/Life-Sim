@@ -32,6 +32,8 @@ def run_rollout_snapshot(seed=8088, months=36):
     cfg["npc_brain"]["ap_enabled"] = True
     cfg["npc_brain"]["player_mimic_enabled"] = True
     cfg["npc_brain"]["debug_logging"] = False
+    cfg["npc_brain"]["infant_brain_v2_enabled"] = True
+    cfg["npc_brain"]["infant_brain_v2_debug_logging"] = False
 
     random.seed(seed)
     np.random.seed(seed)
@@ -54,6 +56,17 @@ def run_rollout_snapshot(seed=8088, months=36):
     npc_hist_counts = [len(v) for k, v in (sim.agent_event_history or {}).items() if k != sim.player.uid]
     npc_hist_total = sum(npc_hist_counts)
     npc_hist_mean = (statistics.mean(npc_hist_counts) if npc_hist_counts else 0.0)
+    infant_npcs = [npc for npc in (sim.npcs or {}).values() if int(getattr(npc, "age_months", 0)) <= 35]
+    npc_brain_state_count = sum(
+        1
+        for npc in (sim.npcs or {}).values()
+        if isinstance((getattr(npc, "brain", {}) or {}).get("infant_state"), dict)
+    )
+    infant_state_count = sum(
+        1
+        for npc in infant_npcs
+        if isinstance((getattr(npc, "brain", {}) or {}).get("infant_state"), dict)
+    )
 
     return {
         "seed": seed,
@@ -65,6 +78,9 @@ def run_rollout_snapshot(seed=8088, months=36):
         "player_event_history_count": len(sim.event_history),
         "player_style_observations": int((sim.player_style_tracker or {}).get("observations", 0)),
         "npc_count": len(sim.npcs),
+        "npc_brain_state_count": int(npc_brain_state_count),
+        "infant_npc_count": len(infant_npcs),
+        "infant_state_count": int(infant_state_count),
         "npc_event_history_total": int(npc_hist_total),
         "npc_event_history_mean": round(float(npc_hist_mean), 6),
         "turn_time_ms": {
@@ -99,6 +115,11 @@ class Phase8RolloutTests(unittest.TestCase):
         self.assertGreaterEqual(snap["npc_count"], 1)
         self.assertGreaterEqual(snap["npc_event_history_total"], 1)
         self.assertGreaterEqual(snap["player_style_observations"], 1)
+
+    def test_rollout_keeps_brain_scaffold_present(self):
+        snap = run_rollout_snapshot(seed=8484, months=24)
+        self.assertGreaterEqual(snap["npc_count"], 1)
+        self.assertGreaterEqual(snap["npc_brain_state_count"], 1)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,13 @@ from typing import List, Dict, Any, Optional
 from .. import constants
 from . import school as school_logic
 from .brain import event_choice_to_features
-from .brain import NPCBrain, make_decision_rng
+from .brain import (
+    NPCBrain,
+    InfantBrain,
+    make_decision_rng,
+    choice_to_infant_appraisal,
+    temperament_to_infant_params,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +263,52 @@ class EventManager:
                 return False
         return False
 
+    def _is_infant_brain_v2_active(self, sim_state, agent, event, age_months):
+        cfg = (getattr(sim_state, "config", {}) or {}).get("npc_brain", {}) or {}
+        if not bool(cfg.get("infant_brain_v2_enabled", False)):
+            return False
+        if int(age_months) > 35:
+            return False
+        if not self._is_infant_event(event):
+            return False
+        temperament = getattr(agent, "temperament", None)
+        return isinstance(temperament, dict) and len(temperament) > 0
+
+    def _build_infant_brain_context(self, sim_state, agent):
+        cfg = (getattr(sim_state, "config", {}) or {}).get("npc_brain", {}) or {}
+        infant_cfg = cfg.get("infant_brain_v2", {}) or {}
+        brain_profile = getattr(agent, "brain", {}) or {}
+
+        # Temperament is the primary source of infant decision parameters.
+        infant_params = dict(temperament_to_infant_params(getattr(agent, "temperament", {}) or {}))
+        if isinstance(brain_profile, dict):
+            brain_profile["infant_params"] = dict(infant_params)
+
+        infant_state = {
+            "energy_level": 0.65,
+            "satiety_level": 0.60,
+            "security_level": 0.70,
+            "stimulation_load": 0.25,
+            "last_event_novelty": 0.20,
+        }
+        state_from_brain = (brain_profile.get("infant_state", {}) or {})
+        for key in infant_state.keys():
+            if key in state_from_brain:
+                try:
+                    infant_state[key] = max(0.0, min(1.0, float(state_from_brain.get(key))))
+                except (TypeError, ValueError):
+                    pass
+
+        weights_cfg = (infant_cfg.get("weights", {}) or {})
+        penalties_cfg = (infant_cfg.get("penalties", {}) or {})
+        return {
+            "infant_params": infant_params,
+            "infant_state": infant_state,
+            "weights": dict(weights_cfg),
+            "penalties": dict(penalties_cfg),
+            "debug_logging": bool(cfg.get("infant_brain_v2_debug_logging", False)),
+        }
+
     def _choose_indices_with_brain(
         self,
         sim_state,
@@ -267,6 +319,62 @@ class EventManager:
     ):
         if not event.choices:
             return []
+
+        decision_key = str(getattr(event, "id", "event"))
+        decision_age_months = int(
+            age_months_override
+            if age_months_override is not None
+            else getattr(agent, "age_months", 0)
+        )
+        rng = make_decision_rng(
+            getattr(sim_state, "world_seed", 0),
+            getattr(agent, "uid", "npc"),
+            decision_age_months,
+            domain,
+            decision_key,
+        )
+
+        if self._is_infant_brain_v2_active(sim_state, agent, event, decision_age_months):
+            decision_style = (getattr(agent, "brain", {}) or {}).get("decision_style", {}) or {}
+            temperature = float(decision_style.get("temperature", 1.0))
+            ctx = self._build_infant_brain_context(sim_state, agent)
+            infant_brain = InfantBrain(
+                weights=ctx.get("weights"),
+                penalties=ctx.get("penalties"),
+                temperature=temperature,
+            )
+            options = []
+            scored_rows = []
+            context = {
+                "event_id": decision_key,
+                "infant_params": ctx.get("infant_params", {}),
+                "infant_state": ctx.get("infant_state", {}),
+            }
+            for idx, choice in enumerate(event.choices):
+                appraisal = choice_to_infant_appraisal(choice)
+                option = {"id": choice.get("text", str(idx)), "appraisal": appraisal}
+                options.append(option)
+                score, _trace = infant_brain.score_option(option, context=context)
+                scored_rows.append((idx, score, choice))
+
+            if str(getattr(event, "ui_type", "")) == "multi_select":
+                ui_cfg = event.ui_config or {}
+                min_sel = max(1, int(ui_cfg.get("min_selections", 1)))
+                ranked = sorted(scored_rows, key=lambda r: (-r[1], r[0]))
+                return [int(idx) for idx, _, _ in ranked[:min_sel]]
+
+            choice_out = infant_brain.choose(options, context=context, rng=rng)
+            selected = [int(choice_out["chosen_index"])]
+
+            if bool(ctx.get("debug_logging", False)):
+                logger.debug(
+                    "InfantBrain v2 decision: uid=%s event=%s selected=%s age_months=%s",
+                    getattr(agent, "uid", "unknown"),
+                    decision_key,
+                    selected,
+                    decision_age_months,
+                )
+            return selected
 
         relationship_type = None
         if hasattr(sim_state, "player") and hasattr(sim_state.player, "relationships"):
@@ -291,20 +399,6 @@ class EventManager:
             options.append(option)
             score, _ = brain.score_option(option)
             scored_rows.append((idx, score, choice))
-
-        decision_key = str(getattr(event, "id", "event"))
-        decision_age_months = int(
-            age_months_override
-            if age_months_override is not None
-            else getattr(agent, "age_months", 0)
-        )
-        rng = make_decision_rng(
-            getattr(sim_state, "world_seed", 0),
-            getattr(agent, "uid", "npc"),
-            decision_age_months,
-            domain,
-            decision_key,
-        )
 
         # Multi-select policy
         if str(getattr(event, "ui_type", "")) == "multi_select":
@@ -679,6 +773,10 @@ class EventManager:
             if getattr(agent, "is_player", False) and hasattr(sim_state, "_update_player_style_tracker"):
                 observed = event_choice_to_features(selected_choice)
                 sim_state._update_player_style_tracker(observed)
+
+            # Phase 5: Infant v2 post-choice state transition (when enabled).
+            if hasattr(sim_state, "_update_infant_state_after_choice"):
+                sim_state._update_infant_state_after_choice(agent, selected_choice)
         
         # Special handler for IGCSE Subject Selection
         if event.id == "EVT_IGCSE_SUBJECTS":

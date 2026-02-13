@@ -138,13 +138,17 @@ def _process_agent_monthly(sim_state, agent):
             agent.plasticity = target_plasticity
             if agent.is_player:
                 sim_state.add_log(f"Plasticity updated to {target_plasticity}", constants.COLOR_TEXT_DIM)
+
+    # E. Infant brain homeostasis update (phase 5)
+    if hasattr(sim_state, "_update_infant_state_monthly"):
+        sim_state._update_infant_state_monthly(agent)
     
-    # E. Time Management (AP Reset)
+    # F. Time Management (AP Reset)
     agent.ap_used = 0
     time_conf = sim_state.config.get("time_management", {})
     agent._recalculate_ap_needs(time_conf)
     
-    # F. Sleep Penalties
+    # G. Sleep Penalties
     sleep_deficit = max(0, agent.ap_sleep - agent.target_sleep_hours)
     if sleep_deficit > 0:
         penalties = time_conf.get("penalties", {})
@@ -161,7 +165,7 @@ def _process_agent_monthly(sim_state, agent):
     else:
         agent._temp_cognitive_penalty = 0.0
     
-    # G. Truancy Logic
+    # H. Truancy Logic
     skipped_hours = agent.ap_locked * (1.0 - agent.attendance_rate)
     if skipped_hours > 0:
         penalties = time_conf.get("penalties", {})
@@ -185,7 +189,7 @@ def _process_agent_monthly(sim_state, agent):
             # Skipped undetected
             logger.debug(f"{agent.first_name} skipped {skipped_hours:.1f}h undetected")
     
-    # H. Economics (Salary)
+    # I. Economics (Salary)
     if agent.job:
         monthly_salary = int(agent.job['salary'] / 12)
         agent.money += monthly_salary
@@ -196,7 +200,7 @@ def _process_agent_monthly(sim_state, agent):
             # Log to debug only to avoid spam
             logger.debug(f"NPC {agent.first_name} earned ${monthly_salary}")
 
-    # F. Mortality Check
+    # J. Mortality Check
     # Enforce biological cap
     if agent.health > agent.max_health:
         agent.health = agent.max_health

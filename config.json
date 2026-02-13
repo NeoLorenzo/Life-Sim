@@ -11,6 +11,23 @@
         "player_mimic_enabled": false,
         "debug_logging": false,
         "infant_event_backfill_debug_logging": false,
+        "infant_brain_v2_enabled": true,
+        "infant_brain_v2_debug_logging": false,
+        "infant_brain_v2": {
+            "version": "v2_spec_2026_02",
+            "weights": {
+                "comfort": 1.0,
+                "cost": 1.0,
+                "fit": 1.0
+            },
+            "penalties": {
+                "energy_margin_threshold": -0.25,
+                "energy_penalty": 0.35,
+                "safety_risk_threshold": 0.75,
+                "threat_sensitivity_threshold": 0.6,
+                "safety_penalty": 0.4
+            }
+        },
         "player_mimic": {
             "ema_beta": 0.15,
             "alpha_default_player": 0.0,

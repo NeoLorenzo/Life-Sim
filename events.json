@@ -17,6 +17,14 @@
                         "temperament": {
                             "Activity": 7,
                             "Intensity": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.6219,
+                            "energy_cost": 0.5375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5562,
+                            "familiarity": 0.4125,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -26,6 +34,14 @@
                         "temperament": {
                             "Approach_Withdrawal": -4,
                             "Persistence": 5
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -35,6 +51,14 @@
                         "temperament": {
                             "Adaptability": 6,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5906,
+                            "energy_cost": 0.5125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -44,6 +68,14 @@
                         "temperament": {
                             "Adaptability": -6,
                             "Threshold": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3094,
+                            "energy_cost": 0.4563,
+                            "safety_risk": 0.3625,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -66,6 +98,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 5,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -75,6 +115,14 @@
                         "temperament": {
                             "Intensity": 5,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -84,6 +132,14 @@
                         "temperament": {
                             "Distractibility": -4,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -93,6 +149,14 @@
                         "temperament": {
                             "Threshold": -4,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3406,
+                            "energy_cost": 0.4438,
+                            "safety_risk": 0.3375,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -115,6 +179,14 @@
                         "temperament": {
                             "Mood": 6,
                             "Activity": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.6062,
+                            "energy_cost": 0.525,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5375,
+                            "familiarity": 0.425,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -124,6 +196,14 @@
                         "temperament": {
                             "Threshold": -7,
                             "Intensity": 5
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4188,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.275,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -133,6 +213,14 @@
                         "temperament": {
                             "Distractibility": -5,
                             "Persistence": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -142,6 +230,14 @@
                         "temperament": {
                             "Threshold": 4,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -164,6 +260,14 @@
                         "temperament": {
                             "Intensity": 4,
                             "Mood": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -173,6 +277,14 @@
                         "temperament": {
                             "Approach_Withdrawal": -5,
                             "Threshold": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.325,
+                            "energy_cost": 0.45,
+                            "safety_risk": 0.35,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -182,6 +294,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Distractibility": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -191,6 +311,14 @@
                         "temperament": {
                             "Threshold": 4,
                             "Activity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -213,6 +341,14 @@
                         "temperament": {
                             "Activity": 5,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -222,6 +358,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -231,6 +375,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Adaptability": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -240,6 +392,14 @@
                         "temperament": {
                             "Intensity": 5,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4969,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4062,
+                            "familiarity": 0.5125,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -262,6 +422,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 6,
                             "Mood": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.6062,
+                            "energy_cost": 0.525,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5375,
+                            "familiarity": 0.425,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -271,6 +439,14 @@
                         "temperament": {
                             "Persistence": 5,
                             "Distractibility": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -280,6 +456,14 @@
                         "temperament": {
                             "Threshold": -5,
                             "Approach_Withdrawal": -4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3094,
+                            "energy_cost": 0.4563,
+                            "safety_risk": 0.3625,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -289,6 +473,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Intensity": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -311,6 +503,14 @@
                         "temperament": {
                             "Distractibility": -5,
                             "Persistence": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -320,6 +520,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -329,6 +537,14 @@
                         "temperament": {
                             "Threshold": -4,
                             "Approach_Withdrawal": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3563,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.325,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -338,6 +554,14 @@
                         "temperament": {
                             "Regularity": 3,
                             "Threshold": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -360,6 +584,14 @@
                         "temperament": {
                             "Activity": 5,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -369,6 +601,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Approach_Withdrawal": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -378,6 +618,14 @@
                         "temperament": {
                             "Threshold": -5,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3406,
+                            "energy_cost": 0.4438,
+                            "safety_risk": 0.3375,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -387,6 +635,14 @@
                         "temperament": {
                             "Adaptability": 3,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -409,6 +665,14 @@
                         "temperament": {
                             "Activity": 6,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5906,
+                            "energy_cost": 0.5125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -418,6 +682,14 @@
                         "temperament": {
                             "Threshold": -6,
                             "Mood": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3094,
+                            "energy_cost": 0.4563,
+                            "safety_risk": 0.3625,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -427,6 +699,14 @@
                         "temperament": {
                             "Distractibility": -6,
                             "Persistence": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4188,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.275,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -436,6 +716,14 @@
                         "temperament": {
                             "Adaptability": -4,
                             "Approach_Withdrawal": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -458,6 +746,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Approach_Withdrawal": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -467,6 +763,14 @@
                         "temperament": {
                             "Persistence": 3,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -476,6 +780,14 @@
                         "temperament": {
                             "Regularity": 3,
                             "Adaptability": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -485,6 +797,14 @@
                         "temperament": {
                             "Intensity": 4,
                             "Threshold": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -507,6 +827,14 @@
                         "temperament": {
                             "Persistence": 6,
                             "Distractibility": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4969,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4062,
+                            "familiarity": 0.5125,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -516,6 +844,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -525,6 +861,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -534,6 +878,14 @@
                         "temperament": {
                             "Distractibility": 4,
                             "Approach_Withdrawal": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -556,6 +908,14 @@
                         "temperament": {
                             "Persistence": 7,
                             "Approach_Withdrawal": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.6219,
+                            "energy_cost": 0.5375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5562,
+                            "familiarity": 0.4125,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -565,6 +925,14 @@
                         "temperament": {
                             "Regularity": 5,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -574,6 +942,14 @@
                         "temperament": {
                             "Intensity": 6,
                             "Activity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -583,6 +959,14 @@
                         "temperament": {
                             "Distractibility": -4,
                             "Adaptability": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -605,6 +989,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 5,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -614,6 +1006,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Adaptability": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -623,6 +1023,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3563,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.325,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -632,6 +1040,14 @@
                         "temperament": {
                             "Mood": 3,
                             "Activity": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -654,6 +1070,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 4,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -663,6 +1087,14 @@
                         "temperament": {
                             "Approach_Withdrawal": -4,
                             "Threshold": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3563,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.325,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -672,6 +1104,14 @@
                         "temperament": {
                             "Mood": 4,
                             "Intensity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -681,6 +1121,14 @@
                         "temperament": {
                             "Regularity": 3,
                             "Distractibility": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -703,6 +1151,14 @@
                         "temperament": {
                             "Regularity": 6,
                             "Adaptability": -4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -712,6 +1168,14 @@
                         "temperament": {
                             "Adaptability": 6,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -721,6 +1185,14 @@
                         "temperament": {
                             "Activity": 3,
                             "Threshold": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -730,6 +1202,14 @@
                         "temperament": {
                             "Distractibility": -3,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -752,6 +1232,14 @@
                         "temperament": {
                             "Persistence": 6,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5906,
+                            "energy_cost": 0.5125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -761,6 +1249,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Threshold": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -770,6 +1266,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 3,
                             "Adaptability": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -779,6 +1283,14 @@
                         "temperament": {
                             "Activity": -2,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3875,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.3,
+                            "novelty_load": 0.425,
+                            "familiarity": 0.5,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -801,6 +1313,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -810,6 +1330,14 @@
                         "temperament": {
                             "Intensity": 4,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -819,6 +1347,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Persistence": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -828,6 +1364,14 @@
                         "temperament": {
                             "Threshold": -4,
                             "Adaptability": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3406,
+                            "energy_cost": 0.4438,
+                            "safety_risk": 0.3375,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -850,6 +1394,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 6,
                             "Intensity": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.6062,
+                            "energy_cost": 0.525,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5375,
+                            "familiarity": 0.425,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -859,6 +1411,14 @@
                         "temperament": {
                             "Threshold": -5,
                             "Approach_Withdrawal": -4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3094,
+                            "energy_cost": 0.4563,
+                            "safety_risk": 0.3625,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -868,6 +1428,14 @@
                         "temperament": {
                             "Regularity": 5,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -877,6 +1445,14 @@
                         "temperament": {
                             "Distractibility": 4,
                             "Persistence": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -899,6 +1475,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Persistence": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -908,6 +1492,14 @@
                         "temperament": {
                             "Distractibility": -3,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -917,6 +1509,14 @@
                         "temperament": {
                             "Threshold": -5,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3406,
+                            "energy_cost": 0.4438,
+                            "safety_risk": 0.3375,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -926,6 +1526,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 3,
                             "Adaptability": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -948,6 +1556,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Adaptability": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -957,6 +1573,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Distractibility": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -966,6 +1590,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Threshold": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -975,6 +1607,14 @@
                         "temperament": {
                             "Mood": -2,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3719,
+                            "energy_cost": 0.4313,
+                            "safety_risk": 0.3125,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -997,6 +1637,14 @@
                         "temperament": {
                             "Intensity": 7,
                             "Regularity": -4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4969,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4062,
+                            "familiarity": 0.5125,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1006,6 +1654,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Adaptability": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1015,6 +1671,14 @@
                         "temperament": {
                             "Regularity": 6,
                             "Threshold": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5906,
+                            "energy_cost": 0.5125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1024,6 +1688,14 @@
                         "temperament": {
                             "Persistence": 5,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4969,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4062,
+                            "familiarity": 0.5125,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1046,6 +1718,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1055,6 +1735,14 @@
                         "temperament": {
                             "Regularity": 3,
                             "Activity": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1064,6 +1752,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1073,6 +1769,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Adaptability": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1095,6 +1799,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1104,6 +1816,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 3,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1113,6 +1833,14 @@
                         "temperament": {
                             "Distractibility": -4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4188,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.275,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1122,6 +1850,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3563,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.325,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1144,6 +1880,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1153,6 +1897,14 @@
                         "temperament": {
                             "Intensity": 5,
                             "Approach_Withdrawal": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1162,6 +1914,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 4,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1171,6 +1931,14 @@
                         "temperament": {
                             "Threshold": 4,
                             "Activity": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1193,6 +1961,14 @@
                         "temperament": {
                             "Activity": 5,
                             "Approach_Withdrawal": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1202,6 +1978,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Regularity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1211,6 +1995,14 @@
                         "temperament": {
                             "Mood": 3,
                             "Adaptability": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5281,
+                            "energy_cost": 0.4625,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1220,6 +2012,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3719,
+                            "energy_cost": 0.4313,
+                            "safety_risk": 0.3125,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1242,6 +2042,14 @@
                         "temperament": {
                             "Activity": 4,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1251,6 +2059,14 @@
                         "temperament": {
                             "Distractibility": -3,
                             "Approach_Withdrawal": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1260,6 +2076,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 3,
                             "Adaptability": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5281,
+                            "energy_cost": 0.4625,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1269,6 +2093,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Regularity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4344,
+                            "energy_cost": 0.4062,
+                            "safety_risk": 0.2625,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1291,6 +2123,14 @@
                         "temperament": {
                             "Adaptability": 5,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1300,6 +2140,14 @@
                         "temperament": {
                             "Intensity": 4,
                             "Activity": 4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.575,
+                            "energy_cost": 0.5,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1309,6 +2157,14 @@
                         "temperament": {
                             "Persistence": 6,
                             "Distractibility": -4
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1318,6 +2174,14 @@
                         "temperament": {
                             "Threshold": -5,
                             "Mood": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.325,
+                            "energy_cost": 0.45,
+                            "safety_risk": 0.35,
+                            "novelty_load": 0.5,
+                            "familiarity": 0.45,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1340,6 +2204,14 @@
                         "temperament": {
                             "Mood": 3,
                             "Approach_Withdrawal": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5281,
+                            "energy_cost": 0.4625,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1349,6 +2221,14 @@
                         "temperament": {
                             "Regularity": 3,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1358,6 +2238,14 @@
                         "temperament": {
                             "Adaptability": 3,
                             "Approach_Withdrawal": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1367,6 +2255,14 @@
                         "temperament": {
                             "Distractibility": 3,
                             "Mood": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1389,6 +2285,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1398,6 +2302,14 @@
                         "temperament": {
                             "Intensity": 4,
                             "Activity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1407,6 +2319,14 @@
                         "temperament": {
                             "Distractibility": -3,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1416,6 +2336,14 @@
                         "temperament": {
                             "Activity": 3,
                             "Adaptability": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1438,6 +2366,14 @@
                         "temperament": {
                             "Activity": 6,
                             "Approach_Withdrawal": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5906,
+                            "energy_cost": 0.5125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.5187,
+                            "familiarity": 0.4375,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1447,6 +2383,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Approach_Withdrawal": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1456,6 +2400,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Threshold": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1465,6 +2417,14 @@
                         "temperament": {
                             "Distractibility": -4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4188,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.275,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1487,6 +2447,14 @@
                         "temperament": {
                             "Persistence": 4,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1496,6 +2464,14 @@
                         "temperament": {
                             "Activity": 3,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1505,6 +2481,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 2,
                             "Adaptability": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5281,
+                            "energy_cost": 0.4625,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1514,6 +2498,14 @@
                         "temperament": {
                             "Threshold": -2,
                             "Regularity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4656,
+                            "energy_cost": 0.4125,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3687,
+                            "familiarity": 0.5375,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1536,6 +2528,14 @@
                         "temperament": {
                             "Persistence": 5,
                             "Intensity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1545,6 +2545,14 @@
                         "temperament": {
                             "Adaptability": 3,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1554,6 +2562,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Intensity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1563,6 +2579,14 @@
                         "temperament": {
                             "Distractibility": 4,
                             "Activity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1585,6 +2609,14 @@
                         "temperament": {
                             "Regularity": 4,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1594,6 +2626,14 @@
                         "temperament": {
                             "Intensity": 5,
                             "Regularity": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1603,6 +2643,14 @@
                         "temperament": {
                             "Persistence": 5,
                             "Adaptability": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4969,
+                            "energy_cost": 0.4375,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4062,
+                            "familiarity": 0.5125,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1612,6 +2660,14 @@
                         "temperament": {
                             "Threshold": 4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1634,6 +2690,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 4,
                             "Mood": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5594,
+                            "energy_cost": 0.4875,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4812,
+                            "familiarity": 0.4625,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1643,6 +2707,14 @@
                         "temperament": {
                             "Distractibility": -3,
                             "Persistence": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1652,6 +2724,14 @@
                         "temperament": {
                             "Adaptability": 4,
                             "Mood": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1661,6 +2741,14 @@
                         "temperament": {
                             "Threshold": -3,
                             "Approach_Withdrawal": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.3719,
+                            "energy_cost": 0.4313,
+                            "safety_risk": 0.3125,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 }
@@ -1683,6 +2771,14 @@
                         "temperament": {
                             "Persistence": 5,
                             "Distractibility": -3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.4813,
+                            "energy_cost": 0.425,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.3875,
+                            "familiarity": 0.525,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1692,6 +2788,14 @@
                         "temperament": {
                             "Intensity": 3,
                             "Activity": 3
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5437,
+                            "energy_cost": 0.475,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4625,
+                            "familiarity": 0.475,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1701,6 +2805,14 @@
                         "temperament": {
                             "Adaptability": 3,
                             "Regularity": 2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.5281,
+                            "energy_cost": 0.4625,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.4437,
+                            "familiarity": 0.4875,
+                            "social_soothing": 0.3
                         }
                     }
                 },
@@ -1710,6 +2822,14 @@
                         "temperament": {
                             "Approach_Withdrawal": 2,
                             "Regularity": -2
+                        },
+                        "infant_appraisal": {
+                            "comfort_value": 0.45,
+                            "energy_cost": 0.4,
+                            "safety_risk": 0.25,
+                            "novelty_load": 0.35,
+                            "familiarity": 0.55,
+                            "social_soothing": 0.3
                         }
                     }
                 }

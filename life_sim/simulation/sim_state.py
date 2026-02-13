@@ -16,6 +16,8 @@ from .brain import (
     default_player_style_tracker,
     update_player_style_tracker,
     blend_weights,
+    choice_to_infant_appraisal,
+    temperament_to_infant_params,
 )
 
 class SimState:
@@ -436,6 +438,7 @@ class SimState:
             return round(clamp01(rng.gauss(mu, sigma)), 4)
 
         mimic_cfg = cfg.get("player_mimic", {}) or {}
+        infant_v2_cfg = cfg.get("infant_brain_v2", {}) or {}
         alpha_default_npc = float(mimic_cfg.get("alpha_default_npc", 0.10))
         alpha_default_player = float(mimic_cfg.get("alpha_default_player", 0.0))
         alpha_default = alpha_default_player if is_player else alpha_default_npc
@@ -471,7 +474,136 @@ class SimState:
                 "event_decisions": 0,
                 "ap_decisions": 0,
             },
+            # Phase 2 infant-v2 scaffold: non-breaking data contract only.
+            "infant_brain_version": str(infant_v2_cfg.get("version", "v2_spec_2026_02")),
+            "infant_brain_v2_enabled": bool(cfg.get("infant_brain_v2_enabled", False)),
+            "infant_params": {
+                "novelty_tolerance": 0.5,
+                "threat_sensitivity": 0.5,
+                "energy_budget": 0.5,
+                "self_regulation": 0.5,
+                "comfort_bias": 0.5,
+            },
+            "infant_state": {
+                "energy_level": 0.65,
+                "satiety_level": 0.60,
+                "security_level": 0.70,
+                "stimulation_load": 0.25,
+                "last_event_novelty": 0.20,
+            },
         }
+
+    def _clamp01(self, value):
+        return max(0.0, min(1.0, float(value)))
+
+    def _is_infant_brain_v2_active_for_agent(self, agent):
+        cfg = self.config.get("npc_brain", {}) or {}
+        if not bool(cfg.get("infant_brain_v2_enabled", False)):
+            return False
+        if agent is None:
+            return False
+        if int(getattr(agent, "age_months", 0)) > 35:
+            return False
+        temperament = getattr(agent, "temperament", None)
+        return isinstance(temperament, dict) and len(temperament) > 0
+
+    def _ensure_infant_brain_state(self, agent):
+        if agent is None:
+            return None
+        if not isinstance(getattr(agent, "brain", None), dict):
+            agent.brain = {}
+        agent.brain.setdefault("infant_state", {})
+
+        derived = temperament_to_infant_params(getattr(agent, "temperament", {}) or {})
+        params = {key: self._clamp01(val) for key, val in derived.items()}
+        agent.brain["infant_params"] = params
+
+        state = agent.brain.get("infant_state", {}) or {}
+        state.setdefault("energy_level", 0.65)
+        state.setdefault("satiety_level", 0.60)
+        state.setdefault("security_level", 0.70)
+        state.setdefault("stimulation_load", 0.25)
+        state.setdefault("last_event_novelty", 0.20)
+        for key in ("energy_level", "satiety_level", "security_level", "stimulation_load", "last_event_novelty"):
+            state[key] = self._clamp01(state.get(key, 0.0))
+        agent.brain["infant_state"] = state
+        return state
+
+    def _update_infant_state_monthly(self, agent):
+        """
+        Deterministic monthly infant homeostasis update.
+        Applies only while infant v2 is enabled and agent is in infancy.
+        """
+        if not self._is_infant_brain_v2_active_for_agent(agent):
+            return
+        state = self._ensure_infant_brain_state(agent)
+        params = (agent.brain.get("infant_params", {}) or {})
+        self_reg = self._clamp01(params.get("self_regulation", 0.5))
+        novelty_tol = self._clamp01(params.get("novelty_tolerance", 0.5))
+        comfort_bias = self._clamp01(params.get("comfort_bias", 0.5))
+
+        state["energy_level"] = self._clamp01(
+            (state["energy_level"] * 0.88)
+            + (0.10 * comfort_bias)
+            + (0.04 * self_reg)
+            - (0.05 * state["stimulation_load"])
+        )
+        state["satiety_level"] = self._clamp01((state["satiety_level"] * 0.90) + 0.05)
+        state["security_level"] = self._clamp01(
+            (state["security_level"] * 0.90)
+            + (0.06 * comfort_bias)
+            - (0.03 * state["stimulation_load"])
+        )
+        state["stimulation_load"] = self._clamp01(
+            (state["stimulation_load"] * 0.76)
+            + (0.08 * state["last_event_novelty"])
+            + (0.05 * (1.0 - self_reg))
+            + (0.04 * max(0.0, novelty_tol - 0.5))
+        )
+        state["last_event_novelty"] = self._clamp01(state["last_event_novelty"] * 0.70)
+
+        agent.brain["infant_state"] = state
+
+    def _update_infant_state_after_choice(self, agent, choice):
+        """
+        Deterministic post-choice infant state transition.
+        Uses infant appraisal and current derived infant parameters.
+        """
+        if not self._is_infant_brain_v2_active_for_agent(agent):
+            return
+        state = self._ensure_infant_brain_state(agent)
+        params = (agent.brain.get("infant_params", {}) or {})
+        appraisal = choice_to_infant_appraisal(choice)
+
+        self_reg = self._clamp01(params.get("self_regulation", 0.5))
+        threat = self._clamp01(params.get("threat_sensitivity", 0.5))
+        energy_budget = self._clamp01(params.get("energy_budget", 0.5))
+
+        energy_drop = appraisal["energy_cost"] * (0.45 + (0.40 * (1.0 - energy_budget)))
+        energy_recover = appraisal["comfort_value"] * 0.08
+        state["energy_level"] = self._clamp01(state["energy_level"] - energy_drop + energy_recover)
+
+        satiety_delta = (0.06 * appraisal["comfort_value"]) + (0.02 * appraisal["social_soothing"]) - (0.04 * appraisal["energy_cost"])
+        state["satiety_level"] = self._clamp01(state["satiety_level"] + satiety_delta)
+
+        security_delta = (
+            (0.16 * appraisal["comfort_value"])
+            + (0.16 * appraisal["social_soothing"])
+            + (0.10 * appraisal["familiarity"])
+            - (0.28 * appraisal["safety_risk"] * (0.8 + (0.4 * threat)))
+        )
+        state["security_level"] = self._clamp01(state["security_level"] + security_delta)
+
+        novelty_pressure = appraisal["novelty_load"] * (1.0 + (0.60 * (1.0 - self_reg)))
+        soothe_buffer = (0.18 * appraisal["familiarity"]) + (0.14 * appraisal["social_soothing"])
+        state["stimulation_load"] = self._clamp01(
+            (state["stimulation_load"] * 0.65)
+            + (0.50 * novelty_pressure)
+            - soothe_buffer
+        )
+        state["last_event_novelty"] = self._clamp01(appraisal["novelty_load"])
+
+        agent.brain["infant_state"] = state
 
     def _init_player_style_tracker(self):
         cfg = self.config.get("npc_brain", {}) or {}
