@@ -120,6 +120,37 @@ AFFINITY_OPENNESS_WEIGHT      = 0.8
 AFFINITY_CONSCIENTIOUSNESS_WEIGHT = 0.8
 AFFINITY_EXTRAVERSION_WEIGHT  = 0.5
 
+# Extraversion Complementarity Constants
+AFFINITY_EXTRAVERSION_COMP_MIN = 30   # Minimum difference for complementarity bonus
+AFFINITY_EXTRAVERSION_COMP_MAX = 50   # Maximum difference for complementarity bonus  
+AFFINITY_EXTRAVERSION_COMP_PEAK = 15  # Peak bonus at minimum difference
+AFFINITY_EXTRAVERSION_COMP_TAPER = 0.25  # Taper rate per point above minimum
+
+# Life Stage Compatibility Constants
+AFFINITY_LIFE_STAGE_SAME_BONUS = 10    # Bonus for same life stage
+AFFINITY_LIFE_STAGE_DEFAULT_PENALTY = -5  # Default penalty for incompatible stages
+
+# Life Stage Age Ranges (inclusive)
+LIFE_STAGE_CHILD = (0, 12)      # Childhood - play-based relationships
+LIFE_STAGE_TEEN = (13, 17)      # Adolescence - identity formation  
+LIFE_STAGE_YOUNG_ADULT = (18, 25) # Early adulthood - career/romance focus
+LIFE_STAGE_ADULT = (26, 40)     # Mid-life - family/career establishment
+LIFE_STAGE_MATURE = (41, 65)    # Mature adulthood - legacy/stability
+LIFE_STAGE_SENIOR = (66, 120)   # Senior years - reflection/health
+
+# Trait-Specific Incompatibility Constants
+# Different traits have different tolerance levels for incompatibility
+AFFINITY_OPENNESS_THRESHOLD = 25      # Higher tolerance - values can differ more
+AFFINITY_CONSCIENTIOUSNESS_THRESHOLD = 15  # Lower tolerance - lifestyle clashes are painful
+
+# Trait-specific penalty severity multipliers
+AFFINITY_OPENNESS_PENALTY_SEVERITY = 0.6     # Mild penalty for value differences
+AFFINITY_CONSCIENTIOUSNESS_PENALTY_SEVERITY = 1.2  # Severe penalty for routine incompatibility
+
+# Incompatibility severity thresholds for UI labeling
+AFFINITY_MILD_INCOMPATIBILITY_THRESHOLD = 15   # Below this = mild clash
+AFFINITY_SEVERE_INCOMPATIBILITY_THRESHOLD = 35  # Above this = severe clash
+
 # Minimum absolute effect magnitude to warrant a breakdown label in the UI.
 # Below this the contribution is noise; surfacing it would clutter tooltips.
 AFFINITY_LABEL_THRESHOLD      = 5

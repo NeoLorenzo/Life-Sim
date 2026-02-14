@@ -1188,23 +1188,33 @@ These affect how an agent relates to *anyone*:
 **2. Dyadic Effects (Similarity/Homophily)**
 These compare traits between two agents using: `(AFFINITY_DYADIC_THRESHOLD - Delta) * WEIGHT`
 
-**Openness (Shared Interests vs. Value Clash)**
+**Openness (Shared Interests vs. Value Clashes)**
+- **Threshold**: `AFFINITY_OPENNESS_THRESHOLD` (25 - higher tolerance)
 - **Weight**: `AFFINITY_OPENNESS_WEIGHT` (0.8 - highest priority)
-- **Positive**: "Shared Interests" when difference < `AFFINITY_DYADIC_THRESHOLD`
-- **Negative**: "Value Clash" when difference > `AFFINITY_DYADIC_THRESHOLD`
-- **Rationale**: Core value alignment is strongest predictor of long-term relationship viability
+- **Penalty Severity**: `AFFINITY_OPENNESS_PENALTY_SEVERITY` (0.6x - milder penalties)
+- **Positive**: "Shared Interests" when difference < threshold
+- **Negative**: "Mild Value Clash", "Value Clash", "Severe Value Clash" based on difference magnitude
+- **Rationale**: Core value alignment is important but people can tolerate different worldviews
 
-**Conscientiousness (Lifestyle Sync vs. Clash)**
-- **Weight**: `AFFINITY_CONSCIENTIOUSNESS_WEIGHT` (0.8 - equal priority with Openness)
-- **Positive**: "Lifestyle Sync" for similar organization levels
-- **Negative**: "Lifestyle Clash" for different life approaches
-- **Rationale**: People with incompatible routines grind against each other constantly
+**Conscientiousness (Lifestyle Sync vs. Severe Lifestyle Clashes)**
+- **Threshold**: `AFFINITY_CONSCIENTIOUSNESS_THRESHOLD` (15 - lower tolerance)
+- **Weight**: `AFFINITY_CONSCIENTIOUSNESS_WEIGHT` (0.8 - highest priority)
+- **Penalty Severity**: `AFFINITY_CONSCIENTIOUSNESS_PENALTY_SEVERITY` (1.2x - severe penalties)
+- **Positive**: "Lifestyle Sync" when difference < threshold
+- **Negative**: "Mild Lifestyle Clash", "Lifestyle Clash", "Severe Lifestyle Clash" based on difference magnitude
+- **Rationale**: Daily routine incompatibility is a major relationship stressor and predictor of breakdown
 
-**Extraversion (Energy Match vs. Mismatch)**
+**Extraversion (Social Complementarity vs. Energy Clash)**
 - **Weight**: `AFFINITY_EXTRAVERSION_WEIGHT` (0.5 - lower priority)
-- **Positive**: "Energy Match" for similar social energy levels
-- **Negative**: **"Energy Mismatch"** for different energy levels (previously invisible in tooltips)
-- **Rationale**: Energy mismatch creates friction but rarely breaks otherwise well-matched relationships
+- **Positive**: "Social Complementarity" for optimal 30-50 point difference, "Energy Match" for similar traits
+- **Negative**: "Energy Clash" for extreme differences (>50 points), "Energy Mismatch" for moderate differences
+- **Rationale**: Complementary social energy creates balanced dynamics; extremes create friction
+
+**Life Stage Compatibility (Developmental Alignment)**
+- **Weight**: Fixed modifiers based on developmental psychology
+- **Positive**: "Life Stage Sync" for same stage, "Big/Little Sibling Dynamic", "Career Guidance", "Life Experience", "Peer Support"
+- **Negative**: "Generation Gap", "Parent-Child Gap", "Life Phase Mismatch", "Different Priorities"
+- **Rationale**: Developmental psychology shows life stage alignment is crucial for relationship potential
 
 </details>
 
@@ -1216,19 +1226,21 @@ These compare traits between two agents using: `(AFFINITY_DYADIC_THRESHOLD - Del
 **For Bulk Initialization** (`calculate_affinity`):
 1. **Actor Effects**: Apply Neuroticism/Agreeableness thresholds using constants
 2. **Dyadic Effects**: Compute similarity for Openness, Conscientiousness, Extraversion
-3. **Final Clamp**: `max(AFFINITY_SCORE_MIN, min(AFFINITY_SCORE_MAX, rounded_score))`
-4. **Zero Allocations**: No list building, no label formatting, minimal branching
+3. **Life Stage**: Apply developmental compatibility modifiers
+4. **Final Clamp**: `max(AFFINITY_SCORE_MIN, min(AFFINITY_SCORE_MAX, rounded_score))`
+5. **Zero Allocations**: No list building, no label formatting, minimal branching
 
 **For Detailed Analysis** (`get_affinity_breakdown`):
 1. **Initialize**: Start with score = 0.0, empty breakdown list
 2. **Actor Effects**: Apply individual trait modifiers for both agents
 3. **Dyadic Effects**: Calculate similarity/difference penalties and bonuses
-4. **Categorize Effects**: Label significant effects (> `AFFINITY_LABEL_THRESHOLD`) for UI display
-5. **Final Clamp**: Round and clamp to `[AFFINITY_SCORE_MIN, AFFINITY_SCORE_MAX]`
+4. **Life Stage**: Apply developmental compatibility with contextual labels
+5. **Categorize Effects**: Label significant effects (> `AFFINITY_LABEL_THRESHOLD`) for UI display
+6. **Final Clamp**: Round and clamp to `[AFFINITY_SCORE_MIN, AFFINITY_SCORE_MAX]`
 
 **Breakdown Categories**
-- **Positive Labels**: "Shared Interests (Openness)", "Lifestyle Sync (Order)", "Energy Match"
-- **Negative Labels**: "Value Clash (Openness)", "Lifestyle Clash (Order)", **"Energy Mismatch"** (new)
+- **Positive Labels**: "Shared Interests (Openness)", "Lifestyle Sync (Order)", "Social Complementarity", "Energy Match", "Life Stage Sync", "Big Sibling Dynamic", "Career Guidance", "Life Experience", "Peer Support"
+- **Negative Labels**: "Mild Value Clash", "Value Clash", "Severe Value Clash", "Mild Lifestyle Clash", "Lifestyle Clash", "Severe Lifestyle Clash", "Energy Clash", "Energy Mismatch", "Generation Gap", "Parent-Child Gap", "Life Phase Mismatch", "Different Priorities"
 - **Individual Labels**: "{Name}'s Neuroticism", "{Name}'s Agreeableness"
 - **Filtering**: Only effects exceeding `AFFINITY_LABEL_THRESHOLD` appear in breakdown
 
@@ -2829,9 +2841,11 @@ The physical attributes system replaces traditional RPG-style stats with a scien
                 *   *Neuroticism*: Threshold-based penalty above `AFFINITY_ACTOR_THRESHOLD` (70), scaling at `AFFINITY_ACTOR_WEIGHT` (0.5x).
                 *   *Agreeableness*: Threshold-based bonus above `AFFINITY_ACTOR_THRESHOLD`, same weight.
             *   **Dyadic Effects**: 
-                *   *Openness*: Shared interests vs. value clashes using `(AFFINITY_DYADIC_THRESHOLD - delta) * AFFINITY_OPENNESS_WEIGHT`.
-                *   *Conscientiousness*: Lifestyle sync vs. clashes using `(AFFINITY_DYADIC_THRESHOLD - delta) * AFFINITY_CONSCIENTIOUSNESS_WEIGHT`.
-                *   *Extraversion*: Energy match/mismatch using `(AFFINITY_DYADIC_THRESHOLD - delta) * AFFINITY_EXTRAVERSION_WEIGHT`.
+                *   *Openness*: Trait-specific compatibility using `_trait_specific_compatibility()` with 25-point tolerance and 0.6x penalty severity.
+                *   *Conscientiousness*: Trait-specific compatibility using `_trait_specific_compatibility()` with 15-point tolerance and 1.2x penalty severity.
+                *   *Extraversion*: Social complementarity using `_extraversion_compatibility()` with optimal 30-50 point difference for bonus, penalties for extremes.
+            *   **Trait-Specific Incompatibilities**: Different traits have different tolerance levels and penalty severities based on psychological research showing some mismatches are more damaging than others.
+            *   **Life Stage Compatibility**: Developmental psychology-based modifiers using `_life_stage_compatibility()` with contextual bonuses/penalties for different life stage combinations.
             *   **Complete Negative Labeling**: All negative effects now properly labeled in tooltips, including the previously missing "Energy Mismatch" for Extraversion differences.
             *   **Performance-Optimized Paths**: Dual-function architecture with `calculate_affinity()` for bulk initialization (zero allocations) and `get_affinity_breakdown()` for detailed UI tooltips.
             *   **Constants-Driven Tuning**: All thresholds, weights, and bounds moved to `constants.py` for easy balancing without touching core logic.
