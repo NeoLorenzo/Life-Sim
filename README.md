@@ -1604,6 +1604,59 @@ The `events.py` module manages a comprehensive life event system, handling age-b
 }
 ```
 
+### Infant Event Balance Model
+
+Infant temperament effects in `events.json` are calibrated to keep two goals in tension:
+
+- **Directionality**: Choices should still feel meaningful and behaviorally distinct.
+- **Population realism**: Repeated monthly event exposure should not force the entire cohort into a single temperament style by 35 months.
+
+The current balancing approach is:
+
+- Use month-locked infant events (`1..35`) with plasticity scaling (`1.0 -> 0.6 -> 0.3`).
+- Reduce broad one-direction drift across all infant events.
+- Re-expand a small set of highest-impact events to recover realistic profile spread and tails.
+- Preserve event narrative, trigger windows, and choice structure while tuning only temperament effect magnitudes.
+
+This keeps developmental movement visible without collapsing diversity.
+
+### Infant Cohort Statistical Analysis (0m vs 35m)
+
+Baseline source: `tests/baselines/phase9_infant_temperament_cohort_report.json`
+
+- **Sample design**
+- Cohort size: `n=1000` at birth and `n=1000` at 35 months.
+- Deterministic paired replay with infant event backfill and infant-brain routing.
+- Metrics include trait distribution shape, tails, within-agent coherence, pairwise structure, and drift.
+
+- **Key summary metrics**
+- `mean_abs_delta_all_traits`: `5.0001`
+- `within_35m.profile_sd_mean`: `8.0185`
+- `within_35m.profile_span_mean`: `26.0158`
+- Max trait `p99` at 35m: `75.401`
+
+- **Strengths**
+- Trait distributions are centered and bounded realistically at both timepoints.
+- Per-trait tail mass is present and healthy (roughly 4-5% two-sided `|z| >= 2`).
+- Cross-trait directionality remains plausible:
+- `Regularity` vs `Distractibility` remains negative.
+- `Regularity` vs `Persistence` remains positive.
+- `Mood` vs `Threshold` remains positive.
+- Developmental drift is present but no longer extreme, avoiding prior one-way inflation.
+
+- **Weaknesses / residual risks**
+- Profiles are still somewhat clean:
+- `contradiction_rate` is effectively `0.0` in current audit runs.
+- Some structural correlations weaken by 35 months relative to birth.
+- Mild directional push remains in event counterfactual comparisons:
+- Residual increases in `Persistence`, `Regularity`, `Activity`, `Intensity`.
+- Residual decreases in `Distractibility` and `Threshold`.
+
+- **Interpretation**
+- Current cohort generation is materially more realistic than pre-calibration high-drift behavior.
+- The system currently sits in a compromise zone: reduced directional bias with restored spread.
+- Remaining improvements should focus on micro-level event tuning for messier edge profiles rather than broad global scaling.
+
 </details>
 </details>
 

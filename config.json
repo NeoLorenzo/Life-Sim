@@ -1,7 +1,7 @@
 {
     "seed": 42,
     "development": {
-        "disable_events": false
+        "disable_events": true
     },
     "npc_brain": {
         "enabled": true,

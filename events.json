@@ -15,8 +15,8 @@
                     "text": "Grab the spoon with both hands and smear victory everywhere",
                     "effects": {
                         "temperament": {
-                            "Activity": 7,
-                            "Intensity": 4
+                            "Activity": 4.7,
+                            "Intensity": 2.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.6219,
@@ -32,8 +32,8 @@
                     "text": "Freeze, inspect, and only then allow one cautious taste",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": -4,
-                            "Persistence": 5
+                            "Approach_Withdrawal": -4.1,
+                            "Persistence": 2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -49,8 +49,8 @@
                     "text": "Accept it calmly like a tiny diplomat",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 6,
-                            "Mood": 3
+                            "Adaptability": 5.2,
+                            "Mood": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5906,
@@ -66,8 +66,8 @@
                     "text": "Close your mouth and demand the old menu",
                     "effects": {
                         "temperament": {
-                            "Adaptability": -6,
-                            "Threshold": -3
+                            "Adaptability": -5.2,
+                            "Threshold": -2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3094,
@@ -96,8 +96,8 @@
                     "text": "Smile first and launch friendly diplomacy",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 5,
-                            "Mood": 3
+                            "Approach_Withdrawal": 5.2,
+                            "Mood": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -113,8 +113,8 @@
                     "text": "Headbutt the mirror to test this impostor",
                     "effects": {
                         "temperament": {
-                            "Intensity": 5,
-                            "Activity": 3
+                            "Intensity": 3.4,
+                            "Activity": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -130,8 +130,8 @@
                     "text": "Stare in stunned silence, gathering data",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -4,
-                            "Persistence": 3
+                            "Distractibility": -2.9,
+                            "Persistence": 1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -147,8 +147,8 @@
                     "text": "Burst into tears and seek immediate extraction",
                     "effects": {
                         "temperament": {
-                            "Threshold": -4,
-                            "Approach_Withdrawal": -3
+                            "Threshold": -2.7,
+                            "Approach_Withdrawal": -3.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3406,
@@ -177,8 +177,8 @@
                     "text": "Laugh at the boom and kick your feet like a battle chief",
                     "effects": {
                         "temperament": {
-                            "Mood": 6,
-                            "Activity": 4
+                            "Mood": 4.1,
+                            "Activity": 2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.6062,
@@ -194,8 +194,8 @@
                     "text": "Wail for immediate evacuation to trusted arms",
                     "effects": {
                         "temperament": {
-                            "Threshold": -7,
-                            "Intensity": 5
+                            "Threshold": -4.9,
+                            "Intensity": 3.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4188,
@@ -211,8 +211,8 @@
                     "text": "Track every rumble in focused silence",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -5,
-                            "Persistence": 4
+                            "Distractibility": -3.6,
+                            "Persistence": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -228,8 +228,8 @@
                     "text": "Ignore the chaos and continue chewing your sleeve",
                     "effects": {
                         "temperament": {
-                            "Threshold": 4,
-                            "Regularity": 3
+                            "Threshold": 2.7,
+                            "Regularity": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -258,8 +258,8 @@
                     "text": "Laugh and bark back with full chest",
                     "effects": {
                         "temperament": {
-                            "Intensity": 4,
-                            "Mood": 4
+                            "Intensity": 2.9,
+                            "Mood": 2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -275,8 +275,8 @@
                     "text": "Hide your face in a blanket bunker",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": -5,
-                            "Threshold": -3
+                            "Approach_Withdrawal": -5.2,
+                            "Threshold": -2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.325,
@@ -292,8 +292,8 @@
                     "text": "Track the sound source without blinking",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Distractibility": -3
+                            "Persistence": 2.2,
+                            "Distractibility": -2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -309,8 +309,8 @@
                     "text": "Ignore the beast and continue floor-rolling",
                     "effects": {
                         "temperament": {
-                            "Threshold": 4,
-                            "Activity": 2
+                            "Threshold": 2.7,
+                            "Activity": 1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -339,8 +339,8 @@
                     "text": "Conduct a crawling search of all nearby territory",
                     "effects": {
                         "temperament": {
-                            "Activity": 5,
-                            "Persistence": 3
+                            "Activity": 3.4,
+                            "Persistence": 1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -356,8 +356,8 @@
                     "text": "Accept single-sock life with great dignity",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Mood": 2
+                            "Adaptability": 4.3,
+                            "Mood": 1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -373,8 +373,8 @@
                     "text": "Refuse to proceed until matching sock is restored",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Adaptability": -3
+                            "Regularity": 2.9,
+                            "Adaptability": -2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -390,8 +390,8 @@
                     "text": "Wail dramatically at the injustice",
                     "effects": {
                         "temperament": {
-                            "Intensity": 5,
-                            "Mood": -2
+                            "Intensity": 3.4,
+                            "Mood": -1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4969,
@@ -420,8 +420,8 @@
                     "text": "Explode into giggles and demand another round",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 6,
-                            "Mood": 4
+                            "Approach_Withdrawal": 6.3,
+                            "Mood": 2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.6062,
@@ -437,8 +437,8 @@
                     "text": "Study the trick, then attempt your own stealth face-cover",
                     "effects": {
                         "temperament": {
-                            "Persistence": 5,
-                            "Distractibility": -3
+                            "Persistence": 2.7,
+                            "Distractibility": -2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -454,8 +454,8 @@
                     "text": "Burst into tears at each disappearance",
                     "effects": {
                         "temperament": {
-                            "Threshold": -5,
-                            "Approach_Withdrawal": -4
+                            "Threshold": -3.4,
+                            "Approach_Withdrawal": -4.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3094,
@@ -471,8 +471,8 @@
                     "text": "Remain stone-faced until performance quality improves",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Intensity": -3
+                            "Regularity": 2.9,
+                            "Intensity": -2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -501,8 +501,8 @@
                     "text": "Enter a trance and follow every rotation",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -5,
-                            "Persistence": 4
+                            "Distractibility": -3.6,
+                            "Persistence": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -518,8 +518,8 @@
                     "text": "Kick excitedly as the prophecy unfolds",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Mood": 3
+                            "Activity": 2.7,
+                            "Mood": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -535,8 +535,8 @@
                     "text": "Demand to be moved somewhere less mysterious",
                     "effects": {
                         "temperament": {
-                            "Threshold": -4,
-                            "Approach_Withdrawal": -2
+                            "Threshold": -2.7,
+                            "Approach_Withdrawal": -2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3563,
@@ -552,8 +552,8 @@
                     "text": "Ignore the fan and chew your sleeve with resolve",
                     "effects": {
                         "temperament": {
-                            "Regularity": 3,
-                            "Threshold": 3
+                            "Regularity": 2.2,
+                            "Threshold": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -582,8 +582,8 @@
                     "text": "Join in and percussion everything in reach",
                     "effects": {
                         "temperament": {
-                            "Activity": 5,
-                            "Intensity": 3
+                            "Activity": 3.4,
+                            "Intensity": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -599,8 +599,8 @@
                     "text": "Listen carefully and mimic the rhythm",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Approach_Withdrawal": 2
+                            "Persistence": 2.2,
+                            "Approach_Withdrawal": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -616,8 +616,8 @@
                     "text": "Cover your ears and demand silence",
                     "effects": {
                         "temperament": {
-                            "Threshold": -5,
-                            "Mood": -2
+                            "Threshold": -3.4,
+                            "Mood": -1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3406,
@@ -633,8 +633,8 @@
                     "text": "Nod politely, then crawl away from the performance",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 3,
-                            "Regularity": 3
+                            "Adaptability": 2.7,
+                            "Regularity": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -663,8 +663,8 @@
                     "text": "Launch a tidal assault with both hands",
                     "effects": {
                         "temperament": {
-                            "Activity": 6,
-                            "Intensity": 3
+                            "Activity": 4.1,
+                            "Intensity": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5906,
@@ -680,8 +680,8 @@
                     "text": "Cry as if betrayed by civilization itself",
                     "effects": {
                         "temperament": {
-                            "Threshold": -6,
-                            "Mood": -3
+                            "Threshold": -4.1,
+                            "Mood": -2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3094,
@@ -697,8 +697,8 @@
                     "text": "Stare at bubbles with monk-like concentration",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -6,
-                            "Persistence": 4
+                            "Distractibility": -4.3,
+                            "Persistence": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4188,
@@ -714,8 +714,8 @@
                     "text": "Attempt to drink the mysterious water",
                     "effects": {
                         "temperament": {
-                            "Adaptability": -4,
-                            "Approach_Withdrawal": 3
+                            "Adaptability": -3.4,
+                            "Approach_Withdrawal": 3.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -744,8 +744,8 @@
                     "text": "Open wide and embrace the unknown flavor",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Approach_Withdrawal": 3
+                            "Adaptability": 4.3,
+                            "Approach_Withdrawal": 3.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -761,8 +761,8 @@
                     "text": "Smear it on tray first for texture analysis",
                     "effects": {
                         "temperament": {
-                            "Persistence": 3,
-                            "Activity": 3
+                            "Persistence": 1.6,
+                            "Activity": 2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -778,8 +778,8 @@
                     "text": "Accept one bite, then reject all further terms",
                     "effects": {
                         "temperament": {
-                            "Regularity": 3,
-                            "Adaptability": -3
+                            "Regularity": 2.2,
+                            "Adaptability": -2.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -795,8 +795,8 @@
                     "text": "Refuse immediately and file formal complaint noises",
                     "effects": {
                         "temperament": {
-                            "Intensity": 4,
-                            "Threshold": -3
+                            "Intensity": 2.9,
+                            "Threshold": -2.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -825,8 +825,8 @@
                     "text": "Carefully stack them higher than reason allows",
                     "effects": {
                         "temperament": {
-                            "Persistence": 6,
-                            "Distractibility": -3
+                            "Persistence": 3.2,
+                            "Distractibility": -2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4969,
@@ -842,8 +842,8 @@
                     "text": "Knock the tower down instantly for science",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Mood": 2
+                            "Activity": 2.7,
+                            "Mood": 1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -859,8 +859,8 @@
                     "text": "Sort cups by color with stern focus",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Persistence": 3
+                            "Regularity": 2.9,
+                            "Persistence": 1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -876,8 +876,8 @@
                     "text": "Toss one cup and pursue it across the room",
                     "effects": {
                         "temperament": {
-                            "Distractibility": 4,
-                            "Approach_Withdrawal": 2
+                            "Distractibility": 2.9,
+                            "Approach_Withdrawal": 2.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -906,8 +906,8 @@
                     "text": "Test every corner for structural weakness",
                     "effects": {
                         "temperament": {
-                            "Persistence": 7,
-                            "Approach_Withdrawal": 4
+                            "Persistence": 3.8,
+                            "Approach_Withdrawal": 4.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.6219,
@@ -923,8 +923,8 @@
                     "text": "Retreat and reorganize your toy base camp",
                     "effects": {
                         "temperament": {
-                            "Regularity": 5,
-                            "Approach_Withdrawal": -3
+                            "Regularity": 3.6,
+                            "Approach_Withdrawal": -3.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -940,8 +940,8 @@
                     "text": "Summon help with dramatic shouting",
                     "effects": {
                         "temperament": {
-                            "Intensity": 6,
-                            "Activity": 2
+                            "Intensity": 4.1,
+                            "Activity": 1.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -957,8 +957,8 @@
                     "text": "Sit and quietly observe older humans using the mechanism",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -4,
-                            "Adaptability": 4
+                            "Distractibility": -2.9,
+                            "Adaptability": 3.4
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -987,8 +987,8 @@
                     "text": "Charge up and slide down immediately",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 5,
-                            "Activity": 3
+                            "Approach_Withdrawal": 2.9,
+                            "Activity": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1004,8 +1004,8 @@
                     "text": "Climb halfway, retreat, then plan a better run",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Adaptability": 2
+                            "Persistence": 1.2,
+                            "Adaptability": 1.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1021,8 +1021,8 @@
                     "text": "Ask to be carried down with royal caution",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Approach_Withdrawal": -3
+                            "Threshold": -1.1,
+                            "Approach_Withdrawal": -1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3563,
@@ -1038,8 +1038,8 @@
                     "text": "Sit at the top and wave at everyone instead",
                     "effects": {
                         "temperament": {
-                            "Mood": 3,
-                            "Activity": -2
+                            "Mood": 1.1,
+                            "Activity": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1068,8 +1068,8 @@
                     "text": "Rush toward the sound to inspect the arrivals",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 4,
-                            "Activity": 3
+                            "Approach_Withdrawal": 2.3,
+                            "Activity": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1085,8 +1085,8 @@
                     "text": "Freeze and watch from behind a trusted leg",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": -4,
-                            "Threshold": -2
+                            "Approach_Withdrawal": -2.3,
+                            "Threshold": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3563,
@@ -1102,8 +1102,8 @@
                     "text": "Wave enthusiastically at whoever enters",
                     "effects": {
                         "temperament": {
-                            "Mood": 4,
-                            "Intensity": 2
+                            "Mood": 1.5,
+                            "Intensity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1119,8 +1119,8 @@
                     "text": "Ignore visitors and continue your toy mission",
                     "effects": {
                         "temperament": {
-                            "Regularity": 3,
-                            "Distractibility": -2
+                            "Regularity": 1.2,
+                            "Distractibility": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1149,8 +1149,8 @@
                     "text": "Cling to the bear and refuse sleep without it",
                     "effects": {
                         "temperament": {
-                            "Regularity": 6,
-                            "Adaptability": -4
+                            "Regularity": 2.4,
+                            "Adaptability": -1.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -1166,8 +1166,8 @@
                     "text": "Offer the bear to a parent, then settle anyway",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 6,
-                            "Mood": 2
+                            "Adaptability": 2.9,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1183,8 +1183,8 @@
                     "text": "Interrogate the bear by chewing one ear",
                     "effects": {
                         "temperament": {
-                            "Activity": 3,
-                            "Threshold": 3
+                            "Activity": 1.1,
+                            "Threshold": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1200,8 +1200,8 @@
                     "text": "Ignore the bear and watch shadows on the wall",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -3,
-                            "Persistence": 3
+                            "Distractibility": -1.2,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -1230,8 +1230,8 @@
                     "text": "Rattle the gate and seek every weak point",
                     "effects": {
                         "temperament": {
-                            "Persistence": 6,
-                            "Intensity": 3
+                            "Persistence": 1.8,
+                            "Intensity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5906,
@@ -1247,8 +1247,8 @@
                     "text": "Respect the barrier and patrol the lower floor",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Threshold": 2
+                            "Regularity": 1.6,
+                            "Threshold": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1264,8 +1264,8 @@
                     "text": "Call for help to begin the ascent together",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 3,
-                            "Adaptability": 3
+                            "Approach_Withdrawal": 1.7,
+                            "Adaptability": 1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1281,8 +1281,8 @@
                     "text": "Retreat to your blocks and abandon the campaign",
                     "effects": {
                         "temperament": {
-                            "Activity": -2,
-                            "Mood": -2
+                            "Activity": -0.8,
+                            "Mood": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3875,
@@ -1311,8 +1311,8 @@
                     "text": "Accept the armor and march into drizzle",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Mood": 2
+                            "Adaptability": 2.4,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1328,8 +1328,8 @@
                     "text": "Fight the sleeves like a trapped hero",
                     "effects": {
                         "temperament": {
-                            "Intensity": 4,
-                            "Activity": 3
+                            "Intensity": 1.6,
+                            "Activity": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1345,8 +1345,8 @@
                     "text": "Stand still until someone fixes every fold",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Persistence": 2
+                            "Regularity": 1.6,
+                            "Persistence": 0.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1362,8 +1362,8 @@
                     "text": "Refuse the coat and demand fair weather",
                     "effects": {
                         "temperament": {
-                            "Threshold": -4,
-                            "Adaptability": -3
+                            "Threshold": -1.5,
+                            "Adaptability": -1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3406,
@@ -1392,8 +1392,8 @@
                     "text": "Demand higher altitude immediately",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 6,
-                            "Intensity": 4
+                            "Approach_Withdrawal": 3.5,
+                            "Intensity": 1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.6062,
@@ -1409,8 +1409,8 @@
                     "text": "Grip the chains and ask to stop",
                     "effects": {
                         "temperament": {
-                            "Threshold": -5,
-                            "Approach_Withdrawal": -4
+                            "Threshold": -1.9,
+                            "Approach_Withdrawal": -2.3
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3094,
@@ -1426,8 +1426,8 @@
                     "text": "Settle into a steady rhythm and hum",
                     "effects": {
                         "temperament": {
-                            "Regularity": 5,
-                            "Mood": 3
+                            "Regularity": 2.0,
+                            "Mood": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1443,8 +1443,8 @@
                     "text": "Scan every nearby kid and narrate silently",
                     "effects": {
                         "temperament": {
-                            "Distractibility": 4,
-                            "Persistence": -3
+                            "Distractibility": 1.6,
+                            "Persistence": -0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1473,8 +1473,8 @@
                     "text": "Dig boldly and build a very serious mound",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Persistence": 4
+                            "Activity": 1.5,
+                            "Persistence": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1490,8 +1490,8 @@
                     "text": "Sift each handful and inspect every grain",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -3,
-                            "Persistence": 3
+                            "Distractibility": -1.2,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -1507,8 +1507,8 @@
                     "text": "Panic when sand touches your fingers",
                     "effects": {
                         "temperament": {
-                            "Threshold": -5,
-                            "Mood": -2
+                            "Threshold": -1.9,
+                            "Mood": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3406,
@@ -1524,8 +1524,8 @@
                     "text": "Share your shovel and start a co-op castle",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 3,
-                            "Adaptability": 3
+                            "Approach_Withdrawal": 1.7,
+                            "Adaptability": 1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1554,8 +1554,8 @@
                     "text": "Dive in and sculpt a glorious mud monument",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Adaptability": 3
+                            "Activity": 1.5,
+                            "Adaptability": 1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1571,8 +1571,8 @@
                     "text": "Pinch and inspect every texture with grave seriousness",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Distractibility": -3
+                            "Persistence": 1.2,
+                            "Distractibility": -1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1588,8 +1588,8 @@
                     "text": "Reject the mud and request immediate hand restoration",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Threshold": -3
+                            "Regularity": 1.6,
+                            "Threshold": -1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1605,8 +1605,8 @@
                     "text": "Smear one heroic streak, then panic about your fingers",
                     "effects": {
                         "temperament": {
-                            "Mood": -2,
-                            "Approach_Withdrawal": -3
+                            "Mood": -0.8,
+                            "Approach_Withdrawal": -1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3719,
@@ -1635,8 +1635,8 @@
                     "text": "Protest loudly from the crib rails",
                     "effects": {
                         "temperament": {
-                            "Intensity": 7,
-                            "Regularity": -4
+                            "Intensity": 2.7,
+                            "Regularity": -1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4969,
@@ -1652,8 +1652,8 @@
                     "text": "Negotiate by asking for one song, then sleep",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Adaptability": 4
+                            "Regularity": 1.6,
+                            "Adaptability": 1.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1669,8 +1669,8 @@
                     "text": "Sleep instantly, no drama, no witnesses",
                     "effects": {
                         "temperament": {
-                            "Regularity": 6,
-                            "Threshold": 3
+                            "Regularity": 2.4,
+                            "Threshold": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5906,
@@ -1686,8 +1686,8 @@
                     "text": "Stay awake quietly and inspect the ceiling for hours",
                     "effects": {
                         "temperament": {
-                            "Persistence": 5,
-                            "Mood": -2
+                            "Persistence": 1.5,
+                            "Mood": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4969,
@@ -1716,8 +1716,8 @@
                     "text": "Search every room shouting tactical updates",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Intensity": 3
+                            "Activity": 1.5,
+                            "Intensity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1733,8 +1733,8 @@
                     "text": "Sit down and wait for adult logistics support",
                     "effects": {
                         "temperament": {
-                            "Regularity": 3,
-                            "Activity": -2
+                            "Regularity": 1.2,
+                            "Activity": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1750,8 +1750,8 @@
                     "text": "Wear mismatched shoes and proceed anyway",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Mood": 2
+                            "Adaptability": 2.4,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1767,8 +1767,8 @@
                     "text": "Refuse to move until the correct pair is assembled",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Adaptability": -3
+                            "Persistence": 1.2,
+                            "Adaptability": -1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1797,8 +1797,8 @@
                     "text": "Whisper along and tiptoe like a tiny scholar",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Persistence": 3
+                            "Regularity": 1.6,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1814,8 +1814,8 @@
                     "text": "Point loudly at every colorful book you spot",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 3,
-                            "Intensity": 3
+                            "Approach_Withdrawal": 1.7,
+                            "Intensity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1831,8 +1831,8 @@
                     "text": "Curl up in a reading corner and focus on pictures",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -4,
-                            "Mood": 2
+                            "Distractibility": -1.6,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4188,
@@ -1848,8 +1848,8 @@
                     "text": "Complain that silence is suspicious and retreat",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Approach_Withdrawal": -3
+                            "Threshold": -1.1,
+                            "Approach_Withdrawal": -1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3563,
@@ -1878,8 +1878,8 @@
                     "text": "Hand it over, then seek a new quest",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Mood": 3
+                            "Adaptability": 2.4,
+                            "Mood": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1895,8 +1895,8 @@
                     "text": "Hold it tight and declare ownership with a roar",
                     "effects": {
                         "temperament": {
-                            "Intensity": 5,
-                            "Approach_Withdrawal": -3
+                            "Intensity": 1.9,
+                            "Approach_Withdrawal": -1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -1912,8 +1912,8 @@
                     "text": "Offer a trade: rattle for blocks",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 4,
-                            "Persistence": 3
+                            "Approach_Withdrawal": 2.3,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -1929,8 +1929,8 @@
                     "text": "Walk away from both toy and conflict",
                     "effects": {
                         "temperament": {
-                            "Threshold": 4,
-                            "Activity": -3
+                            "Threshold": 1.5,
+                            "Activity": -1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -1959,8 +1959,8 @@
                     "text": "Pedal furiously and trust momentum",
                     "effects": {
                         "temperament": {
-                            "Activity": 5,
-                            "Approach_Withdrawal": 3
+                            "Activity": 1.9,
+                            "Approach_Withdrawal": 1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -1976,8 +1976,8 @@
                     "text": "Practice one careful push at a time",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Regularity": 2
+                            "Persistence": 1.2,
+                            "Regularity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -1993,8 +1993,8 @@
                     "text": "Demand a push from behind and wave like royalty",
                     "effects": {
                         "temperament": {
-                            "Mood": 3,
-                            "Adaptability": 2
+                            "Mood": 1.1,
+                            "Adaptability": 1.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5281,
@@ -2010,8 +2010,8 @@
                     "text": "Step off after a wobble and declare the road cursed",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Mood": -2
+                            "Threshold": -1.1,
+                            "Mood": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3719,
@@ -2040,8 +2040,8 @@
                     "text": "Chase it relentlessly across the room",
                     "effects": {
                         "temperament": {
-                            "Activity": 4,
-                            "Persistence": 3
+                            "Activity": 1.5,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -2057,8 +2057,8 @@
                     "text": "Study it calmly and test movement patterns",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -3,
-                            "Approach_Withdrawal": 2
+                            "Distractibility": -1.2,
+                            "Approach_Withdrawal": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -2074,8 +2074,8 @@
                     "text": "Invite a parent to help trap the shadow",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 3,
-                            "Adaptability": 2
+                            "Approach_Withdrawal": 1.7,
+                            "Adaptability": 1.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5281,
@@ -2091,8 +2091,8 @@
                     "text": "Avoid stepping on it, just in case",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Regularity": 2
+                            "Threshold": -1.1,
+                            "Regularity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4344,
@@ -2121,8 +2121,8 @@
                     "text": "Accept the outfit and march onward",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 5,
-                            "Regularity": 3
+                            "Adaptability": 2.4,
+                            "Regularity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -2138,8 +2138,8 @@
                     "text": "Insist the tube is a royal cape and reject all socks",
                     "effects": {
                         "temperament": {
-                            "Intensity": 4,
-                            "Activity": 4
+                            "Intensity": 1.6,
+                            "Activity": 1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.575,
@@ -2155,8 +2155,8 @@
                     "text": "Focus on putting one sock on perfectly",
                     "effects": {
                         "temperament": {
-                            "Persistence": 6,
-                            "Distractibility": -4
+                            "Persistence": 1.8,
+                            "Distractibility": -1.6
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -2172,8 +2172,8 @@
                     "text": "Cry because the blue sock touched the red sock",
                     "effects": {
                         "temperament": {
-                            "Threshold": -5,
-                            "Mood": -3
+                            "Threshold": -1.9,
+                            "Mood": -1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.325,
@@ -2202,8 +2202,8 @@
                     "text": "Place it proudly on your shirt as a badge",
                     "effects": {
                         "temperament": {
-                            "Mood": 3,
-                            "Approach_Withdrawal": 2
+                            "Mood": 1.1,
+                            "Approach_Withdrawal": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5281,
@@ -2219,8 +2219,8 @@
                     "text": "Save it for later in a very secret location",
                     "effects": {
                         "temperament": {
-                            "Regularity": 3,
-                            "Persistence": 3
+                            "Regularity": 1.2,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2236,8 +2236,8 @@
                     "text": "Offer it to someone and wait for a reaction",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 3,
-                            "Approach_Withdrawal": 3
+                            "Adaptability": 1.5,
+                            "Approach_Withdrawal": 1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2253,8 +2253,8 @@
                     "text": "Peel and re-peel it until it loses all power",
                     "effects": {
                         "temperament": {
-                            "Distractibility": 3,
-                            "Mood": -2
+                            "Distractibility": 1.2,
+                            "Mood": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -2283,8 +2283,8 @@
                     "text": "Wave at every passerby with diplomatic confidence",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 4,
-                            "Mood": 2
+                            "Approach_Withdrawal": 2.3,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2300,8 +2300,8 @@
                     "text": "Point at random items and issue urgent demands",
                     "effects": {
                         "temperament": {
-                            "Intensity": 4,
-                            "Activity": 2
+                            "Intensity": 1.6,
+                            "Activity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2317,8 +2317,8 @@
                     "text": "Sit quietly and count bright packages",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -3,
-                            "Regularity": 3
+                            "Distractibility": -1.2,
+                            "Regularity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -2334,8 +2334,8 @@
                     "text": "Ask to get down and walk your own route",
                     "effects": {
                         "temperament": {
-                            "Activity": 3,
-                            "Adaptability": -2
+                            "Activity": 1.1,
+                            "Adaptability": -1.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -2364,8 +2364,8 @@
                     "text": "Jump in with unshakable conviction",
                     "effects": {
                         "temperament": {
-                            "Activity": 6,
-                            "Approach_Withdrawal": 3
+                            "Activity": 2.3,
+                            "Approach_Withdrawal": 1.7
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5906,
@@ -2381,8 +2381,8 @@
                     "text": "Poke it with a stick first",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Approach_Withdrawal": 2
+                            "Persistence": 1.2,
+                            "Approach_Withdrawal": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2398,8 +2398,8 @@
                     "text": "Avoid it and keep shoes dry at all costs",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Threshold": -2
+                            "Regularity": 1.6,
+                            "Threshold": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -2415,8 +2415,8 @@
                     "text": "Stand at the edge, fascinated by ripples",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -4,
-                            "Mood": 2
+                            "Distractibility": -1.6,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4188,
@@ -2445,8 +2445,8 @@
                     "text": "Methodically gather every crumb into one pile",
                     "effects": {
                         "temperament": {
-                            "Persistence": 4,
-                            "Regularity": 3
+                            "Persistence": 1.2,
+                            "Regularity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -2462,8 +2462,8 @@
                     "text": "Sweep crumbs dramatically onto the floor",
                     "effects": {
                         "temperament": {
-                            "Activity": 3,
-                            "Intensity": 3
+                            "Activity": 1.1,
+                            "Intensity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2479,8 +2479,8 @@
                     "text": "Offer crumbs to a nearby ally as tribute",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 2,
-                            "Adaptability": 3
+                            "Approach_Withdrawal": 1.2,
+                            "Adaptability": 1.5
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5281,
@@ -2496,8 +2496,8 @@
                     "text": "Refuse to continue until cleanup is complete",
                     "effects": {
                         "temperament": {
-                            "Threshold": -2,
-                            "Regularity": 3
+                            "Threshold": -0.8,
+                            "Regularity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4656,
@@ -2526,8 +2526,8 @@
                     "text": "Attempt every button yourself, no surrender",
                     "effects": {
                         "temperament": {
-                            "Persistence": 5,
-                            "Intensity": 2
+                            "Persistence": 1.5,
+                            "Intensity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -2543,8 +2543,8 @@
                     "text": "Ask for help, then copy each step carefully",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 3,
-                            "Persistence": 3
+                            "Adaptability": 1.5,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2560,8 +2560,8 @@
                     "text": "Get frustrated and demand instant speed mode",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Intensity": 3
+                            "Threshold": -1.1,
+                            "Intensity": 1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -2577,8 +2577,8 @@
                     "text": "Lose focus halfway and start a new game instead",
                     "effects": {
                         "temperament": {
-                            "Distractibility": 4,
-                            "Activity": 2
+                            "Distractibility": 1.6,
+                            "Activity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2607,8 +2607,8 @@
                     "text": "Request one story and settle peacefully",
                     "effects": {
                         "temperament": {
-                            "Regularity": 4,
-                            "Mood": 3
+                            "Regularity": 1.6,
+                            "Mood": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -2624,8 +2624,8 @@
                     "text": "Launch an emergency campaign for more water",
                     "effects": {
                         "temperament": {
-                            "Intensity": 5,
-                            "Regularity": -3
+                            "Intensity": 1.9,
+                            "Regularity": -1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -2641,8 +2641,8 @@
                     "text": "Rearrange every pillow with strict precision",
                     "effects": {
                         "temperament": {
-                            "Persistence": 5,
-                            "Adaptability": -2
+                            "Persistence": 1.5,
+                            "Adaptability": -1.0
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4969,
@@ -2658,8 +2658,8 @@
                     "text": "Fall asleep mid-sentence before terms are final",
                     "effects": {
                         "temperament": {
-                            "Threshold": 4,
-                            "Mood": 2
+                            "Threshold": 1.5,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2688,8 +2688,8 @@
                     "text": "Blow confidently on first attempt",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 4,
-                            "Mood": 3
+                            "Approach_Withdrawal": 2.3,
+                            "Mood": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5594,
@@ -2705,8 +2705,8 @@
                     "text": "Watch the flame carefully before acting",
                     "effects": {
                         "temperament": {
-                            "Distractibility": -3,
-                            "Persistence": 3
+                            "Distractibility": -1.2,
+                            "Persistence": 0.9
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
@@ -2722,8 +2722,8 @@
                     "text": "Laugh, clap, and let someone assist",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 4,
-                            "Mood": 2
+                            "Adaptability": 1.9,
+                            "Mood": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2739,8 +2739,8 @@
                     "text": "Retreat from the tiny fire with concern",
                     "effects": {
                         "temperament": {
-                            "Threshold": -3,
-                            "Approach_Withdrawal": -2
+                            "Threshold": -1.1,
+                            "Approach_Withdrawal": -1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.3719,
@@ -2769,8 +2769,8 @@
                     "text": "Rotate each piece until it fits perfectly",
                     "effects": {
                         "temperament": {
-                            "Persistence": 5,
-                            "Distractibility": -3
+                            "Persistence": 1.5,
+                            "Distractibility": -1.2
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.4813,
@@ -2786,8 +2786,8 @@
                     "text": "Try bold force and see what yields",
                     "effects": {
                         "temperament": {
-                            "Intensity": 3,
-                            "Activity": 3
+                            "Intensity": 1.2,
+                            "Activity": 1.1
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5437,
@@ -2803,8 +2803,8 @@
                     "text": "Ask for a hint, then finish the rest",
                     "effects": {
                         "temperament": {
-                            "Adaptability": 3,
-                            "Regularity": 2
+                            "Adaptability": 1.5,
+                            "Regularity": 0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.5281,
@@ -2820,8 +2820,8 @@
                     "text": "Abandon the puzzle and invent a new game",
                     "effects": {
                         "temperament": {
-                            "Approach_Withdrawal": 2,
-                            "Regularity": -2
+                            "Approach_Withdrawal": 1.2,
+                            "Regularity": -0.8
                         },
                         "infant_appraisal": {
                             "comfort_value": 0.45,
